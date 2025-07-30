@@ -16,7 +16,7 @@
                 <h2>Bem-vindo, Treinador!</h2>
                 <p>Qual é o seu nome?</p>
                 <input type="text" id="manager-name-input" placeholder="Digite seu nome...">
-                <button onclick="createManager()">Confirmar</button>
+                <button id="confirm-manager-name-btn">Confirmar</button>
             </div>
         </div>
 
@@ -24,8 +24,8 @@
         <div id="start-screen" class="screen">
             <div class="screen-content">
                 <h1>Football Manager</h1>
-                <button onclick="showScreen('new-club-screen')">Criar Novo Clube</button>
-                <button onclick="showScreen('select-league-screen')">Treinar Clube Existente</button>
+                <button id="go-to-new-club-btn">Criar Novo Clube</button>
+                <button id="go-to-select-league-btn">Treinar Clube Existente</button>
             </div>
         </div>
 
@@ -35,8 +35,8 @@
                 <h2>Crie seu Clube</h2>
                 <input type="text" id="club-name-input" placeholder="Nome do Clube">
                 <input type="text" id="club-initials-input" placeholder="Iniciais (3 letras)">
-                <button onclick="createClub()">Criar e Jogar</button>
-                <button class="secondary" onclick="showScreen('start-screen')">Voltar</button>
+                <button id="create-new-club-btn">Criar e Jogar</button>
+                <button class="secondary" id="new-club-back-btn">Voltar</button>
             </div>
         </div>
 
@@ -45,7 +45,7 @@
             <div class="screen-content">
                 <h2>Selecione uma Liga</h2>
                 <div id="league-selection" class="card-container"></div>
-                <button class="secondary" onclick="showScreen('start-screen')">Voltar</button>
+                <button class="secondary" id="select-league-back-btn">Voltar</button>
             </div>
         </div>
 
@@ -54,7 +54,7 @@
             <div class="screen-content">
                 <h2>Selecione um Time</h2>
                 <div id="team-selection" class="card-container"></div>
-                <button class="secondary" onclick="showScreen('select-league-screen')">Voltar</button>
+                <button class="secondary" id="select-team-back-btn">Voltar</button>
             </div>
         </div>
 
@@ -67,20 +67,20 @@
                 </div>
                 <div class="header-center">
                     <span id="current-date-display"></span>
-                    <button id="advance-day-button" onclick="advanceDay()">Avançar</button>
+                    <button id="advance-day-button">Avançar</button>
                 </div>
                 <div class="header-manager-info">
                     <span id="header-manager-name">Nome do Treinador</span>
-                    <button onclick="exitToStartScreen()">Sair do Jogo</button>
+                    <button id="exit-game-btn">Sair do Jogo</button>
                 </div>
             </header>
             <nav id="sidebar">
                 <ul>
-                    <li class="active" onclick="showMainContent('home-content')">Início</li>
-                    <li onclick="showMainContent('squad-content')">Elenco</li>
-                    <li onclick="showMainContent('league-content')">Liga</li>
-                    <li onclick="showMainContent('stadium-content')">Estádio</li>
-                    <li onclick="showMainContent('match-content')">Jogar</li>
+                    <li data-content="home-content" class="active">Início</li>
+                    <li data-content="squad-content">Elenco</li>
+                    <li data-content="league-content">Liga</li>
+                    <li data-content="stadium-content">Estádio</li>
+                    <li data-content="match-content">Jogar</li>
                 </ul>
             </nav>
             <main id="main-content">
@@ -94,8 +94,8 @@
                 </div>
                 <div id="league-content" class="main-content-panel">
                     <div class="tabs">
-                        <button class="tab-button active" onclick="openTab(event, 'league-table-tab')">Tabela</button>
-                        <button class="tab-button" onclick="openTab(event, 'league-calendar-tab')">Calendário</button>
+                        <button data-tab="league-table-tab" class="tab-button active">Tabela</button>
+                        <button data-tab="league-calendar-tab" class="tab-button">Calendário</button>
                     </div>
                     <div id="league-table-tab" class="tab-content active">
                         <h3>Tabela de Classificação</h3>
@@ -108,12 +108,12 @@
                 </div>
                 <div id="stadium-content" class="main-content-panel">
                     <h3>Editor de Estádio</h3>
-                    <p>Recurso em desenvolvimento. Aqui você poderá customizar seu estádio.</p>
+                    <p>Recurso em desenvolvimento.</p>
                 </div>
                 <div id="match-content" class="main-content-panel">
                     <h3>Próxima Partida</h3>
                     <div id="match-simulation">
-                        <p>A simulação da partida em texto aparecerá aqui em tempo real.</p>
+                        <p>A simulação da partida em texto aparecerá aqui.</p>
                     </div>
                 </div>
             </main>
