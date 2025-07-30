@@ -39,24 +39,25 @@ footer {
     border-top: 1px solid #ddd;
 }
 
+/* --- Estilos dos Botões --- */
 .button-container {
     display: flex;
     flex-direction: column;
     gap: 15px;
     align-items: center;
-    padding: 40px 0;
+    padding: 20px 0;
 }
 
 .button {
     padding: 15px 30px;
-    font-size: 1.2em;
+    font-size: 1.1em;
     color: white;
     background-color: #00796b;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.3s;
-    width: 300px;
+    width: 350px;
     text-align: center;
 }
 
@@ -64,6 +65,64 @@ footer {
     background-color: #004d40;
 }
 
-.hidden {
-    display: none;
+.button-small {
+    width: 200px;
+    padding: 10px 20px;
+    font-size: 1em;
+}
+
+/* --- Estilos do Hub do Clube --- */
+.club-hub-container {
+    display: grid;
+    grid-template-areas:
+        "header header"
+        "info actions"
+        "footer footer";
+    grid-template-columns: 1fr 2fr;
+    gap: 20px;
+}
+
+.hub-header {
+    grid-area: header;
+    text-align: center;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+.hub-info {
+    grid-area: info;
+    background-color: #fafafa;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.hub-info h3 {
+    margin-top: 0;
+}
+
+.hub-actions {
+    grid-area: actions;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.action-button {
+    padding: 20px;
+    font-size: 1.1em;
+    color: white;
+    background-color: #00897b;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.3s;
+}
+
+.action-button:hover {
+    background-color: #00695c;
+}
+
+h2 {
+    text-align: center;
 }
