@@ -142,4 +142,92 @@ document.addEventListener('DOMContentLoaded', () => {
     // e já estão incluídas na lógica completa acima.
 
     showMainMenu();
+
+        // =====================================================================
+    // FUNÇÕES DE SETUP QUE ESTAVAM FALTANDO
+    // =====================================================================
+
+    function showManagerCreationScreen() {
+        mainContent.innerHTML = `
+            <div class="setup-screen">
+                <h2>Quem é você?</h2>
+                <div class="form-group"><label>Nome:</label><input type="text" id="first-name"></div>
+                <div class="form-group"><label>Sobrenome:</label><input type="text" id="last-name"></div>
+                <div class="form-group"><label>Nacionalidade:</label><select id="nationality"><option>Brasileiro</option><option>Português</option><option>Argentino</option></select></div>
+                <div class="form-group"><label>Vida Pessoal:</label><div class="toggle-switch"><input type="checkbox" id="family-feature"><label for="family-feature">Toggle</label></div></div>
+                <div class="navigation-buttons">
+                    <button class="menu-button" id="back-to-main">Voltar</button>
+                    <button class="menu-button" id="next-step">Avançar</button>
+                </div>
+            </div>`;
+        document.getElementById('back-to-main').addEventListener('click', showMainMenu);
+        document.getElementById('next-step').addEventListener('click', () => {
+            gameState.manager.firstName = document.getElementById('first-name').value || 'Manager';
+            gameState.manager.lastName = document.getElementById('last-name').value || 'Padrão';
+            gameState.manager.nationality = document.getElementById('nationality').value;
+            gameState.manager.familyFeature = document.getElementById('family-feature').checked;
+            if (gameState.manager.familyFeature) {
+                showFamilySetupScreen();
+            } else {
+                showDifficultyScreen();
+            }
+        });
+    }
+
+    function showFamilySetupScreen() {
+        mainContent.innerHTML = `
+            <div class="setup-screen">
+                <h2>Qual o seu status familiar?</h2>
+                <div class="family-container">
+                     <p>Defina sua situação familiar inicial.</p>
+                     <div class="family-grid">${Array(8).fill('<div class="family-slot">+</div>').join('')}</div>
+                </div>
+                 <div class="navigation-buttons">
+                    <button class="menu-button" id="back-to-manager">Voltar</button>
+                    <button class="menu-button" id="next-step">Avançar</button>
+                </div>
+            </div>`;
+        document.getElementById('back-to-manager').addEventListener('click', showManagerCreationScreen);
+        document.getElementById('next-step').addEventListener('click', showDifficultyScreen);
+    }
+    
+    function showDifficultyScreen() {
+        mainContent.innerHTML = `
+            <div class="setup-screen">
+                <h2>Configuração de Dificuldade</h2>
+                <div class="form-group"><label>Orçamentos:</label><select id="budgets"><option>Baixo</option><option selected>Médio</option><option>Alto</option></select></div>
+                <div class="form-group"><label>Segurança no Emprego:</label><select id="job-security"><option>Alta</option><option selected>Normal</option><option>Baixa</option></select></div>
+                <div class="navigation-buttons">
+                    <button class="menu-button" id="back-to-setup">Voltar</button>
+                    <button class="menu-button" id="next-step">Avançar</button>
+                </div>
+            </div>`;
+        document.getElementById('back-to-setup').addEventListener('click', gameState.manager.familyFeature ? showFamilySetupScreen : showManagerCreationScreen);
+        document.getElementById('next-step').addEventListener('click', () => {
+            gameState.difficulty.budgets = document.getElementById('budgets').value;
+            gameState.difficulty.jobSecurity = document.getElementById('job-security').value;
+            selectLeagueScreen();
+        });
+    }
+    
+    function selectLeagueScreen() {
+        const leagueButtonsHTML = database.leagues.map(league => `<button class="menu-button" data-league-id="${league.id}">${league.name}</button>`).join('');
+        mainContent.innerHTML = `<div class="setup-screen"><h2>Selecione uma Liga</h2><div style="height: 500px; overflow-y: auto; padding: 10px;">${leagueButtonsHTML}</div><div class="navigation-buttons"><button class="menu-button" id="back-to-difficulty">Voltar</button></div></div>`;
+        document.querySelectorAll('[data-league-id]').forEach(button => button.addEventListener('click', e => selectTeamScreen(e.target.getAttribute('data-league-id'))));
+        document.getElementById('back-to-difficulty').addEventListener('click', showDifficultyScreen);
+    }
+
+    function selectTeamScreen(leagueId) {
+        const league = database.leagues.find(l => l.id === leagueId);
+        const teamButtonsHTML = league.teams.sort((a,b) => b.overall - a.overall).map(team => `<button class="menu-button" data-team-id="${team.id}">${team.name} (OVR: ${team.overall})</button>`).join('');
+        mainContent.innerHTML = `<div class="setup-screen"><h2>Selecione um Time de ${league.name}</h2><div style="height: 500px; overflow-y: auto; padding: 10px;">${teamButtonsHTML}</div><div class="navigation-buttons"><button class="menu-button" id="back-to-leagues">Voltar</button></div></div>`;
+        document.querySelectorAll('[data-team-id]').forEach(button => button.addEventListener('click', e => startGame(parseInt(e.currentTarget.getAttribute('data-team-id')))));
+        document.getElementById('back-to-leagues').addEventListener('click', selectLeagueScreen);
+    }
+
+    function startGame(teamId) {
+        gameState.playerTeamId = teamId;
+        showClubHub();
+    }
+    
 });
