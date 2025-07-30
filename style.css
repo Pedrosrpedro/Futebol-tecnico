@@ -289,3 +289,9 @@ input[type="text"] {
 .calendar-day { background-color: var(--bg-light); }
 .calendar-day.other-month { opacity: 0.4; }
 .calendar-day.match-day { background-color: var(--accent-color); color: var(--bg-dark); font-weight: bold; }
+
+/* Adicione isso ao seu style.css */
+.calendar-day.current-day {
+    border: 2px solid var(--text-primary);
+    background-color: var(--bg-medium);
+}
