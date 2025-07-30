@@ -209,7 +209,7 @@ input[type="text"] {
 }
 
 
-/* --- Abas da Liga (Tabela/Calendário) --- */
+/* --- Abas da Liga (REMOVIDO, POIS NÃO HÁ MAIS ABAS) --- */
 .tabs {
     border-bottom: 2px solid var(--border-color);
     margin-bottom: 20px;
@@ -230,18 +230,32 @@ input[type="text"] {
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 
-/* --- Tabela de Classificação --- */
+/* --- Tabela de Classificação (COM ALTERAÇÕES) --- */
+#league-table-container {
+    /* Define uma altura máxima e adiciona rolagem vertical */
+    max-height: calc(100vh - 220px); /* Ajuste este valor conforme necessário */
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
 #league-table-container table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
 }
 #league-table-container th, #league-table-container td {
     padding: 10px;
     text-align: center;
     border-bottom: 1px solid var(--border-color);
 }
-#league-table-container th { background-color: var(--bg-light); text-align: center; }
+#league-table-container tr:last-child td {
+    border-bottom: none; /* Remove a borda do último item */
+}
+#league-table-container th { 
+    background-color: var(--bg-light); 
+    text-align: center;
+    position: sticky; /* Faz o cabeçalho fixar no topo durante a rolagem */
+    top: 0;
+}
 #league-table-container td:nth-child(2) { text-align: left; } /* Alinha nome do time à esquerda */
 #league-table-container tr.user-team-row { 
     font-weight: bold; 
