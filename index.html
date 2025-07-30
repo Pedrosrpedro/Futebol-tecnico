@@ -10,7 +10,7 @@
 </head>
 <body>
     <div id="game-container">
-        <!-- Tela de Criação de Treinador -->
+        <!-- Telas de criação (sem alterações) -->
         <div id="manager-creation-screen" class="screen active">
             <div class="screen-content">
                 <h2>Bem-vindo, Treinador!</h2>
@@ -20,7 +20,6 @@
             </div>
         </div>
 
-        <!-- Tela de Início -->
         <div id="start-screen" class="screen">
             <div class="screen-content">
                 <h1>Football Manager</h1>
@@ -29,7 +28,6 @@
             </div>
         </div>
 
-        <!-- Tela de Criação de Clube -->
         <div id="new-club-screen" class="screen">
             <div class="screen-content">
                 <h2>Crie seu Clube</h2>
@@ -40,7 +38,6 @@
             </div>
         </div>
 
-        <!-- Tela de Seleção de Liga -->
         <div id="select-league-screen" class="screen">
             <div class="screen-content">
                 <h2>Selecione uma Liga</h2>
@@ -49,7 +46,6 @@
             </div>
         </div>
 
-        <!-- Tela de Seleção de Time -->
         <div id="select-team-screen" class="screen">
             <div class="screen-content">
                 <h2>Selecione um Time</h2>
@@ -58,7 +54,7 @@
             </div>
         </div>
 
-        <!-- Tela Principal do Jogo -->
+        <!-- Tela Principal do Jogo (COM ALTERAÇÕES) -->
         <div id="main-game-screen" class="screen">
             <header id="main-header">
                 <div class="header-club-info">
@@ -79,6 +75,8 @@
                     <li data-content="home-content" class="active">Início</li>
                     <li data-content="squad-content">Elenco</li>
                     <li data-content="league-content">Liga</li>
+                    <!-- NOVO BOTÃO CALENDÁRIO -->
+                    <li data-content="calendar-content">Calendário</li> 
                     <li data-content="stadium-content">Estádio</li>
                     <li data-content="match-content">Jogar</li>
                 </ul>
@@ -92,18 +90,18 @@
                     <h3>Elenco Principal</h3>
                     <div id="player-list-table"></div>
                 </div>
+                <!-- SEÇÃO DA LIGA SIMPLIFICADA (SEM ABAS) -->
                 <div id="league-content" class="main-content-panel">
-                    <div class="tabs">
-                        <button data-tab="league-table-tab" class="tab-button active">Tabela</button>
-                        <button data-tab="league-calendar-tab" class="tab-button">Calendário</button>
+                    <h3>Tabela de Classificação</h3>
+                    <div id="league-table-container">
+                        <!-- A tabela da liga será inserida aqui pelo JS -->
                     </div>
-                    <div id="league-table-tab" class="tab-content active">
-                        <h3>Tabela de Classificação</h3>
-                        <div id="league-table-container"></div>
-                    </div>
-                    <div id="league-calendar-tab" class="tab-content">
-                        <h3>Calendário</h3>
-                        <div id="calendar-container"></div>
+                </div>
+                <!-- NOVO PAINEL PARA O CALENDÁRIO -->
+                <div id="calendar-content" class="main-content-panel">
+                    <h3>Calendário da Temporada</h3>
+                    <div id="calendar-container">
+                        <!-- O calendário será inserido aqui pelo JS -->
                     </div>
                 </div>
                 <div id="stadium-content" class="main-content-panel">
