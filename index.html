@@ -74,9 +74,10 @@
                 <ul>
                     <li data-content="home-content" class="active">Início</li>
                     <li data-content="squad-content">Elenco</li>
+                    <!-- NOVO BOTÃO DE TÁTICAS -->
+                    <li data-content="tactics-content">Táticas</li>
                     <li data-content="league-content">Liga</li>
-                    <!-- NOVO BOTÃO CALENDÁRIO -->
-                    <li data-content="calendar-content">Calendário</li> 
+                    <li data-content="calendar-content">Calendário</li>
                     <li data-content="stadium-content">Estádio</li>
                     <li data-content="match-content">Jogar</li>
                 </ul>
@@ -90,19 +91,82 @@
                     <h3>Elenco Principal</h3>
                     <div id="player-list-table"></div>
                 </div>
-                <!-- SEÇÃO DA LIGA SIMPLIFICADA (SEM ABAS) -->
+
+                <!-- NOVO PAINEL DE TÁTICAS -->
+                <div id="tactics-content" class="main-content-panel">
+                    <h3>Plano Tático</h3>
+                    <div id="tactics-container">
+                        <div class="tactic-card">
+                            <h4>Formação e Mentalidade</h4>
+                            <div class="tactic-option">
+                                <label for="tactic-formation">Formação:</label>
+                                <select id="tactic-formation">
+                                    <option value="4-4-2">4-4-2</option>
+                                    <option value="4-3-3">4-3-3</option>
+                                    <option value="4-5-1">4-5-1</option>
+                                    <option value="3-5-2">3-5-2</option>
+                                    <option value="5-3-2">5-3-2</option>
+                                    <option value="4-2-3-1">4-2-3-1</option>
+                                </select>
+                            </div>
+                            <div class="tactic-option">
+                                <label for="tactic-mentality">Mentalidade:</label>
+                                <select id="tactic-mentality">
+                                    <option value="defensive">Muito Defensiva</option>
+                                    <option value="cautious">Cautelosa</option>
+                                    <option value="balanced" selected>Equilibrada</option>
+                                    <option value="attacking">Ofensiva</option>
+                                    <option value="very_attacking">Muito Ofensiva</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="tactic-card">
+                            <h4>Com a Bola</h4>
+                            <div class="tactic-option">
+                                <label for="tactic-passing">Estilo de Passe:</label>
+                                <select id="tactic-passing">
+                                    <option value="short">Curto</option>
+                                    <option value="mixed">Misto</option>
+                                    <option value="direct">Direto</option>
+                                </select>
+                            </div>
+                             <div class="tactic-option">
+                                <label for="tactic-attack-width">Amplitude Ofensiva:</label>
+                                <select id="tactic-attack-width">
+                                    <option value="narrow">Pelo Meio</option>
+                                    <option value="normal">Normal</option>
+                                    <option value="wide">Pelas Pontas</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="tactic-card">
+                            <h4>Sem a Bola</h4>
+                             <div class="tactic-option">
+                                <label for="tactic-pressing">Intensidade da Pressão: <span id="pressing-value">5</span></label>
+                                <input type="range" id="tactic-pressing" min="1" max="10" value="5">
+                            </div>
+                            <div class="tactic-option">
+                                <label for="tactic-defensive-line">Altura da Linha Defensiva:</label>
+                                <select id="tactic-defensive-line">
+                                    <option value="deep">Recuada</option>
+                                    <option value="normal">Normal</option>
+                                    <option value="high">Avançada</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="save-tactics-btn">Salvar Táticas</button>
+                </div>
+
                 <div id="league-content" class="main-content-panel">
                     <h3>Tabela de Classificação</h3>
-                    <div id="league-table-container">
-                        <!-- A tabela da liga será inserida aqui pelo JS -->
-                    </div>
+                    <div id="league-table-container"></div>
                 </div>
-                <!-- NOVO PAINEL PARA O CALENDÁRIO -->
                 <div id="calendar-content" class="main-content-panel">
                     <h3>Calendário da Temporada</h3>
-                    <div id="calendar-container">
-                        <!-- O calendário será inserido aqui pelo JS -->
-                    </div>
+                    <div id="calendar-container"></div>
                 </div>
                 <div id="stadium-content" class="main-content-panel">
                     <h3>Editor de Estádio</h3>
