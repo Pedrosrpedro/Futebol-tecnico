@@ -47,16 +47,6 @@ function showMainContent(contentId) {
     gameState.currentMainContent = contentId;
 }
 
-/** Função para trocar de aba (Tabela/Calendário) */
-function openTab(evt) {
-    const tabId = evt.target.dataset.tab;
-    const parent = evt.target.closest('.main-content-panel');
-    parent.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    parent.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    evt.currentTarget.classList.add('active');
-}
-
 // --- Lógica de Inicialização do Jogo ---
 
 function createManager() {
@@ -126,7 +116,6 @@ function startGame(team) {
     const teams = leaguesData[gameState.currentLeagueId].teams;
 
     gameState.currentDate = new Date(leagueInfo.startDate + 'T12:00:00');
-    // A linha abaixo é a que estava causando o erro. Agora ela deve funcionar.
     gameState.schedule = generateSchedule(teams, leagueInfo);
     gameState.leagueTable = initializeLeagueTable(teams);
     findNextUserMatch();
@@ -188,13 +177,45 @@ function simulateDayMatches() {
 function loadSquadTable() {
     const playerListDiv = document.getElementById('player-list-table');
     if (!gameState.userClub || !gameState.userClub.players) return;
-    let tableHTML = `<table><thead>...</thead><tbody>`; // Conteúdo da tabela
+    
+    // CORRIGIDO: Adiciona um cabeçalho de tabela (<thead>) completo
+    let tableHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Pos.</th>
+                    <th>Veloc.</th>
+                    <th>Finaliz.</th>
+                    <th>Passe</th>
+                    <th>Drible</th>
+                    <th>Defesa</th>
+                    <th>Físico</th>
+                    <th>GERAL</th>
+                </tr>
+            </thead>
+            <tbody>`;
+    
+    // O loop para adicionar os jogadores
     for (const player of gameState.userClub.players) {
-        tableHTML += `<tr><td>${player.name}</td><td>${player.position}</td><td>${player.attributes.pace}</td><td>${player.attributes.shooting}</td><td>${player.attributes.passing}</td><td>${player.attributes.dribbling}</td><td>${player.attributes.defending}</td><td>${player.attributes.physical}</td><td><b>${player.overall}</b></td></tr>`;
+        tableHTML += `
+            <tr>
+                <td>${player.name}</td>
+                <td>${player.position}</td>
+                <td>${player.attributes.pace}</td>
+                <td>${player.attributes.shooting}</td>
+                <td>${player.attributes.passing}</td>
+                <td>${player.attributes.dribbling}</td>
+                <td>${player.attributes.defending}</td>
+                <td>${player.attributes.physical}</td>
+                <td><b>${player.overall}</b></td>
+            </tr>`;
     }
+
     tableHTML += `</tbody></table>`;
     playerListDiv.innerHTML = tableHTML;
 }
+
 
 function updateTableWithResult(match) {
     const homeTeam = gameState.leagueTable.find(t => t.name === match.home.name);
@@ -210,7 +231,7 @@ function updateTableWithResult(match) {
     homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst;
     awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst;
 
-    if (match.homeScore > match.homeScore) {
+    if (match.homeScore > match.awayScore) { // Corrigido de homeScore > homeScore para homeScore > awayScore
         homeTeam.wins++; homeTeam.points += 3; awayTeam.losses++;
     } else if (match.awayScore > match.homeScore) {
         awayTeam.wins++; awayTeam.points += 3; homeTeam.losses++;
@@ -222,6 +243,8 @@ function updateTableWithResult(match) {
 function updateLeagueTable() {
     const container = document.getElementById('league-table-container');
     const tiebreakers = leaguesData[gameState.currentLeagueId].leagueInfo.tiebreakers;
+    
+    // Ordena a tabela
     gameState.leagueTable.sort((a, b) => {
         for (const key of tiebreakers) {
             if (a[key] > b[key]) return -1;
@@ -229,6 +252,7 @@ function updateLeagueTable() {
         }
         return 0;
     });
+
     let tableHTML = `<table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>`;
     gameState.leagueTable.forEach((team, index) => {
         const isUserTeam = team.name === gameState.userClub.name;
@@ -248,11 +272,23 @@ function updateCalendar() {
 
     let html = `<div class="calendar-header"><h3>${date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3></div>
                 <div class="calendar-grid"><div class="calendar-weekday">Dom</div><div class="calendar-weekday">Seg</div><div class="calendar-weekday">Ter</div><div class="calendar-weekday">Qua</div><div class="calendar-weekday">Qui</div><div class="calendar-weekday">Sex</div><div class="calendar-weekday">Sáb</div>`;
-    for (let i = 0; i < firstDay.getDay(); i++) { html += `<div class="calendar-day other-month"></div>`; }
+    
+    // Adiciona células vazias para os dias antes do início do mês
+    for (let i = 0; i < firstDay.getDay(); i++) { 
+        html += `<div class="calendar-day other-month"></div>`; 
+    }
+
+    // Adiciona todos os dias do mês
     for (let i = 1; i <= lastDay.getDate(); i++) {
         const loopDate = new Date(year, month, i);
+        const isCurrent = isSameDay(loopDate, gameState.currentDate);
         const hasMatch = gameState.schedule.some(m => isSameDay(new Date(m.date), loopDate));
-        html += `<div class="calendar-day ${hasMatch ? 'match-day' : ''}">${i}</div>`;
+        
+        let dayClasses = 'calendar-day';
+        if (hasMatch) dayClasses += ' match-day';
+        if (isCurrent) dayClasses += ' current-day'; // Classe para destacar o dia atual
+
+        html += `<div class="${dayClasses}">${i}</div>`;
     }
     html += '</div>';
     container.innerHTML = html;
@@ -273,10 +309,8 @@ function initializeLeagueTable(teams) {
     }));
 }
 
-// --- CORRIGIDO E SIMPLIFICADO ---
 function generateSchedule(teams, leagueInfo) {
     let clubes = [...teams];
-    // Adiciona um time "fantasma" para folga se o número de times for ímpar
     if (clubes.length % 2 !== 0) {
         clubes.push({ name: "BYE" });
     }
@@ -294,7 +328,6 @@ function generateSchedule(teams, leagueInfo) {
                 firstHalfMatches.push({ home, away });
             }
         }
-        // Gira os times, mantendo o primeiro fixo
         clubes.splice(1, 0, clubes.pop());
     }
 
@@ -305,10 +338,8 @@ function generateSchedule(teams, leagueInfo) {
     let roundDate = new Date(leagueInfo.startDate + 'T12:00:00Z');
 
     for (let i = 0; i < allMatches.length; i++) {
-        // Avança a data da rodada a cada X jogos
         if (i > 0 && i % matchesPerRound === 0) {
-            // Avança para o próximo dia de jogo (Quarta ou Fim de Semana)
-            roundDate.setDate(roundDate.getDate() + (roundDate.getDay() === 6 ? 4 : 3)); // Sábado -> Quarta; Quarta -> Sábado
+            roundDate.setDate(roundDate.getDate() + (roundDate.getDay() === 3 ? 3 : 4)); // Quarta -> Sábado (3 dias), Sábado -> Quarta (4 dias)
         }
         schedule.push({
             ...allMatches[i],
@@ -338,11 +369,10 @@ function initializeEventListeners() {
     document.getElementById('select-team-back-btn').addEventListener('click', () => showScreen('select-league-screen'));
     document.getElementById('advance-day-button').addEventListener('click', advanceDay);
     document.getElementById('exit-game-btn').addEventListener('click', () => window.location.reload());
+    
+    // Listener para o menu lateral
     document.querySelectorAll('#sidebar li').forEach(item => {
         item.addEventListener('click', () => showMainContent(item.dataset.content));
-    });
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.addEventListener('click', openTab);
     });
 }
 
