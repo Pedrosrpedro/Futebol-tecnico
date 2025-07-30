@@ -5,10 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Football Manager</title>
     <link rel="stylesheet" href="style.css">
+
+    <!-- SCRIPTS MOVIDOS PARA CÁ COM 'defer' -->
+    <script src="data/brasileirao_a.js" defer></script>
+    <!-- Adicione outros arquivos de ligas aqui com 'defer' -->
+    <script src="script.js" defer></script>
 </head>
 <body>
     <div id="game-container">
-        <!-- Telas Iniciais (Ocupam a tela inteira) -->
+        <!-- Tela de Criação de Treinador -->
         <div id="manager-creation-screen" class="screen active">
             <div class="screen-content">
                 <h2>Bem-vindo, Treinador!</h2>
@@ -18,6 +23,7 @@
             </div>
         </div>
 
+        <!-- Tela de Início -->
         <div id="start-screen" class="screen">
             <div class="screen-content">
                 <h1>Football Manager</h1>
@@ -26,6 +32,7 @@
             </div>
         </div>
 
+        <!-- Tela de Criação de Clube -->
         <div id="new-club-screen" class="screen">
             <div class="screen-content">
                 <h2>Crie seu Clube</h2>
@@ -36,6 +43,7 @@
             </div>
         </div>
 
+        <!-- Tela de Seleção de Liga -->
         <div id="select-league-screen" class="screen">
             <div class="screen-content">
                 <h2>Selecione uma Liga</h2>
@@ -44,6 +52,7 @@
             </div>
         </div>
 
+        <!-- Tela de Seleção de Time -->
         <div id="select-team-screen" class="screen">
             <div class="screen-content">
                 <h2>Selecione um Time</h2>
@@ -95,10 +104,8 @@
             </main>
         </div>
     </div>
+    
+    <!-- Os scripts foram removidos daqui -->
 
-    <!-- Scripts -->
-    <script src="data/brasileirao_a.js"></script>
-    <!-- Adicione outros arquivos de ligas aqui -->
-    <script src="script.js"></script>
 </body>
 </html>
