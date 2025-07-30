@@ -1,36 +1,84 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Football Manager Sim</title>
+    <title>Football Manager</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container">
-        <header>
-            <h1>Football Manager Sim</h1>
-        </header>
-        <main id="main-content">
-            <!-- O conteúdo do jogo será carregado aqui pelo JavaScript -->
-        </main>
-        <footer>
-            <p>Criado por [Seu Nome] - Jogo para fins não comerciais</p>
-        </footer>
-    </div>
-    <script src="script.js"></script>
-        </main>
-        <footer>
-            <p>Criado por [Seu Nome] - Jogo para fins não comerciais</p>
-        </footer>
+        <!-- Tela de Início -->
+        <div id="start-screen" class="screen active">
+            <h1>Football Manager</h1>
+            <button onclick="showScreen('new-club-screen')">Criar Novo Clube</button>
+            <button onclick="showScreen('select-league-screen')">Treinar Clube Existente</button>
+        </div>
+
+        <!-- Tela de Criação de Clube -->
+        <div id="new-club-screen" class="screen">
+            <h2>Crie seu Clube</h2>
+            <input type="text" id="club-name-input" placeholder="Nome do Clube">
+            <input type="text" id="club-initials-input" placeholder="Iniciais (3 letras)">
+            <button onclick="createClub()">Criar e Jogar</button>
+        </div>
+
+        <!-- Tela de Seleção de Liga -->
+        <div id="select-league-screen" class="screen">
+            <h2>Selecione uma Liga</h2>
+            <div id="league-selection"></div>
+            <button onclick="showScreen('start-screen')">Voltar</button>
+        </div>
+
+        <!-- Tela de Seleção de Time -->
+        <div id="select-team-screen" class="screen">
+            <h2>Selecione um Time</h2>
+            <div id="team-selection"></div>
+            <button onclick="showScreen('select-league-screen')">Voltar</button>
+        </div>
+
+        <!-- Tela Principal do Jogo -->
+        <div id="main-menu-screen" class="screen">
+            <header>
+                <h2 id="club-name-header">Nome do Clube</h2>
+                <button onclick="showScreen('start-screen')">Sair para o Menu Principal</button>
+            </header>
+            <div class="main-menu-buttons">
+                <button onclick="showScreen('squad-screen')">Elenco</button>
+                <button onclick="showScreen('stadium-editor-screen')">Estádio</button>
+                <button onclick="showScreen('match-screen')">Jogar Partida</button>
+            </div>
+        </div>
+
+        <!-- Tela do Elenco -->
+        <div id="squad-screen" class="screen">
+            <h2>Elenco</h2>
+            <div id="player-list"></div>
+            <button onclick="showScreen('main-menu-screen')">Voltar</button>
+        </div>
+
+        <!-- Tela de Edição do Estádio -->
+        <div id="stadium-editor-screen" class="screen">
+            <h2>Editor de Estádio</h2>
+            <p>Em breve!</p>
+            <button onclick="showScreen('main-menu-screen')">Voltar</button>
+        </div>
+
+        <!-- Tela da Partida -->
+        <div id="match-screen" class="screen">
+            <h2>Dia de Jogo</h2>
+            <div id="match-simulation">
+                <p>A simulação da partida em texto aparecerá aqui em tempo real.</p>
+            </div>
+            <button onclick="showScreen('main-menu-screen')">Voltar</o Menu Principal</button>
+        </div>
     </div>
 
-    <!-- CARREGA OS SCRIPTS -->
-    <!-- Primeiro os dados -->
-    <script src="data/leagues.js"></script>
-    <script src="data/players.js"></script>
-    <!-- Depois a lógica do jogo -->
-    <script src="script.js"></script>
+    <!-- Scripts de Dados -->
+    <script src="data/brasileirao_a.js"></script>
+    <!-- Adicione outros arquivos de dados de ligas aqui -->
 
+    <!-- Script Principal -->
+    <script src="script.js"></script>
 </body>
 </html>
