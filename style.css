@@ -183,3 +183,95 @@ input[type="text"] {
 }
 #player-list-table th { background-color: var(--bg-light); }
 #player-list-table tr:hover { background-color: var(--bg-light); }
+
+/* --- Header com Data e Botão Avançar --- */
+.header-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+#current-date-display {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+#advance-day-button {
+    padding: 8px 16px;
+    font-size: 14px;
+    margin: 0;
+}
+#advance-day-button:disabled {
+    background-color: #e66a6a;
+    color: var(--bg-dark);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+
+/* --- Abas da Liga (Tabela/Calendário) --- */
+.tabs {
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 20px;
+}
+.tab-button {
+    background-color: transparent;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text-secondary);
+}
+.tab-button.active {
+    color: var(--accent-color);
+    border-bottom: 2px solid var(--accent-color);
+    font-weight: bold;
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* --- Tabela de Classificação --- */
+#league-table-container table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+#league-table-container th, #league-table-container td {
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+}
+#league-table-container th { background-color: var(--bg-light); text-align: center; }
+#league-table-container td:nth-child(2) { text-align: left; } /* Alinha nome do time à esquerda */
+#league-table-container tr.user-team-row { 
+    font-weight: bold; 
+    color: var(--accent-color);
+    background-color: rgba(136, 192, 208, 0.1);
+}
+
+/* --- Calendário --- */
+#calendar-container {
+    background-color: var(--bg-dark);
+    padding: 15px;
+    border-radius: 8px;
+}
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+}
+.calendar-day, .calendar-weekday {
+    text-align: center;
+    padding: 10px;
+    border-radius: 4px;
+}
+.calendar-weekday { font-weight: bold; color: var(--text-secondary); }
+.calendar-day { background-color: var(--bg-light); }
+.calendar-day.other-month { opacity: 0.4; }
+.calendar-day.match-day { background-color: var(--accent-color); color: var(--bg-dark); font-weight: bold; }
