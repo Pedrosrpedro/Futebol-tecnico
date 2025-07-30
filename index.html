@@ -10,21 +10,61 @@
 </head>
 <body>
     <div id="game-container">
-        <!-- Telas iniciais permanecem as mesmas -->
-        <div id="manager-creation-screen" class="screen active"> ... </div>
-        <div id="start-screen" class="screen"> ... </div>
-        <div id="new-club-screen" class="screen"> ... </div>
-        <div id="select-league-screen" class="screen"> ... </div>
-        <div id="select-team-screen" class="screen"> ... </div>
+        <!-- Tela de Criação de Treinador -->
+        <div id="manager-creation-screen" class="screen active">
+            <div class="screen-content">
+                <h2>Bem-vindo, Treinador!</h2>
+                <p>Qual é o seu nome?</p>
+                <input type="text" id="manager-name-input" placeholder="Digite seu nome...">
+                <button onclick="createManager()">Confirmar</button>
+            </div>
+        </div>
 
-        <!-- Tela Principal do Jogo (MODIFICADA) -->
+        <!-- Tela de Início -->
+        <div id="start-screen" class="screen">
+            <div class="screen-content">
+                <h1>Football Manager</h1>
+                <button onclick="showScreen('new-club-screen')">Criar Novo Clube</button>
+                <button onclick="showScreen('select-league-screen')">Treinar Clube Existente</button>
+            </div>
+        </div>
+
+        <!-- Tela de Criação de Clube -->
+        <div id="new-club-screen" class="screen">
+            <div class="screen-content">
+                <h2>Crie seu Clube</h2>
+                <input type="text" id="club-name-input" placeholder="Nome do Clube">
+                <input type="text" id="club-initials-input" placeholder="Iniciais (3 letras)">
+                <button onclick="createClub()">Criar e Jogar</button>
+                <button class="secondary" onclick="showScreen('start-screen')">Voltar</button>
+            </div>
+        </div>
+
+        <!-- Tela de Seleção de Liga -->
+        <div id="select-league-screen" class="screen">
+            <div class="screen-content">
+                <h2>Selecione uma Liga</h2>
+                <div id="league-selection" class="card-container"></div>
+                <button class="secondary" onclick="showScreen('start-screen')">Voltar</button>
+            </div>
+        </div>
+
+        <!-- Tela de Seleção de Time -->
+        <div id="select-team-screen" class="screen">
+            <div class="screen-content">
+                <h2>Selecione um Time</h2>
+                <div id="team-selection" class="card-container"></div>
+                <button class="secondary" onclick="showScreen('select-league-screen')">Voltar</button>
+            </div>
+        </div>
+
+        <!-- Tela Principal do Jogo -->
         <div id="main-game-screen" class="screen">
             <header id="main-header">
                 <div class="header-club-info">
                     <img id="header-club-logo" src="" alt="Logo do Clube">
                     <h2 id="header-club-name">Nome do Clube</h2>
                 </div>
-                <!-- NOVO: Botão de avançar e data -->
                 <div class="header-center">
                     <span id="current-date-display"></span>
                     <button id="advance-day-button" onclick="advanceDay()">Avançar</button>
@@ -38,17 +78,20 @@
                 <ul>
                     <li class="active" onclick="showMainContent('home-content')">Início</li>
                     <li onclick="showMainContent('squad-content')">Elenco</li>
-                    <!-- NOVO: Opção de menu para a Liga -->
                     <li onclick="showMainContent('league-content')">Liga</li>
                     <li onclick="showMainContent('stadium-content')">Estádio</li>
                     <li onclick="showMainContent('match-content')">Jogar</li>
                 </ul>
             </nav>
             <main id="main-content">
-                <div id="home-content" class="main-content-panel active"> ... </div>
-                <div id="squad-content" class="main-content-panel"> ... </div>
-
-                <!-- NOVO: Conteúdo da Liga com abas -->
+                <div id="home-content" class="main-content-panel active">
+                    <h3>Página Inicial</h3>
+                    <p>Bem-vindo ao seu clube! Use o menu à esquerda para navegar.</p>
+                </div>
+                <div id="squad-content" class="main-content-panel">
+                    <h3>Elenco Principal</h3>
+                    <div id="player-list-table"></div>
+                </div>
                 <div id="league-content" class="main-content-panel">
                     <div class="tabs">
                         <button class="tab-button active" onclick="openTab(event, 'league-table-tab')">Tabela</button>
@@ -63,9 +106,16 @@
                         <div id="calendar-container"></div>
                     </div>
                 </div>
-
-                <div id="stadium-content" class="main-content-panel"> ... </div>
-                <div id="match-content" class="main-content-panel"> ... </div>
+                <div id="stadium-content" class="main-content-panel">
+                    <h3>Editor de Estádio</h3>
+                    <p>Recurso em desenvolvimento. Aqui você poderá customizar seu estádio.</p>
+                </div>
+                <div id="match-content" class="main-content-panel">
+                    <h3>Próxima Partida</h3>
+                    <div id="match-simulation">
+                        <p>A simulação da partida em texto aparecerá aqui em tempo real.</p>
+                    </div>
+                </div>
             </main>
         </div>
     </div>
