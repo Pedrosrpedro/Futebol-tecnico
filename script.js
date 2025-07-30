@@ -1,23 +1,53 @@
-// MODIFICADO: Estado do Jogo expandido
+// --- Estado do Jogo ---
 const gameState = {
     managerName: null,
     userClub: null,
-    currentLeagueId: null, // NOVO
-    currentDate: null,     // NOVO
-    leagueTable: [],       // NOVO
-    schedule: [],          // NOVO
-    nextUserMatch: null,   // NOVO
+    currentLeagueId: null,
+    currentDate: null,
+    leagueTable: [],
+    schedule: [],
+    nextUserMatch: null,
     currentScreen: 'manager-creation-screen',
     currentMainContent: 'home-content'
 };
 
-// --- Funções de Navegação (MODIFICADAS/NOVAS) ---
-function showScreen(screenId) { /* ... sem alterações */ }
-function showMainContent(contentId) { /* ... sem alterações */ }
-function exitToStartScreen() { /* ... sem alterações */ }
+// --- Funções de Navegação ---
 
-// NOVO: Função para trocar de aba (Tabela/Calendário)
-function openTab(evt, tabId) {
+/** Mostra uma tela principal e esconde as outras */
+function showScreen(screenId) {
+    const current = document.getElementById(gameState.currentScreen);
+    if (current) {
+        current.classList.remove('active');
+    }
+    const next = document.getElementById(screenId);
+    if (next) {
+        next.classList.add('active');
+    }
+    gameState.currentScreen = screenId;
+}
+
+/** Mostra um painel de conteúdo dentro da tela principal do jogo */
+function showMainContent(contentId) {
+    // Esconde o painel e desativa o item de menu antigo
+    document.getElementById(gameState.currentMainContent).classList.remove('active');
+    const oldMenuItem = document.querySelector(`#sidebar li[data-content='${gameState.currentMainContent}']`);
+    if (oldMenuItem) {
+        oldMenuItem.classList.remove('active');
+    }
+
+    // Mostra o novo painel e ativa o novo item de menu
+    document.getElementById(contentId).classList.add('active');
+    const newMenuItem = document.querySelector(`#sidebar li[data-content='${contentId}']`);
+    if (newMenuItem) {
+        newMenuItem.classList.add('active');
+    }
+    
+    gameState.currentMainContent = contentId;
+}
+
+/** Função para trocar de aba (Tabela/Calendário) */
+function openTab(evt) {
+    const tabId = evt.target.dataset.tab;
     const parent = evt.target.closest('.main-content-panel');
     parent.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     parent.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
@@ -25,12 +55,32 @@ function openTab(evt, tabId) {
     evt.currentTarget.classList.add('active');
 }
 
-// --- Lógica de Inicialização do Jogo (MODIFICADA) ---
+// --- Lógica de Inicialização do Jogo ---
 
-function createManager() { /* ... sem alterações */ }
-function loadLeagues() { /* ... sem alterações */ }
+function createManager() {
+    const nameInput = document.getElementById('manager-name-input');
+    if (nameInput.value.trim() === '') {
+        alert('Por favor, digite seu nome.');
+        return;
+    }
+    gameState.managerName = nameInput.value.trim();
+    showScreen('start-screen');
+}
+
+function loadLeagues() {
+    const leagueSelectionDiv = document.getElementById('league-selection');
+    leagueSelectionDiv.innerHTML = '';
+    for (const leagueId in leaguesData) {
+        const league = leaguesData[leagueId];
+        const leagueCard = document.createElement('div');
+        leagueCard.className = 'league-card';
+        leagueCard.innerHTML = `<img src="images/${league.logo}" alt="${league.name}"><span>${league.name}</span>`;
+        leagueCard.addEventListener('click', () => loadTeams(leagueId));
+        leagueSelectionDiv.appendChild(leagueCard);
+    }
+}
+
 function loadTeams(leagueId) {
-    // MODIFICADO: Armazena o ID da liga selecionada
     gameState.currentLeagueId = leagueId;
     const teamSelectionDiv = document.getElementById('team-selection');
     teamSelectionDiv.innerHTML = '';
@@ -39,37 +89,57 @@ function loadTeams(leagueId) {
         const teamCard = document.createElement('div');
         teamCard.className = 'team-card';
         teamCard.innerHTML = `<img src="images/${team.logo}" alt="${team.name}"><span>${team.name}</span>`;
-        teamCard.onclick = () => startGame(team);
+        teamCard.addEventListener('click', () => startGame(team));
         teamSelectionDiv.appendChild(teamCard);
     }
     showScreen('select-team-screen');
 }
-function createClub() { /* ... sem alterações */ }
 
+function createClub() {
+    const clubName = document.getElementById('club-name-input').value;
+    const clubInitials = document.getElementById('club-initials-input').value;
 
-// --- Função Principal de Início do Jogo (TOTALMENTE REFEITA) ---
+    if (!clubName || !clubInitials) {
+        alert("Por favor, preencha o nome e as iniciais do clube.");
+        return;
+    }
+    
+    // Associa o clube criado à primeira liga da lista por padrão
+    gameState.currentLeagueId = Object.keys(leaguesData)[0]; 
+
+    const generatedPlayers = [];
+    for (let i = 0; i < 22; i++) {
+        generatedPlayers.push({
+            name: `*Jogador Gerado ${i + 1}`,
+            position: "Genérico",
+            attributes: { pace: 55, shooting: 55, passing: 55, dribbling: 55, defending: 55, physical: 55 },
+            overall: 55
+        });
+    }
+
+    const newClub = {
+        name: clubName,
+        logo: 'logo_default.png',
+        players: generatedPlayers
+    };
+
+    startGame(newClub);
+}
 
 function startGame(team) {
     gameState.userClub = team;
     const leagueInfo = leaguesData[gameState.currentLeagueId].leagueInfo;
     const teams = leaguesData[gameState.currentLeagueId].teams;
 
-    // 1. Inicializa a data
-    gameState.currentDate = new Date(leagueInfo.startDate + 'T12:00:00Z');
-
-    // 2. Gera o calendário de jogos
+    gameState.currentDate = new Date(leagueInfo.startDate + 'T12:00:00');
     gameState.schedule = generateSchedule(teams, leagueInfo);
-
-    // 3. Inicializa a tabela da liga
     gameState.leagueTable = initializeLeagueTable(teams);
-
-    // 4. Encontra o próximo jogo do usuário
     findNextUserMatch();
 
-    // 5. Atualiza a UI
     document.getElementById('header-manager-name').innerText = gameState.managerName;
     document.getElementById('header-club-name').innerText = gameState.userClub.name;
     document.getElementById('header-club-logo').src = `images/${gameState.userClub.logo}`;
+    
     loadSquadTable();
     updateLeagueTable();
     updateCalendar();
@@ -79,24 +149,16 @@ function startGame(team) {
     showMainContent('home-content');
 }
 
-// --- Funções de Conteúdo e UI (NOVAS E MODIFICADAS) ---
+// --- Funções de Avanço e Simulação ---
 
-function loadSquadTable() { /* ... sem alterações */ }
-
-/** NOVO: Avança um dia no jogo */
 function advanceDay() {
     gameState.currentDate.setDate(gameState.currentDate.getDate() + 1);
-
-    // Simula os jogos do dia
     simulateDayMatches();
-    
-    // Atualiza toda a UI que depende da data
     updateLeagueTable();
     updateCalendar();
     updateContinueButton();
 }
 
-/** NOVO: Atualiza o texto e estado do botão Avançar */
 function updateContinueButton() {
     const button = document.getElementById('advance-day-button');
     const displayDate = document.getElementById('current-date-display');
@@ -104,23 +166,21 @@ function updateContinueButton() {
     displayDate.innerText = gameState.currentDate.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
     if (gameState.nextUserMatch && isSameDay(gameState.currentDate, new Date(gameState.nextUserMatch.date))) {
-        button.innerText = "AVANÇAR PARA JOGO";
-        button.disabled = true; // Desabilita para forçar o usuário a jogar
+        button.innerText = "JOGAR PARTIDA";
+        button.disabled = true;
     } else {
         button.innerText = "Avançar";
         button.disabled = false;
     }
 }
 
-/** NOVO: Simula todos os jogos agendados para o dia atual */
 function simulateDayMatches() {
     const todayMatches = gameState.schedule.filter(match => isSameDay(new Date(match.date), gameState.currentDate));
-
     for (const match of todayMatches) {
         if (match.status === 'scheduled') {
-            // Simplificação: gera um placar aleatório para jogos não-usuário
+            // Simula apenas jogos que não envolvem o usuário
             if (match.home.name !== gameState.userClub.name && match.away.name !== gameState.userClub.name) {
-                match.homeScore = Math.floor(Math.random() * 4); // 0-3 gols
+                match.homeScore = Math.floor(Math.random() * 4);
                 match.awayScore = Math.floor(Math.random() * 4);
                 match.status = 'played';
                 updateTableWithResult(match);
@@ -129,10 +189,53 @@ function simulateDayMatches() {
     }
 }
 
-/** NOVO: Atualiza a tabela com o resultado de uma partida */
+// --- Funções de Atualização da Interface (UI) ---
+
+function loadSquadTable() {
+    const playerListDiv = document.getElementById('player-list-table');
+    if (!gameState.userClub) return;
+
+    let tableHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Posição</th>
+                    <th>Ritmo</th>
+                    <th>Chute</th>
+                    <th>Passe</th>
+                    <th>Drible</th>
+                    <th>Defesa</th>
+                    <th>Físico</th>
+                    <th>Overall</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    for (const player of gameState.userClub.players) {
+        tableHTML += `
+            <tr>
+                <td>${player.name}</td>
+                <td>${player.position}</td>
+                <td>${player.attributes.pace}</td>
+                <td>${player.attributes.shooting}</td>
+                <td>${player.attributes.passing}</td>
+                <td>${player.attributes.dribbling}</td>
+                <td>${player.attributes.defending}</td>
+                <td>${player.attributes.physical}</td>
+                <td><b>${player.overall}</b></td>
+            </tr>
+        `;
+    }
+    tableHTML += `</tbody></table>`;
+    playerListDiv.innerHTML = tableHTML;
+}
+
 function updateTableWithResult(match) {
     const homeTeam = gameState.leagueTable.find(t => t.name === match.home.name);
     const awayTeam = gameState.leagueTable.find(t => t.name === match.away.name);
+
+    if (!homeTeam || !awayTeam) return;
 
     homeTeam.played++;
     awayTeam.played++;
@@ -159,13 +262,10 @@ function updateTableWithResult(match) {
     }
 }
 
-
-/** NOVO: Renderiza a tabela de classificação na tela */
 function updateLeagueTable() {
     const container = document.getElementById('league-table-container');
     const tiebreakers = leaguesData[gameState.currentLeagueId].leagueInfo.tiebreakers;
 
-    // Ordena a tabela usando os critérios de desempate
     gameState.leagueTable.sort((a, b) => {
         for (const key of tiebreakers) {
             if (a[key] > b[key]) return -1;
@@ -174,35 +274,15 @@ function updateLeagueTable() {
         return 0;
     });
 
-    let tableHTML = `
-        <table>
-            <thead>
-                <tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr>
-            </thead>
-            <tbody>
-    `;
+    let tableHTML = `<table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>`;
     gameState.leagueTable.forEach((team, index) => {
         const isUserTeam = team.name === gameState.userClub.name;
-        tableHTML += `
-            <tr class="${isUserTeam ? 'user-team-row' : ''}">
-                <td>${index + 1}</td>
-                <td>${team.name}</td>
-                <td>${team.points}</td>
-                <td>${team.played}</td>
-                <td>${team.wins}</td>
-                <td>${team.draws}</td>
-                <td>${team.losses}</td>
-                <td>${team.goalsFor}</td>
-                <td>${team.goalsAgainst}</td>
-                <td>${team.goalDifference}</td>
-            </tr>
-        `;
+        tableHTML += `<tr class="${isUserTeam ? 'user-team-row' : ''}"><td>${index + 1}</td><td>${team.name}</td><td>${team.points}</td><td>${team.played}</td><td>${team.wins}</td><td>${team.draws}</td><td>${team.losses}</td><td>${team.goalsFor}</td><td>${team.goalsAgainst}</td><td>${team.goalDifference}</td></tr>`;
     });
     tableHTML += `</tbody></table>`;
     container.innerHTML = tableHTML;
 }
 
-/** NOVO: Renderiza o calendário do mês atual */
 function updateCalendar() {
     const container = document.getElementById('calendar-container');
     const date = gameState.currentDate;
@@ -212,22 +292,14 @@ function updateCalendar() {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
 
-    let html = `
-        <div class="calendar-header">
-            <button onclick="changeMonth(-1)"><</button>
-            <h3>${date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3>
-            <button onclick="changeMonth(1)">></button>
-        </div>
-        <div class="calendar-grid">
-            <div class="calendar-weekday">Dom</div><div class="calendar-weekday">Seg</div><div class="calendar-weekday">Ter</div><div class="calendar-weekday">Qua</div><div class="calendar-weekday">Qui</div><div class="calendar-weekday">Sex</div><div class="calendar-weekday">Sáb</div>
-    `;
+    let html = `<div class="calendar-header"><h3>${date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3></div>
+                <div class="calendar-grid">
+                    <div class="calendar-weekday">Dom</div><div class="calendar-weekday">Seg</div><div class="calendar-weekday">Ter</div><div class="calendar-weekday">Qua</div><div class="calendar-weekday">Qui</div><div class="calendar-weekday">Sex</div><div class="calendar-weekday">Sáb</div>`;
 
-    // Dias em branco antes do primeiro dia do mês
     for (let i = 0; i < firstDay.getDay(); i++) {
         html += `<div class="calendar-day other-month"></div>`;
     }
 
-    // Dias do mês
     for (let i = 1; i <= lastDay.getDate(); i++) {
         const loopDate = new Date(year, month, i);
         const hasMatch = gameState.schedule.some(m => isSameDay(new Date(m.date), loopDate));
@@ -238,78 +310,112 @@ function updateCalendar() {
     container.innerHTML = html;
 }
 
-/** NOVO: Muda o mês do calendário */
-function changeMonth(direction) {
-    gameState.currentDate.setMonth(gameState.currentDate.getMonth() + direction);
-    updateCalendar();
-    updateContinueButton(); // Atualiza a data no header também
-}
+// --- Funções Auxiliares ---
 
-
-// --- Funções Auxiliares (NOVAS) ---
-
-/** NOVO: Encontra o próximo jogo agendado para o usuário */
 function findNextUserMatch() {
     gameState.nextUserMatch = gameState.schedule
         .filter(m => m.status === 'scheduled' && (m.home.name === gameState.userClub.name || m.away.name === gameState.userClub.name))
         .sort((a, b) => new Date(a.date) - new Date(b.date))[0] || null;
 }
 
-/** NOVO: Gera a estrutura inicial da tabela */
 function initializeLeagueTable(teams) {
     return teams.map(team => ({
-        name: team.name, logo: team.logo,
-        played: 0, wins: 0, draws: 0, losses: 0,
+        name: team.name, logo: team.logo, played: 0, wins: 0, draws: 0, losses: 0,
         goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0
     }));
 }
 
-/** NOVO: Gera o calendário completo da liga (algoritmo round-robin) */
 function generateSchedule(teams, leagueInfo) {
     const schedule = [];
-    let roundDate = new Date(leagueInfo.startDate + 'T12:00:00Z');
-    
-    // Para ter um número par de times
     let clubes = [...teams];
     if (clubes.length % 2 !== 0) {
-        clubes.push({ name: "BYE" }); // Time "fantasma" para folga
+        clubes.push({ name: "BYE" });
     }
     const numRounds = clubes.length - 1;
-
-    for (let round = 0; round < numRounds; round++) {
-        // Jogos de ida
-        for (let i = 0; i < clubes.length / 2; i++) {
-            const home = clubes[i];
-            const away = clubes[clubes.length - 1 - i];
+    const half = clubes.length / 2;
+    let roundDate = new Date(leagueInfo.startDate + 'T12:00:00Z');
+    
+    let allMatches = [];
+    for (let i = 0; i < numRounds; i++) {
+        for (let j = 0; j < half; j++) {
+            const home = clubes[j];
+            const away = clubes[clubes.length - 1 - j];
             if (home.name !== "BYE" && away.name !== "BYE") {
-                schedule.push({ home, away, date: roundDate.toISOString(), status: 'scheduled' });
+                allMatches.push({ home, away });
             }
         }
-        
-        // Gira os times, mantendo o primeiro fixo
         clubes.splice(1, 0, clubes.pop());
-        
-        // Avança a data para o próximo jogo
-        roundDate.setDate(roundDate.getDate() + (round % 2 === 0 ? 3 : 4)); // Alterna meio e fim de semana
     }
     
-    // Gera os jogos de volta (invertendo mando)
-    const returnGames = schedule.map(match => {
-        roundDate.setDate(roundDate.getDate() + (schedule.indexOf(match) % (clubes.length/2) === 0 ? 4 : 3) );
-        return { home: match.away, away: match.home, date: roundDate.toISOString(), status: 'scheduled' };
-    });
+    // Ida e volta
+    const numMatchesInSeason = allMatches.length;
+    for(let i=0; i<numMatchesInSeason; i++) {
+        let match;
+        if (i < numMatchesInSeason / 2) { // Jogos de ida
+            match = allMatches[i];
+        } else { // Jogos de volta
+            let returnMatch = allMatches[i - numMatchesInSeason / 2];
+            match = { home: returnMatch.away, away: returnMatch.home };
+        }
+        
+        schedule.push({ 
+            home: match.home, 
+            away: match.away, 
+            date: new Date(roundDate).toISOString(), 
+            status: 'scheduled' 
+        });
 
-    return [...schedule, ...returnGames].sort((a,b) => new Date(a.date) - new Date(b.date));
+        // Avança data da rodada
+        if ((i + 1) % half === 0) {
+            roundDate.setDate(roundDate.getDate() + (roundDate.getDay() === 6 ? 4 : 3)); // Avança para próxima rodada
+        }
+    }
+
+    return schedule.sort((a, b) => new Date(a.date) - new Date(b.date));
 }
 
-/** NOVO: Helper para verificar se duas datas são no mesmo dia */
 function isSameDay(date1, date2) {
     return date1.getFullYear() === date2.getFullYear() &&
            date1.getMonth() === date2.getMonth() &&
            date1.getDate() === date2.getDate();
 }
 
-// --- Inicialização ---
+
+// --- Central de Eventos ---
+
+function initializeEventListeners() {
+    // Tela de Criação de Treinador
+    document.getElementById('confirm-manager-name-btn').addEventListener('click', createManager);
+
+    // Tela Inicial
+    document.getElementById('go-to-new-club-btn').addEventListener('click', () => showScreen('new-club-screen'));
+    document.getElementById('go-to-select-league-btn').addEventListener('click', () => showScreen('select-league-screen'));
+
+    // Tela de Criação de Clube
+    document.getElementById('create-new-club-btn').addEventListener('click', createClub);
+    document.getElementById('new-club-back-btn').addEventListener('click', () => showScreen('start-screen'));
+    
+    // Telas de Seleção
+    document.getElementById('select-league-back-btn').addEventListener('click', () => showScreen('start-screen'));
+    document.getElementById('select-team-back-btn').addEventListener('click', () => showScreen('select-league-screen'));
+    
+    // Tela Principal
+    document.getElementById('advance-day-button').addEventListener('click', advanceDay);
+    document.getElementById('exit-game-btn').addEventListener('click', () => window.location.reload());
+
+    // Menu Lateral (Sidebar)
+    document.querySelectorAll('#sidebar li').forEach(item => {
+        item.addEventListener('click', () => showMainContent(item.dataset.content));
+    });
+
+    // Abas (Tabela/Calendário)
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', openTab);
+    });
+}
+
+// --- Inicialização do Jogo ---
 document.addEventListener('DOMContentLoaded', () => {
+    initializeEventListeners();
     loadLeagues();
 });
