@@ -35,6 +35,7 @@ button:hover { filter: brightness(1.1); }
 button.secondary { background-color: var(--bg-light); color: var(--text-primary); }
 button.icon-btn { padding: 8px 12px; font-size: 20px; line-height: 1; margin: 0 0 0 10px; }
 input[type="text"] { width: calc(100% - 24px); padding: 12px; margin-bottom: 20px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 16px; background-color: var(--bg-light); color: var(--text-primary); }
+input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent-color); }
 
 /* --- Cards de Seleção --- */
 .card-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; max-height: 400px; overflow-y: auto; }
@@ -63,8 +64,27 @@ input[type="text"] { width: calc(100% - 24px); padding: 12px; margin-bottom: 20p
 #player-list-table th { background-color: var(--bg-light); position: sticky; top: 0; }
 #player-list-table tr:hover { background-color: var(--bg-light); }
 
+/* --- ESTILOS RESTAURADOS: Tabela da Liga --- */
+#league-table-container { max-height: calc(100vh - 220px); overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; }
+#league-table-container table { width: 100%; border-collapse: collapse; }
+#league-table-container th, #league-table-container td { padding: 10px; text-align: center; border-bottom: 1px solid var(--border-color); }
+#league-table-container tr:last-child td { border-bottom: none; }
+#league-table-container th { background-color: var(--bg-light); text-align: center; position: sticky; top: 0; }
+#league-table-container td:nth-child(2) { text-align: left; }
+#league-table-container tr.user-team-row { font-weight: bold; color: var(--accent-color); background-color: rgba(61, 220, 151, 0.1); }
 
-/* --- TELA DE TÁTICAS (LAYOUT CORRIGIDO) --- */
+/* --- ESTILOS RESTAURADOS: Calendário --- */
+#calendar-container { background-color: var(--bg-dark); padding: 15px; border-radius: 8px; }
+.calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.calendar-day, .calendar-weekday { text-align: center; padding: 10px; border-radius: 4px; }
+.calendar-weekday { font-weight: bold; color: var(--text-secondary); }
+.calendar-day { background-color: var(--bg-light); }
+.calendar-day.other-month { opacity: 0.4; }
+.calendar-day.match-day { background-color: var(--accent-color); color: var(--bg-dark); font-weight: bold; }
+.calendar-day.current-day { border: 2px solid var(--text-primary); background-color: var(--bg-medium); }
+
+/* --- TELA DE TÁTICAS --- */
 .tactics-header { display: flex; justify-content: space-between; align-items: center; padding: 0 10px 20px 10px; flex-shrink: 0; }
 .tactic-main-selector { display: flex; flex-direction: column; }
 .tactic-main-selector label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
@@ -74,15 +94,8 @@ input[type="text"] { width: calc(100% - 24px); padding: 12px; margin-bottom: 20p
 .bar { width: 120px; height: 10px; background: var(--bg-dark); border-radius: 5px; }
 .bar-fill { height: 100%; background: var(--accent-color); border-radius: 5px; width: 75%; }
 
-/* CORREÇÃO AQUI: Usando grid com unidades flexíveis */
-.tactics-layout-container { 
-    display: grid; 
-    grid-template-columns: minmax(250px, 1.2fr) 3fr minmax(220px, 1fr);
-    gap: 20px; 
-    flex-grow: 1; /* Permite que o container cresça */
-    overflow: hidden; /* Garante que os filhos não estourem */
-    height: 100%;
-}
+/* CORREÇÃO AQUI: Layout do grid para ser flexível */
+.tactics-layout-container { display: grid; grid-template-columns: minmax(250px, 1.2fr) 3fr minmax(220px, 1fr); gap: 20px; flex-grow: 1; min-height: 0; }
 
 /* Coluna da Esquerda: Instruções */
 .tactics-instructions-column { background: var(--bg-dark); padding: 15px; border-radius: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
@@ -90,10 +103,11 @@ input[type="text"] { width: calc(100% - 24px); padding: 12px; margin-bottom: 20p
 .tactic-section label { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; display: block; }
 .tactic-section select { width: 100%; background-color: var(--bg-medium); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px; }
 .tactic-option { margin-bottom: 10px; }
+.tactic-option[for="tactic-offside-trap"] { display: flex; align-items: center; gap: 10px; }
 
 /* Coluna Central: Campo */
-.tactics-field-column { display: flex; align-items: center; justify-content: center; }
-#field-container { position: relative; width: 100%; max-width: 700px; /* Limite para não ficar gigante */ aspect-ratio: 7 / 5; background-color: var(--field-green); border-radius: 8px; border: 2px solid var(--bg-light); overflow: hidden; }
+.tactics-field-column { display: flex; align-items: center; justify-content: center; min-width: 0; }
+#field-container { position: relative; width: 100%; max-width: 700px; aspect-ratio: 7 / 5; background-color: var(--field-green); border-radius: 8px; border: 2px solid var(--bg-light); overflow: hidden; }
 .field-background { position: relative; width: 100%; height: 100%; cursor: pointer; }
 .field-background::before { content: ''; position: absolute; width: 2px; height: 100%; background-color: rgba(255, 255, 255, 0.2); left: 50%; transform: translateX(-50%); }
 .field-background::after { content: ''; position: absolute; width: 15%; aspect-ratio: 1 / 1; border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 50%; left: 50%; top: 50%; transform: translate(-50%, -50%); }
@@ -103,8 +117,6 @@ input[type="text"] { width: calc(100% - 24px); padding: 12px; margin-bottom: 20p
 .squad-list-container { background-color: var(--bg-dark); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
 .squad-list-container h4 { margin-bottom: 10px; font-size: 14px; text-transform: uppercase; color: var(--text-secondary); }
 .player-list { overflow-y: auto; display: flex; flex-direction: column; gap: 5px; cursor: pointer; height: 100%; }
-
-/* Itens nas listas de elenco */
 .squad-list-player { display: flex; align-items: center; justify-content: space-between; background: var(--bg-medium); padding: 8px; border-radius: 4px; cursor: pointer; }
 .squad-list-player:hover { background: var(--bg-light); }
 .squad-list-player.selected { outline: 2px solid var(--selected-color); }
@@ -122,51 +134,11 @@ input[type="text"] { width: calc(100% - 24px); padding: 12px; margin-bottom: 20p
 .player-chip .player-overall.penalty { color: var(--danger-color); }
 .player-chip .player-pos { color: var(--text-secondary); }
 
-/* --- MODAL DE CONFIGURAÇÕES (NOVO) --- */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    display: none; /* Escondido por padrão */
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-.modal-overlay.active {
-    display: flex; /* Mostra o modal */
-}
-.modal-content {
-    background-color: var(--bg-dark);
-    padding: 30px;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 500px;
-    position: relative;
-    border: 1px solid var(--border-color);
-}
-.modal-close-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 28px;
-    line-height: 1;
-}
-.settings-option {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 0;
-    border-bottom: 1px solid var(--border-color);
-}
-.settings-option:last-child {
-    border-bottom: none;
-}
-.settings-option span {
-    font-size: 18px;
-}
+/* --- MODAL DE CONFIGURAÇÕES --- */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
+.modal-overlay.active { display: flex; }
+.modal-content { background-color: var(--bg-dark); padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; position: relative; border: 1px solid var(--border-color); }
+.modal-close-btn { position: absolute; top: 10px; right: 10px; background: transparent; border: none; color: var(--text-secondary); font-size: 28px; line-height: 1; }
+.settings-option { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border-color); }
+.settings-option:last-child { border-bottom: none; }
+.settings-option span { font-size: 18px; }
