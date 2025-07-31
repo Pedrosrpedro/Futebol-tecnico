@@ -40,7 +40,25 @@ function startGame(team) { gameState.userClub = team; const leagueInfo = leagues
 function handleTacticsInteraction(e) { const clickedElement = e.target.closest('[data-player-id], .player-slot, .player-list'); if (!clickedElement) { clearSelection(); return; } const playerId = clickedElement.dataset.playerId; if (playerId) { const player = gameState.userClub.players.find(p => p.name === playerId); const sourceInfo = getPlayerLocation(player); if (selectedPlayerInfo) { if (selectedPlayerInfo.player.name === player.name) { clearSelection(); } else { swapPlayers(selectedPlayerInfo, sourceInfo); clearSelection(); } } else { selectPlayer(player, sourceInfo.type, sourceInfo.id); } } else if (selectedPlayerInfo) { let destInfo; if (clickedElement.classList.contains('player-slot')) { destInfo = { type: 'field', id: clickedElement.dataset.position }; } else if (clickedElement.closest('#substitutes-list')) { destInfo = { type: 'subs', id: 'substitutes-list' }; } else if (clickedElement.closest('#reserves-list')) { destInfo = { type: 'reserves', id: 'reserves-list' }; } if (destInfo) { movePlayer(selectedPlayerInfo, destInfo); clearSelection(); } } }
 function selectPlayer(player, sourceType, sourceId) { clearSelection(); selectedPlayerInfo = { player, sourceType, sourceId }; const element = document.querySelector(`[data-player-id="${player.name}"]`); if(element) element.classList.add('selected'); }
 function clearSelection() { if (selectedPlayerInfo) { const element = document.querySelector(`[data-player-id="${selectedPlayerInfo.player.name}"]`); if(element) element.classList.remove('selected'); } selectedPlayerInfo = null; }
-function getPlayerLocation(player) { for (const pos in gameState.squadManagement.startingXI) { if (gameState.squadManagement.startingXI[pos]?.name === player.name) { return { type: 'field', id: pos }; } } if (gameState.squadManagement.substitutes.some(p => p.name === player.name)) { return { type: 'subs', id: 'substitutes-list' }; } return { type: 'reserves', id: 'reserves-list' }; }
+// CÓDIGO CORRIGIDO
+
+function getPlayerLocation(player) {
+    for (const pos in gameState.squadManagement.startingXI) {
+        // Verifica se o jogador está na escalação inicial
+        if (gameState.squadManagement.startingXI[pos]?.name === player.name) {
+            // Retorna a localização e o objeto do jogador
+            return { player: player, type: 'field', id: pos };
+        }
+    }
+    // Verifica se o jogador está no banco de substitutos
+    if (gameState.squadManagement.substitutes.some(p => p.name === player.name)) {
+        // Retorna a localização e o objeto do jogador
+        return { player: player, type: 'subs', id: 'substitutes-list' };
+    }
+    // Se não estiver em nenhum dos lugares acima, está nos reservas
+    // Retorna a localização e o objeto do jogador
+    return { player: player, type: 'reserves', id: 'reserves-list' };
+}
 function removePlayerFromSource(playerInfo) { if (playerInfo.sourceType === 'field') { delete gameState.squadManagement.startingXI[playerInfo.sourceId]; } else if (playerInfo.sourceType === 'subs') { gameState.squadManagement.substitutes = gameState.squadManagement.substitutes.filter(p => p.name !== playerInfo.player.name); } else { gameState.squadManagement.reserves = gameState.squadManagement.reserves.filter(p => p.name !== playerInfo.player.name); } }
 function addPlayerToDest(player, destInfo) { if (destInfo.type === 'field') { gameState.squadManagement.startingXI[destInfo.id] = player; } else if (destInfo.type === 'subs') { gameState.squadManagement.substitutes.push(player); } else { gameState.squadManagement.reserves.push(player); } }
 function movePlayer(playerInfo, destInfo) { if (destInfo.type === 'subs' && gameState.squadManagement.substitutes.length >= MAX_SUBSTITUTES) { alert(`O banco de reservas está cheio! (Máx. ${MAX_SUBSTITUTES})`); return; } removePlayerFromSource(playerInfo); addPlayerToDest(playerInfo.player, destInfo); loadTacticsScreen(); }
