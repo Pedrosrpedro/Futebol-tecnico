@@ -39,6 +39,8 @@ function startGame(team) { gameState.userClub = team; const leagueInfo = leagues
 // Lógica de Táticas (Seleção e Movimentação)
 // SUBSTITUA A FUNÇÃO ANTIGA POR ESTA
 
+// SUBSTITUA A FUNÇÃO ANTIGA POR ESTA
+
 function handleTacticsInteraction(e) {
     const clickedElement = e.target.closest('[data-player-id], .player-slot, .player-list');
     if (!clickedElement) {
@@ -78,7 +80,7 @@ function handleTacticsInteraction(e) {
             clearSelection();
         }
     }
-}
+} // <--- ESTE PARÊNTESE ESTAVA EM FALTA
 function selectPlayer(player, sourceType, sourceId) { clearSelection(); selectedPlayerInfo = { player, sourceType, sourceId }; const element = document.querySelector(`[data-player-id="${player.name}"]`); if(element) element.classList.add('selected'); }
 function clearSelection() { if (selectedPlayerInfo) { const element = document.querySelector(`[data-player-id="${selectedPlayerInfo.player.name}"]`); if(element) element.classList.remove('selected'); } selectedPlayerInfo = null; }
 function getPlayerLocation(player) { for (const pos in gameState.squadManagement.startingXI) { if (gameState.squadManagement.startingXI[pos]?.name === player.name) { return { player, type: 'field', id: pos }; } } if (gameState.squadManagement.substitutes.some(p => p.name === player.name)) { return { player, type: 'subs', id: 'substitutes-list' }; } return { player, type: 'reserves', id: 'reserves-list' }; }
