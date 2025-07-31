@@ -91,68 +91,121 @@
                     <div id="player-list-table"></div>
                 </div>
 
-                <!-- PAINEL DE TÁTICAS (TOTALMENTE REFEITO) -->
+                <!-- PAINEL DE TÁTICAS (TOTALMENTE REFEITO PARA FICAR DENTRO DA SEÇÃO CORRETA) -->
                 <div id="tactics-content" class="main-content-panel">
+                    <div class="tactics-header">
+                        <div class="tactic-main-selector">
+                             <label for="tactic-formation">FORMAÇÃO</label>
+                             <select id="tactic-formation">
+                                <option value="4-4-2">4-4-2</option>
+                                <option value="4-3-3">4-3-3</option>
+                                <option value="3-5-2">3-5-2</option>
+                                <option value="4-2-3-1" selected>4-2-3-1</option>
+                            </select>
+                        </div>
+                        <div class="tactic-header-bars">
+                            <span>FAMILIARIDADE</span> <div class="bar"><div class="bar-fill familiarity"></div></div>
+                            <span>INTENSIDADE</span> <div class="bar"><div class="bar-fill intensity"></div></div>
+                        </div>
+                    </div>
                     <div class="tactics-layout-container">
-                        <!-- Coluna Esquerda: Campo e Formação -->
-                        <div class="tactics-field-column">
-                            <h3>Plano de Jogo</h3>
-                            <div class="tactic-option" style="width: 50%;">
-                                <label for="tactic-formation">Formação:</label>
-                                <select id="tactic-formation">
-                                    <option value="4-4-2">4-4-2</option>
-                                    <option value="4-3-3">4-3-3</option>
-                                    <option value="3-5-2">3-5-2</option>
-                                    <option value="4-2-3-1" selected>4-2-3-1</option>
+                        <!-- Coluna Esquerda: Instruções Táticas -->
+                        <div class="tactics-instructions-column">
+                            <div class="tactic-section">
+                                <label for="tactic-mentality">Mentalidade</label>
+                                <select id="tactic-mentality">
+                                    <option value="very_defensive">Muito Defensiva</option>
+                                    <option value="defensive">Defensiva</option>
+                                    <option value="balanced" selected>Equilibrada</option>
+                                    <option value="attacking">Ofensiva</option>
+                                    <option value="very_attacking">Muito Ofensiva</option>
                                 </select>
                             </div>
-                            <div id="field-container">
-                                <div class="field-background drop-zone">
-                                    <!-- Os slots dos jogadores serão inseridos aqui pelo JS -->
+
+                            <div class="tactic-section">
+                                <h4>COM POSSE DE BOLA</h4>
+                                <div class="tactic-option">
+                                    <label>Construção</label>
+                                    <select id="tactic-build-up">
+                                        <option value="play_out_defence">Sair Jogando</option>
+                                        <option value="pass_into_space">Passe em Profundidade</option>
+                                    </select>
+                                </div>
+                                <div class="tactic-option">
+                                    <label>Tipo de Passe</label>
+                                    <select id="tactic-passing-style">
+                                        <option value="shorter">Mais Curtos</option>
+                                        <option value="mixed">Misto</option>
+                                        <option value="longer">Mais Longos</option>
+                                    </select>
+                                </div>
+                                 <div class="tactic-option">
+                                    <label>Ritmo</label>
+                                    <select id="tactic-tempo">
+                                        <option value="slower">Mais Lento</option>
+                                        <option value="normal">Normal</option>
+                                        <option value="higher">Mais Rápido</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="tactic-section">
+                                <h4>EM TRANSIÇÃO</h4>
+                                 <div class="tactic-option">
+                                    <label>Ao Perder a Bola</label>
+                                    <select id="tactic-on-possession-loss">
+                                        <option value="counter_press">Contra-Pressionar</option>
+                                        <option value="regroup">Recompor</option>
+                                    </select>
+                                </div>
+                                <div class="tactic-option">
+                                    <label>Ao Recuperar a Bola</label>
+                                    <select id="tactic-on-possession-gain">
+                                        <option value="counter">Contra-Atacar</option>
+                                        <option value="hold_shape">Manter a Forma</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="tactic-section">
+                                <h4>SEM POSSE DE BOLA</h4>
+                                <div class="tactic-option">
+                                    <label>Linha de Marcação</label>
+                                    <select id="tactic-line-of-engagement">
+                                        <option value="low_block">Bloco Baixo</option>
+                                        <option value="mid_block">Bloco Médio</option>
+                                        <option value="high_press">Pressão Alta</option>
+                                    </select>
+                                </div>
+                                <div class="tactic-option">
+                                    <label>Linha Defensiva</label>
+                                    <select id="tactic-defensive-line">
+                                        <option value="deeper">Mais Recuada</option>
+                                        <option value="standard">Padrão</option>
+                                        <option value="higher">Mais Alta</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Coluna Direita: Gerenciamento e Instruções -->
-                        <div class="tactics-squad-column">
-                            <!-- Instruções Táticas -->
-                            <div class="tactics-instructions-panel">
-                                <h4>Instruções Táticas</h4>
-                                <div class="tactic-option">
-                                    <label for="tactic-offensive-style">Estilo Ofensivo:</label>
-                                    <select id="tactic-offensive-style">
-                                        <option value="possession">Posse de Bola</option>
-                                        <option value="counter_attack">Contra-Ataque Rápido</option>
-                                        <option value="long_ball">Lançamentos Longos</option>
-                                    </select>
-                                </div>
-                                <div class="tactic-option">
-                                    <label for="tactic-defensive-style">Estilo Defensivo:</label>
-                                    <select id="tactic-defensive-style">
-                                        <option value="press_on_error">Pressão no Erro do Adv.</option>
-                                        <option value="press_after_loss">Pressionar Pós-Perda</option>
-                                        <option value="balanced">Equilibrado</option>
-                                        <option value="deep_block">Bloco Baixo Recuado</option>
-                                    </select>
-                                </div>
-                                 <div class="tactic-option">
-                                    <label for="tactic-defensive-line">Altura da Linha Defensiva:</label>
-                                    <input type="range" id="tactic-defensive-line" min="10" max="90" value="50">
-                                </div>
-                                 <div class="tactic-option">
-                                    <label for="tactic-pressure-intensity">Intensidade da Pressão:</label>
-                                    <input type="range" id="tactic-pressure-intensity" min="10" max="100" value="60">
+                        <!-- Coluna Central: Campo -->
+                        <div class="tactics-field-column">
+                             <div id="field-container">
+                                <div class="field-background">
+                                    <!-- Slots dos jogadores -->
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Gerenciamento do Elenco -->
+                        <!-- Coluna Direita: Elenco -->
+                        <div class="tactics-squad-column">
                             <div class="squad-list-container">
-                                <h4>Banco de Reservas (<span id="subs-count">0</span>/7)</h4>
-                                <div id="substitutes-list" class="player-list drop-zone"></div>
+                                <h4>BANCO (<span id="subs-count">0</span>/7)</h4>
+                                <div id="substitutes-list" class="player-list"></div>
                             </div>
                             <div class="squad-list-container">
-                                <h4>Não Relacionados</h4>
-                                <div id="reserves-list" class="player-list drop-zone"></div>
+                                <h4>RESERVAS</h4>
+                                <div id="reserves-list" class="player-list"></div>
                             </div>
                         </div>
                     </div>
