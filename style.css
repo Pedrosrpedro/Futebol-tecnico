@@ -69,6 +69,8 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent-c
 /* --- Calendário --- */
 #calendar-container { background-color: var(--bg-dark); padding: 15px; border-radius: 8px; }
 .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.calendar-header h3 { margin: 0; }
+.calendar-header button { padding: 5px 10px; font-size: 18px; margin: 0; }
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
 .calendar-day, .calendar-weekday { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; padding: 8px 4px; border-radius: 4px; min-height: 70px; }
 .calendar-weekday { font-weight: bold; color: var(--text-secondary); min-height: auto; }
