@@ -37,7 +37,7 @@
             </nav>
             <main id="main-content">
                 <div id="home-content" class="main-content-panel active"><h3>Página Inicial</h3><p>Bem-vindo ao seu clube!</p></div>
-                <div id="squad-content" class="main-content-panel"><h3>Elenco Principal</h3><div id="player-list-table"></div></div>
+                <div id="squad-content" class="main-content-panel"><h3>Elenco Principal</h3><div id="player-list-table" class="table-container"></div></div>
                 <div id="tactics-content" class="main-content-panel">
                     <div class="tactics-header">
                         <div class="tactic-main-selector"><label for="tactic-formation">FORMAÇÃO</label><select id="tactic-formation"><option value="4-4-2">4-4-2</option><option value="4-3-3">4-3-3</option><option value="3-5-2">3-5-2</option><option value="4-2-3-1" selected>4-2-3-1</option></select></div>
@@ -48,25 +48,9 @@
                         <div class="tactics-instructions-column" data-panel-id="instructions">
                             <button class="panel-toggle-btn close-panel-btn" data-panel="instructions">◄</button>
                             <div class="tactic-section"><label for="tactic-mentality">Mentalidade</label><select id="tactic-mentality"><option value="very_defensive">Muito Defensiva</option><option value="defensive">Defensiva</option><option value="balanced" selected>Equilibrada</option><option value="attacking">Ofensiva</option><option value="very_attacking">Muito Ofensiva</option></select></div>
-                            <div class="tactic-section">
-                                <h4>COM POSSE DE BOLA</h4>
-                                <div class="tactic-option"><label>Amplitude Ofensiva</label><select id="tactic-attacking-width"><option value="narrow">Pelas Faixas Centrais</option><option value="normal">Equilibrada</option><option value="wide">Abrir nas Pontas</option></select></div>
-                                <div class="tactic-option"><label>Construção</label><select id="tactic-build-up"><option value="play_out_defence">Sair Jogando da Defesa</option><option value="pass_into_space">Passe em Profundidade</option><option value="long_ball">Bola Longa</option></select></div>
-                                <div class="tactic-option"><label>Criação de Oportunidades</label><select id="tactic-chance-creation"><option value="crosses">Cruzamentos</option><option value="through_balls">Furar a Defesa</option><option value="work_into_box">Trabalhar a Bola na Área</option></select></div>
-                                <div class="tactic-option"><label>Ritmo</label><select id="tactic-tempo"><option value="slower">Mais Lento</option><option value="normal">Normal</option><option value="higher">Mais Rápido</option></select></div>
-                            </div>
-                            <div class="tactic-section">
-                                <h4>EM TRANSIÇÃO</h4>
-                                <div class="tactic-option"><label>Ao Perder a Bola</label><select id="tactic-on-possession-loss"><option value="counter_press">Contra-Pressionar</option><option value="regroup">Recompor</option></select></div>
-                                <div class="tactic-option"><label>Ao Recuperar a Bola</label><select id="tactic-on-possession-gain"><option value="counter">Contra-Atacar</option><option value="hold_shape">Manter a Forma</option></select></div>
-                            </div>
-                            <div class="tactic-section">
-                                <h4>SEM POSSE DE BOLA</h4>
-                                <div class="tactic-option"><label>Linha de Marcação</label><select id="tactic-line-of-engagement"><option value="low_block">Bloco Baixo</option><option value="mid_block">Bloco Médio</option><option value="high_press">Pressão Alta</option></select></div>
-                                <div class="tactic-option"><label>Linha Defensiva</label><select id="tactic-defensive-line"><option value="deeper">Mais Recuada</option><option value="standard">Padrão</option><option value="higher">Mais Alta</option></select></div>
-                                <div class="tactic-option"><label>Desarmes</label><select id="tactic-tackling"><option value="stay_on_feet">Manter a Posição</option><option value="more_aggressive">Ser Mais Agressivo</option></select></div>
-                                <div class="tactic-option" for="tactic-offside-trap"><label>Usar Linha de Impedimento</label><input type="checkbox" id="tactic-offside-trap"></div>
-                            </div>
+                            <div class="tactic-section"><h4>COM POSSE DE BOLA</h4><div class="tactic-option"><label>Amplitude Ofensiva</label><select id="tactic-attacking-width"><option value="narrow">Pelas Faixas Centrais</option><option value="normal">Equilibrada</option><option value="wide">Abrir nas Pontas</option></select></div><div class="tactic-option"><label>Construção</label><select id="tactic-build-up"><option value="play_out_defence">Sair Jogando da Defesa</option><option value="pass_into_space">Passe em Profundidade</option><option value="long_ball">Bola Longa</option></select></div><div class="tactic-option"><label>Criação de Oportunidades</label><select id="tactic-chance-creation"><option value="crosses">Cruzamentos</option><option value="through_balls">Furar a Defesa</option><option value="work_into_box">Trabalhar a Bola na Área</option></select></div><div class="tactic-option"><label>Ritmo</label><select id="tactic-tempo"><option value="slower">Mais Lento</option><option value="normal">Normal</option><option value="higher">Mais Rápido</option></select></div></div>
+                            <div class="tactic-section"><h4>EM TRANSIÇÃO</h4><div class="tactic-option"><label>Ao Perder a Bola</label><select id="tactic-on-possession-loss"><option value="counter_press">Contra-Pressionar</option><option value="regroup">Recompor</option></select></div><div class="tactic-option"><label>Ao Recuperar a Bola</label><select id="tactic-on-possession-gain"><option value="counter">Contra-Atacar</option><option value="hold_shape">Manter a Forma</option></select></div></div>
+                            <div class="tactic-section"><h4>SEM POSSE DE BOLA</h4><div class="tactic-option"><label>Linha de Marcação</label><select id="tactic-line-of-engagement"><option value="low_block">Bloco Baixo</option><option value="mid_block">Bloco Médio</option><option value="high_press">Pressão Alta</option></select></div><div class="tactic-option"><label>Linha Defensiva</label><select id="tactic-defensive-line"><option value="deeper">Mais Recuada</option><option value="standard">Padrão</option><option value="higher">Mais Alta</option></select></div><div class="tactic-option"><label>Desarmes</label><select id="tactic-tackling"><option value="stay_on_feet">Manter a Posição</option><option value="more_aggressive">Ser Mais Agressivo</option></select></div><div class="tactic-option" for="tactic-offside-trap"><label>Usar Linha de Impedimento</label><input type="checkbox" id="tactic-offside-trap"></div></div>
                         </div>
                         <div class="tactics-field-column"><div id="field-container"><div class="field-background"></div></div></div>
                         <div class="tactics-squad-column" data-panel-id="squad">
@@ -77,7 +61,7 @@
                         <button class="panel-toggle-btn open-squad-btn" data-panel="squad">☰</button>
                     </div>
                 </div>
-                <div id="league-content" class="main-content-panel"><h3>Tabela de Classificação</h3><div id="league-table-container"></div></div>
+                <div id="league-content" class="main-content-panel"><h3>Tabela de Classificação</h3><div id="league-table-container" class="table-container"></div></div>
                 <div id="calendar-content" class="main-content-panel"><h3>Calendário da Temporada</h3><div id="calendar-container"></div></div>
                 <div id="stadium-content" class="main-content-panel"><h3>Editor de Estádio</h3><p>Recurso em desenvolvimento.</p></div>
                 <div id="match-content" class="main-content-panel"><h3>Próxima Partida</h3><div id="match-simulation"><p>A simulação da partida em texto aparecerá aqui.</p></div></div>
