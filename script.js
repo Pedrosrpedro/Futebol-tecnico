@@ -3,7 +3,7 @@ const gameState = {
     managerName: null, userClub: null, currentLeagueId: null, currentDate: null, leagueTable: [],
     schedule: [], nextUserMatch: null, currentScreen: 'manager-creation-screen', currentMainContent: 'home-content',
     calendarDisplayDate: null, // Para navegação no calendário
-    currentRoundView: 1, // NOVO: Para a página de jogos
+    currentRoundView: 1, // Para a página de jogos
     tactics: {
         formation: '4-2-3-1', mentality: 'balanced', attackingWidth: 'normal',
         buildUp: 'play_out_defence', chanceCreation: 'mixed', tempo: 'normal',
@@ -56,7 +56,76 @@ function createManager() { const nameInput = document.getElementById('manager-na
 function loadLeagues() { const leagueSelectionDiv = document.getElementById('league-selection'); leagueSelectionDiv.innerHTML = ''; for (const leagueId in leaguesData) { const league = leaguesData[leagueId]; const leagueCard = document.createElement('div'); leagueCard.className = 'league-card'; leagueCard.innerHTML = `<img src="images/${league.logo}" alt="${league.name}"><span>${league.name}</span>`; leagueCard.addEventListener('click', () => loadTeams(leagueId)); leagueSelectionDiv.appendChild(leagueCard); } }
 function loadTeams(leagueId) { gameState.currentLeagueId = leagueId; const teamSelectionDiv = document.getElementById('team-selection'); teamSelectionDiv.innerHTML = ''; const teams = leaguesData[leagueId].teams; for (const team of teams) { const teamCard = document.createElement('div'); teamCard.className = 'team-card'; teamCard.innerHTML = `<img src="images/${team.logo}" alt="${team.name}"><span>${team.name}</span>`; teamCard.addEventListener('click', () => startGame(team)); teamSelectionDiv.appendChild(teamCard); } showScreen('select-team-screen'); }
 function createClub() { const clubName = document.getElementById('club-name-input').value; if (!clubName) { alert("Por favor, preencha o nome do clube."); return; } gameState.currentLeagueId = Object.keys(leaguesData)[0]; const generatedPlayers = []; for (let i = 0; i < 22; i++) { generatedPlayers.push({ name: `*Jogador Gerado ${i + 1}`, position: "CM", attributes: { pace: 55, shooting: 55, passing: 55, dribbling: 55, defending: 55, physical: 55 }, overall: 55 }); } const newClub = { name: clubName, logo: 'logo_default.png', players: generatedPlayers }; startGame(newClub); }
-function startGame(team) { gameState.userClub = team; const leagueInfo = leaguesData[gameState.currentLeagueId].leagueInfo; const teams = leaguesData[gameState.currentLeagueId].teams; gameState.squadManagement.reserves = [...gameState.userClub.players]; gameState.squadManagement.startingXI = {}; gameState.squadManagement.substitutes = []; gameState.currentDate = new Date(leagueInfo.startDate + 'T12:00:00'); gameState.schedule = generateSchedule(teams, leagueInfo); gameState.leagueTable = initializeLeagueTable(teams); findNextUserMatch(); document.getElementById('header-manager-name').innerText = gameState.managerName; document.getElementById('header-club-name').innerText = gameState.userClub.name; document.getElementById('header-club-logo').src = `images/${gameState.userClub.logo}`; loadSquadTable(); updateLeagueTable(); updateContinueButton(); showScreen('main-game-screen'); showMainContent('home-content'); }
+
+// ATUALIZADO: Função startGame para usar a auto-população
+function startGame(team) {
+    gameState.userClub = team;
+    const leagueInfo = leaguesData[gameState.currentLeagueId].leagueInfo;
+    const teams = leaguesData[gameState.currentLeagueId].teams;
+
+    // NOVO: Popula automaticamente a escalação inicial e o banco
+    const { startingXI, substitutes, reserves } = autoPopulateSquad(gameState.userClub.players, gameState.tactics.formation);
+    gameState.squadManagement.startingXI = startingXI;
+    gameState.squadManagement.substitutes = substitutes;
+    gameState.squadManagement.reserves = reserves;
+
+    gameState.currentDate = new Date(leagueInfo.startDate + 'T12:00:00');
+    gameState.schedule = generateSchedule(teams, leagueInfo);
+    gameState.leagueTable = initializeLeagueTable(teams);
+    findNextUserMatch();
+
+    document.getElementById('header-manager-name').innerText = gameState.managerName;
+    document.getElementById('header-club-name').innerText = gameState.userClub.name;
+    document.getElementById('header-club-logo').src = `images/${gameState.userClub.logo}`;
+
+    loadSquadTable();
+    updateLeagueTable();
+    updateContinueButton();
+    showScreen('main-game-screen');
+    showMainContent('home-content');
+}
+
+// NOVO: Função para popular a escalação inicial e o banco automaticamente
+function autoPopulateSquad(allPlayers, formation) {
+    let availablePlayers = [...allPlayers];
+    const startingXI = {};
+    const formationPositions = Object.keys(formationLayouts[formation]);
+
+    // 1. Escolhe os titulares
+    for (const position of formationPositions) {
+        let bestPlayerForPosition = null;
+        let highestScore = -1;
+        let bestPlayerIndex = -1;
+
+        // Procura o melhor jogador disponível para a posição específica
+        availablePlayers.forEach((player, index) => {
+            const score = calculateModifiedOverall(player, position);
+            if (score > highestScore) {
+                highestScore = score;
+                bestPlayerForPosition = player;
+                bestPlayerIndex = index;
+            }
+        });
+
+        // Adiciona o melhor jogador encontrado ao time titular e o remove da lista de disponíveis
+        if (bestPlayerForPosition) {
+            startingXI[position] = bestPlayerForPosition;
+            availablePlayers.splice(bestPlayerIndex, 1);
+        }
+    }
+
+    // Ordena os jogadores restantes pelo overall para preencher o banco
+    availablePlayers.sort((a, b) => b.overall - a.overall);
+
+    // 2. Escolhe os 7 melhores restantes para o banco
+    const substitutes = availablePlayers.slice(0, MAX_SUBSTITUTES);
+
+    // 3. O resto vai para os reservas
+    const reserves = availablePlayers.slice(MAX_SUBSTITUTES);
+
+    return { startingXI, substitutes, reserves };
+}
+
 
 // --- Lógica de Táticas ---
 function handleTacticsInteraction(e) {
@@ -147,22 +216,13 @@ function updateCalendar() {
     document.getElementById('next-month-btn').addEventListener('click', () => { gameState.calendarDisplayDate.setMonth(gameState.calendarDisplayDate.getMonth() + 1); updateCalendar(); });
 }
 
-// NOVO: Funções para a página de Jogos
 function loadMatchesPage() {
     const selector = document.getElementById('competition-selector');
     selector.innerHTML = '';
-    // Lógica para adicionar competições (por enquanto, apenas a atual)
     const currentLeague = leaguesData[gameState.currentLeagueId];
-    const option = document.createElement('option');
-    option.value = gameState.currentLeagueId;
-    option.innerText = currentLeague.name;
-    option.selected = true;
     selector.innerHTML = `<option value="${gameState.currentLeagueId}" selected>${currentLeague.name}</option>`;
-    
-    // Configura os listeners dos botões de navegação
     document.getElementById('prev-round-btn').onclick = () => { if (gameState.currentRoundView > 1) { gameState.currentRoundView--; displayRound(gameState.currentRoundView); } };
     document.getElementById('next-round-btn').onclick = () => { if (gameState.currentRoundView < 38) { gameState.currentRoundView++; displayRound(gameState.currentRoundView); } };
-
     displayRound(gameState.currentRoundView);
 }
 
@@ -173,33 +233,17 @@ function displayRound(roundNumber) {
     const nextBtn = document.getElementById('next-round-btn');
     
     const matchesPerRound = leaguesData[gameState.currentLeagueId].teams.length / 2;
-    const startIndex = (roundNumber - 1) * matchesPerRound;
-    const endIndex = startIndex + matchesPerRound;
-    const roundMatches = gameState.schedule.slice(startIndex, endIndex);
+    const roundMatches = gameState.schedule.filter(match => match.round === roundNumber);
 
     roundDisplay.innerText = `Rodada ${roundNumber}`;
-    container.innerHTML = ''; // Limpa o container
+    container.innerHTML = '';
     
     let roundHTML = '';
     for (const match of roundMatches) {
         const score = match.status === 'played' ? `${match.homeScore} - ${match.awayScore}` : 'vs';
-        roundHTML += `
-            <div class="match-card">
-                <div class="match-card-team home">
-                    <span>${match.home.name}</span>
-                    <img src="images/${match.home.logo}" alt="${match.home.name}">
-                </div>
-                <div class="match-score">${score}</div>
-                <div class="match-card-team away">
-                    <img src="images/${match.away.logo}" alt="${match.away.name}">
-                    <span>${match.away.name}</span>
-                </div>
-            </div>
-        `;
+        roundHTML += `<div class="match-card"><div class="match-card-team home"><span>${match.home.name}</span><img src="images/${match.home.logo}" alt="${match.home.name}"></div><div class="match-score">${score}</div><div class="match-card-team away"><img src="images/${match.away.logo}" alt="${match.away.name}"><span>${match.away.name}</span></div></div>`;
     }
     container.innerHTML = roundHTML;
-
-    // Habilita/desabilita botões
     prevBtn.disabled = roundNumber === 1;
     nextBtn.disabled = roundNumber === (leaguesData[gameState.currentLeagueId].teams.length - 1) * 2;
 }
@@ -211,7 +255,6 @@ function simulateDayMatches() { const todayMatches = gameState.schedule.filter(m
 function findNextUserMatch() { gameState.nextUserMatch = gameState.schedule .filter(m => m.status === 'scheduled' && (m.home.name === gameState.userClub.name || m.away.name === gameState.userClub.name)) .sort((a, b) => new Date(a.date) - new Date(b.date))[0] || null; }
 function initializeLeagueTable(teams) { return teams.map(team => ({ name: team.name, logo: team.logo, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 })); }
 
-// CORRIGIDO: Algoritmo de geração de calendário (Round-robin / Berger)
 function generateSchedule(teams, leagueInfo) {
     let clubes = [...teams];
     if (clubes.length % 2 !== 0) {
@@ -228,7 +271,6 @@ function generateSchedule(teams, leagueInfo) {
             const home = clubes[i];
             const away = clubes[numTeams - 1 - i];
             if (home.name !== "BYE" && away.name !== "BYE") {
-                // Alterna mando de campo para o primeiro time não ficar sempre em casa/fora
                 if (round % 2 === 0) {
                     roundMatches.push({ home, away });
                 } else {
@@ -237,7 +279,6 @@ function generateSchedule(teams, leagueInfo) {
             }
         }
         firstHalf.push(...roundMatches);
-        // Rotaciona os times, mantendo o primeiro fixo
         clubes.splice(1, 0, clubes.pop());
     }
 
@@ -245,7 +286,7 @@ function generateSchedule(teams, leagueInfo) {
     const allMatches = [...firstHalf, ...secondHalf];
     const schedule = [];
     let currentRoundDate = new Date(leagueInfo.startDate + 'T12:00:00Z');
-    let dateIncrement = 4; // Sábado -> Quarta
+    let dateIncrement = 4;
 
     for (let i = 0; i < allMatches.length; i += matchesPerRound) {
         const roundFixtures = allMatches.slice(i, i + matchesPerRound);
@@ -253,9 +294,8 @@ function generateSchedule(teams, leagueInfo) {
             schedule.push({ ...match, date: new Date(currentRoundDate).toISOString(), status: 'scheduled' });
         }
         currentRoundDate.setDate(currentRoundDate.getDate() + dateIncrement);
-        dateIncrement = 7 - dateIncrement; // Alterna 4 e 3 dias
+        dateIncrement = 7 - dateIncrement;
     }
-    // Associa cada partida a um número de rodada
     return schedule.map((match, index) => ({
         ...match,
         round: Math.floor(index / matchesPerRound) + 1
@@ -287,7 +327,18 @@ function initializeEventListeners() {
             e.stopPropagation();
             const tacticKey = e.target.id.replace('tactic-', '').replace(/-([a-z])/g, g => g[1].toUpperCase());
             if (e.target.type === 'checkbox') { gameState.tactics[tacticKey] = e.target.checked; } else { gameState.tactics[tacticKey] = e.target.value; }
-            if (tacticKey === 'formation') { Object.values(gameState.squadManagement.startingXI).forEach(player => { if(player) gameState.squadManagement.reserves.push(player); }); gameState.squadManagement.startingXI = {}; }
+            if (tacticKey === 'formation') {
+                 // Ao mudar de formação, reagrupa todos e remonta a escalação
+                const allPlayers = [
+                    ...Object.values(gameState.squadManagement.startingXI),
+                    ...gameState.squadManagement.substitutes,
+                    ...gameState.squadManagement.reserves
+                ];
+                const { startingXI, substitutes, reserves } = autoPopulateSquad(allPlayers, gameState.tactics.formation);
+                gameState.squadManagement.startingXI = startingXI;
+                gameState.squadManagement.substitutes = substitutes;
+                gameState.squadManagement.reserves = reserves;
+            }
             loadTacticsScreen();
         });
     });
@@ -302,4 +353,4 @@ function initializeEventListeners() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => { initializeEventListeners(); loadLeagues(); });
+document.addEventListener('DOMContentLoaded', () => { initializeEventListeners(); loadLeagues(); });```
