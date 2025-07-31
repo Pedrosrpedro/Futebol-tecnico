@@ -110,6 +110,8 @@ function generateSchedule(teams, leagueInfo) { let clubes = [...teams]; if (club
 function isSameDay(date1, date2) { return date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth() && date1.getDate() === date2.getDate(); }
 
 // Event Listeners
+// SUBSTITUA TODA A SUA FUNÇÃO 'initializeEventListeners' POR ESTA:
+
 function initializeEventListeners() {
     document.getElementById('confirm-manager-name-btn').addEventListener('click', createManager);
     document.getElementById('go-to-new-club-btn').addEventListener('click', () => showScreen('new-club-screen'));
@@ -121,22 +123,46 @@ function initializeEventListeners() {
     document.getElementById('advance-day-button').addEventListener('click', advanceDay);
     document.getElementById('exit-game-btn').addEventListener('click', () => window.location.reload());
     
-    document.querySelectorAll('#sidebar li').forEach(item => { item.addEventListener('click', () => showMainContent(item.dataset.content)); });
+    document.querySelectorAll('#sidebar li').forEach(item => {
+        item.addEventListener('click', () => showMainContent(item.dataset.content));
+    });
 
     document.getElementById('settings-btn').addEventListener('click', openSettingsModal);
     document.getElementById('close-modal-btn').addEventListener('click', closeSettingsModal);
     document.getElementById('fullscreen-btn').addEventListener('click', toggleFullScreen);
-    document.getElementById('settings-modal').addEventListener('click', (e) => { if (e.target.id === 'settings-modal') { closeSettingsModal(); } });
+    document.getElementById('settings-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'settings-modal') {
+            closeSettingsModal();
+        }
+    });
 
     const tacticsContent = document.getElementById('tactics-content');
-    if (tacticsContent) { tacticsContent.addEventListener('click', handleTacticsInteraction); }
+    if (tacticsContent) {
+        tacticsContent.addEventListener('click', handleTacticsInteraction);
+    }
     
     document.querySelectorAll('#tactics-content select, #tactics-content input[type="checkbox"]').forEach(element => {
         element.addEventListener('change', (e) => {
             e.stopPropagation(); 
             const tacticKey = e.target.id.replace('tactic-', '').replace(/-([a-z])/g, g => g[1].toUpperCase());
-            if (e.target.type === 'checkbox') { gameState.tactics[tacticKey] = e.target.checked; } else { gameState.tactics[tacticKey] = e.target.value; }
-            if (tacticKey === 'formation') { Object.values(gameState.squadManagement.startingXI).forEach(player => { if(player) gameState.squadManagement.reserves.push(player); }); gameState.squadManagement.startingXI = {}; }
+
+            if (e.target.type === 'checkbox') {
+                gameState.tactics[tacticKey] = e.target.checked;
+            } else {
+                gameState.tactics[tacticKey] = e.target.value;
+            }
+
+            if (tacticKey === 'formation') {
+                // CORREÇÃO APLICADA AQUI:
+                // Move todos os jogadores dos titulares para as reservas
+                Object.values(gameState.squadManagement.startingXI).forEach(player => {
+                    if(player) {
+                        gameState.squadManagement.reserves.push(player);
+                    }
+                });
+                // Limpa os titulares
+                gameState.squadManagement.startingXI = {};
+            }
             loadTacticsScreen();
         });
     });
