@@ -31,8 +31,8 @@
                     <li data-content="tactics-content">Táticas</li>
                     <li data-content="league-content">Liga</li>
                     <li data-content="calendar-content">Calendário</li>
+                    <li data-content="matches-content">Jogos</li>
                     <li data-content="stadium-content">Estádio</li>
-                    <li data-content="match-content">Jogar</li>
                 </ul>
             </nav>
             <main id="main-content">
@@ -68,8 +68,23 @@
                         <!-- O conteúdo do calendário será gerado pelo JS -->
                     </div>
                 </div>
+                 <div id="matches-content" class="main-content-panel">
+                    <div class="matches-header">
+                        <div class="competition-selector-container">
+                            <label for="competition-selector">Competição:</label>
+                            <select id="competition-selector"></select>
+                        </div>
+                        <div class="round-nav">
+                            <button id="prev-round-btn">◀</button>
+                            <span id="round-display">Rodada 1</span>
+                            <button id="next-round-btn">▶</button>
+                        </div>
+                    </div>
+                    <div id="round-matches-container" class="table-container">
+                        <!-- Jogos da rodada serão inseridos aqui -->
+                    </div>
+                </div>
                 <div id="stadium-content" class="main-content-panel"><h3>Editor de Estádio</h3><p>Recurso em desenvolvimento.</p></div>
-                <div id="match-content" class="main-content-panel"><h3>Próxima Partida</h3><div id="match-simulation"><p>A simulação da partida em texto aparecerá aqui.</p></div></div>
             </main>
         </div>
     </div>
