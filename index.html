@@ -11,66 +11,18 @@
 <body>
     <div id="game-container">
         <!-- Telas de criação (sem alterações) -->
-        <div id="manager-creation-screen" class="screen active">
-            <div class="screen-content">
-                <h2>Bem-vindo, Treinador!</h2>
-                <p>Qual é o seu nome?</p>
-                <input type="text" id="manager-name-input" placeholder="Digite seu nome...">
-                <button id="confirm-manager-name-btn">Confirmar</button>
-            </div>
-        </div>
-
-        <div id="start-screen" class="screen">
-            <div class="screen-content">
-                <h1>Football Manager</h1>
-                <button id="go-to-new-club-btn">Criar Novo Clube</button>
-                <button id="go-to-select-league-btn">Treinar Clube Existente</button>
-            </div>
-        </div>
-
-        <div id="new-club-screen" class="screen">
-            <div class="screen-content">
-                <h2>Crie seu Clube</h2>
-                <input type="text" id="club-name-input" placeholder="Nome do Clube">
-                <input type="text" id="club-initials-input" placeholder="Iniciais (3 letras)">
-                <button id="create-new-club-btn">Criar e Jogar</button>
-                <button class="secondary" id="new-club-back-btn">Voltar</button>
-            </div>
-        </div>
-
-        <div id="select-league-screen" class="screen">
-            <div class="screen-content">
-                <h2>Selecione uma Liga</h2>
-                <div id="league-selection" class="card-container"></div>
-                <button class="secondary" id="select-league-back-btn">Voltar</button>
-            </div>
-        </div>
-
-        <div id="select-team-screen" class="screen">
-            <div class="screen-content">
-                <h2>Selecione um Time</h2>
-                <div id="team-selection" class="card-container"></div>
-                <button class="secondary" id="select-team-back-btn">Voltar</button>
-            </div>
-        </div>
+        <div id="manager-creation-screen" class="screen active"><div class="screen-content"><h2>Bem-vindo, Treinador!</h2><p>Qual é o seu nome?</p><input type="text" id="manager-name-input" placeholder="Digite seu nome..."><button id="confirm-manager-name-btn">Confirmar</button></div></div>
+        <div id="start-screen" class="screen"><div class="screen-content"><h1>Football Manager</h1><button id="go-to-new-club-btn">Criar Novo Clube</button><button id="go-to-select-league-btn">Treinar Clube Existente</button></div></div>
+        <div id="new-club-screen" class="screen"><div class="screen-content"><h2>Crie seu Clube</h2><input type="text" id="club-name-input" placeholder="Nome do Clube"><input type="text" id="club-initials-input" placeholder="Iniciais (3 letras)"><button id="create-new-club-btn">Criar e Jogar</button><button class="secondary" id="new-club-back-btn">Voltar</button></div></div>
+        <div id="select-league-screen" class="screen"><div class="screen-content"><h2>Selecione uma Liga</h2><div id="league-selection" class="card-container"></div><button class="secondary" id="select-league-back-btn">Voltar</button></div></div>
+        <div id="select-team-screen" class="screen"><div class="screen-content"><h2>Selecione um Time</h2><div id="team-selection" class="card-container"></div><button class="secondary" id="select-team-back-btn">Voltar</button></div></div>
 
         <!-- Tela Principal do Jogo -->
         <div id="main-game-screen" class="screen">
             <header id="main-header">
-                <div class="header-club-info">
-                    <img id="header-club-logo" src="" alt="Logo do Clube">
-                    <h2 id="header-club-name">Nome do Clube</h2>
-                </div>
-                <div class="header-center">
-                    <span id="current-date-display"></span>
-                    <button id="advance-day-button">Avançar</button>
-                </div>
-                <div class="header-manager-info">
-                    <span id="header-manager-name">Nome do Treinador</span>
-                    <!-- NOVO BOTÃO DE CONFIGURAÇÕES -->
-                    <button id="settings-btn" class="icon-btn" title="Configurações">⚙️</button>
-                    <button id="exit-game-btn">Sair</button>
-                </div>
+                <div class="header-club-info"><img id="header-club-logo" src="" alt="Logo do Clube"><h2 id="header-club-name">Nome do Clube</h2></div>
+                <div class="header-center"><span id="current-date-display"></span><button id="advance-day-button">Avançar</button></div>
+                <div class="header-manager-info"><span id="header-manager-name">Nome do Treinador</span><button id="settings-btn" class="icon-btn" title="Configurações">⚙️</button><button id="exit-game-btn">Sair</button></div>
             </header>
             <nav id="sidebar">
                  <ul>
@@ -84,10 +36,41 @@
                 </ul>
             </nav>
             <main id="main-content">
-                <!-- Conteúdo das abas (sem alterações no HTML aqui) -->
-                 <div id="home-content" class="main-content-panel active"><h3>Página Inicial</h3><p>Bem-vindo ao seu clube! Use o menu à esquerda para navegar.</p></div>
+                <div id="home-content" class="main-content-panel active"><h3>Página Inicial</h3><p>Bem-vindo ao seu clube! Use o menu à esquerda para navegar.</p></div>
                 <div id="squad-content" class="main-content-panel"><h3>Elenco Principal</h3><div id="player-list-table"></div></div>
-                <div id="tactics-content" class="main-content-panel"><div class="tactics-header"><div class="tactic-main-selector"><label for="tactic-formation">FORMAÇÃO</label><select id="tactic-formation"><option value="4-4-2">4-4-2</option><option value="4-3-3">4-3-3</option><option value="3-5-2">3-5-2</option><option value="4-2-3-1" selected>4-2-3-1</option></select></div><div class="tactic-header-bars"><span>FAMILIARIDADE</span> <div class="bar"><div class="bar-fill familiarity"></div></div><span>INTENSIDADE</span> <div class="bar"><div class="bar-fill intensity"></div></div></div></div><div class="tactics-layout-container"><div class="tactics-instructions-column"><div class="tactic-section"><label for="tactic-mentality">Mentalidade</label><select id="tactic-mentality"><option value="very_defensive">Muito Defensiva</option><option value="defensive">Defensiva</option><option value="balanced" selected>Equilibrada</option><option value="attacking">Ofensiva</option><option value="very_attacking">Muito Ofensiva</option></select></div><div class="tactic-section"><h4>COM POSSE DE BOLA</h4><div class="tactic-option"><label>Construção</label><select id="tactic-build-up"><option value="play_out_defence">Sair Jogando</option><option value="pass_into_space">Passe em Profundidade</option></select></div><div class="tactic-option"><label>Tipo de Passe</label><select id="tactic-passing-style"><option value="shorter">Mais Curtos</option><option value="mixed">Misto</option><option value="longer">Mais Longos</option></select></div><div class="tactic-option"><label>Ritmo</label><select id="tactic-tempo"><option value="slower">Mais Lento</option><option value="normal">Normal</option><option value="higher">Mais Rápido</option></select></div></div><div class="tactic-section"><h4>EM TRANSIÇÃO</h4><div class="tactic-option"><label>Ao Perder a Bola</label><select id="tactic-on-possession-loss"><option value="counter_press">Contra-Pressionar</option><option value="regroup">Recompor</option></select></div><div class="tactic-option"><label>Ao Recuperar a Bola</label><select id="tactic-on-possession-gain"><option value="counter">Contra-Atacar</option><option value="hold_shape">Manter a Forma</option></select></div></div><div class="tactic-section"><h4>SEM POSSE DE BOLA</h4><div class="tactic-option"><label>Linha de Marcação</label><select id="tactic-line-of-engagement"><option value="low_block">Bloco Baixo</option><option value="mid_block">Bloco Médio</option><option value="high_press">Pressão Alta</option></select></div><div class="tactic-option"><label>Linha Defensiva</label><select id="tactic-defensive-line"><option value="deeper">Mais Recuada</option><option value="standard">Padrão</option><option value="higher">Mais Alta</option></select></div></div></div><div class="tactics-field-column"><div id="field-container"><div class="field-background"></div></div></div><div class="tactics-squad-column"><div class="squad-list-container"><h4>BANCO (<span id="subs-count">0</span>/7)</h4><div id="substitutes-list" class="player-list"></div></div><div class="squad-list-container"><h4>RESERVAS</h4><div id="reserves-list" class="player-list"></div></div></div></div></div>
+                <div id="tactics-content" class="main-content-panel">
+                    <div class="tactics-header">
+                        <div class="tactic-main-selector"><label for="tactic-formation">FORMAÇÃO</label><select id="tactic-formation"><option value="4-4-2">4-4-2</option><option value="4-3-3">4-3-3</option><option value="3-5-2">3-5-2</option><option value="4-2-3-1" selected>4-2-3-1</option></select></div>
+                        <div class="tactic-header-bars"><span>FAMILIARIDADE</span> <div class="bar"><div class="bar-fill familiarity"></div></div><span>INTENSIDADE</span> <div class="bar"><div class="bar-fill intensity"></div></div></div>
+                    </div>
+                    <div class="tactics-layout-container">
+                        <div class="tactics-instructions-column">
+                            <div class="tactic-section"><label for="tactic-mentality">Mentalidade</label><select id="tactic-mentality"><option value="very_defensive">Muito Defensiva</option><option value="defensive">Defensiva</option><option value="balanced" selected>Equilibrada</option><option value="attacking">Ofensiva</option><option value="very_attacking">Muito Ofensiva</option></select></div>
+                            <div class="tactic-section">
+                                <h4>COM POSSE DE BOLA</h4>
+                                <!-- NOVAS OPÇÕES ADICIONADAS AQUI -->
+                                <div class="tactic-option"><label>Amplitude Ofensiva</label><select id="tactic-attacking-width"><option value="narrow">Pelas Faixas Centrais</option><option value="normal">Equilibrada</option><option value="wide">Abrir nas Pontas</option></select></div>
+                                <div class="tactic-option"><label>Construção</label><select id="tactic-build-up"><option value="play_out_defence">Sair Jogando da Defesa</option><option value="pass_into_space">Passe em Profundidade</option><option value="long_ball">Bola Longa</option></select></div>
+                                <div class="tactic-option"><label>Criação de Oportunidades</label><select id="tactic-chance-creation"><option value="crosses">Cruzamentos</option><option value="through_balls">Furar a Defesa</option><option value="work_into_box">Trabalhar a Bola na Área</option></select></div>
+                                <div class="tactic-option"><label>Ritmo</label><select id="tactic-tempo"><option value="slower">Mais Lento</option><option value="normal">Normal</option><option value="higher">Mais Rápido</option></select></div>
+                            </div>
+                            <div class="tactic-section">
+                                <h4>EM TRANSIÇÃO</h4>
+                                <div class="tactic-option"><label>Ao Perder a Bola</label><select id="tactic-on-possession-loss"><option value="counter_press">Contra-Pressionar</option><option value="regroup">Recompor</option></select></div>
+                                <div class="tactic-option"><label>Ao Recuperar a Bola</label><select id="tactic-on-possession-gain"><option value="counter">Contra-Atacar</option><option value="hold_shape">Manter a Forma</option></select></div>
+                            </div>
+                            <div class="tactic-section">
+                                <h4>SEM POSSE DE BOLA</h4>
+                                <div class="tactic-option"><label>Linha de Marcação</label><select id="tactic-line-of-engagement"><option value="low_block">Bloco Baixo</option><option value="mid_block">Bloco Médio</option><option value="high_press">Pressão Alta</option></select></div>
+                                <div class="tactic-option"><label>Linha Defensiva</label><select id="tactic-defensive-line"><option value="deeper">Mais Recuada</option><option value="standard">Padrão</option><option value="higher">Mais Alta</option></select></div>
+                                <div class="tactic-option"><label>Desarmes</label><select id="tactic-tackling"><option value="stay_on_feet">Manter a Posição</option><option value="more_aggressive">Ser Mais Agressivo</option></select></div>
+                                <div class="tactic-option"><label for="tactic-offside-trap">Usar Linha de Impedimento</label><input type="checkbox" id="tactic-offside-trap"></div>
+                            </div>
+                        </div>
+                        <div class="tactics-field-column"><div id="field-container"><div class="field-background"></div></div></div>
+                        <div class="tactics-squad-column"><div class="squad-list-container"><h4>BANCO (<span id="subs-count">0</span>/7)</h4><div id="substitutes-list" class="player-list"></div></div><div class="squad-list-container"><h4>RESERVAS</h4><div id="reserves-list" class="player-list"></div></div></div>
+                    </div>
+                </div>
                 <div id="league-content" class="main-content-panel"><h3>Tabela de Classificação</h3><div id="league-table-container"></div></div>
                 <div id="calendar-content" class="main-content-panel"><h3>Calendário da Temporada</h3><div id="calendar-container"></div></div>
                 <div id="stadium-content" class="main-content-panel"><h3>Editor de Estádio</h3><p>Recurso em desenvolvimento.</p></div>
@@ -95,18 +78,6 @@
             </main>
         </div>
     </div>
-
-    <!-- NOVO MODAL DE CONFIGURAÇÕES -->
-    <div id="settings-modal" class="modal-overlay">
-        <div class="modal-content">
-            <button id="close-modal-btn" class="icon-btn modal-close-btn">×</button>
-            <h2>Configurações</h2>
-            <div class="settings-option">
-                <span>Tela Cheia</span>
-                <button id="fullscreen-btn">Ativar</button>
-            </div>
-            <!-- Outras configurações podem ser adicionadas aqui -->
-        </div>
-    </div>
+    <div id="settings-modal" class="modal-overlay"><div class="modal-content"><button id="close-modal-btn" class="icon-btn modal-close-btn">×</button><h2>Configurações</h2><div class="settings-option"><span>Tela Cheia</span><button id="fullscreen-btn">Ativar</button></div></div></div>
 </body>
 </html>
