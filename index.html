@@ -87,6 +87,76 @@
                 <div id="stadium-content" class="main-content-panel"><h3>Editor de Estádio</h3><p>Recurso em desenvolvimento.</p></div>
             </main>
         </div>
+        
+        <!-- NOVO: Tela de Simulação de Partida -->
+        <div id="match-simulation-screen" class="screen">
+            <div id="match-header">
+                <div id="match-scoreboard">
+                    <div class="scoreboard-team home">
+                        <span id="match-home-team-name">Time Casa</span>
+                        <img id="match-home-team-logo" src="images/logo_default.png" alt="Logo">
+                    </div>
+                    <div class="scoreboard-center">
+                        <div id="match-time-status">PRIMEIRO TEMPO</div>
+                        <div id="match-score-display">0 - 0</div>
+                        <div id="match-clock">00:00</div>
+                    </div>
+                    <div class="scoreboard-team away">
+                        <img id="match-away-team-logo" src="images/logo_default.png" alt="Logo">
+                        <span id="match-away-team-name">Time Fora</span>
+                    </div>
+                </div>
+                <button id="pause-match-btn" class="icon-btn">❚❚</button>
+            </div>
+
+            <div id="match-pitch-container">
+                <!-- O canvas é onde os "botões" dos jogadores serão desenhados -->
+                <canvas id="match-pitch-canvas"></canvas>
+            </div>
+
+            <!-- Overlay de Pausa -->
+            <div id="pause-overlay" class="modal-overlay">
+                <div class="pause-menu">
+                    <h2>PAUSA</h2>
+                    <button id="resume-match-btn">Continuar Partida</button>
+                    <button id="suggestions-btn" disabled>Sugestões Técnicas</button>
+                    <button id="ingame-tactics-btn">Táticas</button>
+                </div>
+            </div>
+
+            <!-- Notificações durante a partida -->
+            <div id="match-notification-area"></div>
+        </div>
+
+        <!-- NOVO: Modal de Confirmação de Partida -->
+        <div id="match-confirmation-modal" class="modal-overlay">
+            <div class="modal-content">
+                <button id="close-confirmation-modal-btn" class="icon-btn modal-close-btn">×</button>
+                <h2>Confirmar Escalação</h2>
+                <p>Você tem certeza que deseja ir para a partida com a escalação e táticas atuais?</p>
+                <button id="confirm-and-play-btn">Prosseguir para a Partida</button>
+                <button class="secondary" id="cancel-play-btn">Voltar para as Táticas</button>
+            </div>
+        </div>
+
+        <!-- NOVO: Modal de Táticas Dentro do Jogo -->
+        <div id="ingame-tactics-modal" class="modal-overlay">
+            <!-- O conteúdo de táticas será injetado aqui pelo JS, similar à tela principal -->
+        </div>
+
+        <!-- NOVO: Modal de Relatório Pós-Jogo -->
+        <div id="post-match-report-modal" class="modal-overlay">
+            <div class="modal-content post-match-report">
+                <h2 id="post-match-title">Fim de Jogo!</h2>
+                <div id="post-match-newspaper">
+                    <h3>Jornal Esportivo do Dia</h3>
+                    <p id="post-match-headline">Manchete da partida irá aqui.</p>
+                    <p id="post-match-summary">Um resumo de como a partida se desenrolou, quem jogou melhor, e o resultado final.</p>
+                </div>
+                <button id="close-post-match-btn">Continuar</button>
+            </div>
+        </div>
+
     </div>
     <div id="settings-modal" class="modal-overlay"><div class="modal-content"><button id="close-modal-btn" class="icon-btn modal-close-btn">×</button><h2>Configurações</h2><div class="settings-option"><span>Tela Cheia</span><button id="fullscreen-btn">Ativar</button></div></div></div>
 </body>
