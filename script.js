@@ -100,11 +100,16 @@ function startGame(team) {
     const teams = leaguesData[gameState.currentLeagueId].teams;
     
     setupInitialSquad();
-
-    gameState.currentDate = new Date(leagueInfo.startDate + 'T12:00:00');
+    
     gameState.schedule = generateSchedule(teams, leagueInfo);
     gameState.leagueTable = initializeLeagueTable(teams);
     findNextUserMatch();
+
+    // CORREÇÃO: Define a data de início para 5 dias antes da primeira rodada
+    const firstMatchDate = new Date(leagueInfo.startDate + 'T12:00:00');
+    firstMatchDate.setDate(firstMatchDate.getDate() - 5);
+    gameState.currentDate = firstMatchDate;
+
     document.getElementById('header-manager-name').innerText = gameState.managerName;
     document.getElementById('header-club-name').innerText = gameState.userClub.name;
     document.getElementById('header-club-logo').src = `images/${gameState.userClub.logo}`;
@@ -258,7 +263,16 @@ function displayRound(roundNumber) {
 }
 
 // --- Funções de Avanço e Simulação ---
-function advanceDay() { gameState.currentDate.setDate(gameState.currentDate.getDate() + 1); simulateDayMatches(); updateLeagueTable(); updateContinueButton(); if(gameState.currentMainContent === 'calendar-content') { gameState.calendarDisplayDate = new Date(gameState.currentDate); updateCalendar();} }
+function advanceDay() { 
+    gameState.currentDate.setDate(gameState.currentDate.getDate() + 1); 
+    simulateDayMatches(); 
+    updateLeagueTable(); 
+    updateContinueButton(); 
+    if(gameState.currentMainContent === 'calendar-content') { 
+        gameState.calendarDisplayDate = new Date(gameState.currentDate); 
+        updateCalendar();
+    } 
+}
 
 function updateContinueButton() {
     const button = document.getElementById('advance-day-button');
@@ -266,13 +280,13 @@ function updateContinueButton() {
     displayDate.innerText = gameState.currentDate.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     
     if (gameState.nextUserMatch && isSameDay(gameState.currentDate, new Date(gameState.nextUserMatch.date))) {
-        button.innerText = "JOGAR PARTIDA";
-        button.disabled = false; // Permitir que o botão seja clicado
-        button.onclick = promptMatchConfirmation; // Mudar o evento do botão
+        button.innerText = "DIA DO JOGO"; // CORRIGIDO
+        button.disabled = false;
+        button.onclick = promptMatchConfirmation;
     } else {
         button.innerText = "Avançar";
         button.disabled = false;
-        button.onclick = advanceDay; // Restaurar o evento padrão
+        button.onclick = advanceDay;
     }
 }
 
@@ -330,10 +344,10 @@ function generateSchedule(teams, leagueInfo) {
 function isSameDay(date1, date2) { if(!date1 || !date2) return false; return date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth() && date1.getDate() === date2.getDate(); }
 
 // =================================================================================
-// --- NOVO: LÓGICA DA SIMULAÇÃO DE PARTIDA ---
+// --- LÓGICA DA SIMULAÇÃO DE PARTIDA ---
 // =================================================================================
 
-let matchInterval; // Para controlar o relógio do jogo
+let matchInterval;
 
 function promptMatchConfirmation() {
     if (!gameState.nextUserMatch) return;
@@ -486,27 +500,37 @@ function drawMatch() {
     if (!canvas.getContext) return;
     const ctx = canvas.getContext('2d');
 
-    // Definir o tamanho do canvas com base no container
     const container = document.getElementById('match-pitch-container');
-    const size = Math.min(container.clientWidth, container.clientHeight);
-    canvas.width = size / 7 * 5; // Proporção 5:7
-    canvas.height = size;
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    
+    const canvasAspectRatio = 5 / 7;
+    let canvasWidth = containerWidth;
+    let canvasHeight = containerWidth / canvasAspectRatio;
+
+    if (canvasHeight > containerHeight) {
+        canvasHeight = containerHeight;
+        canvasWidth = canvasHeight * canvasAspectRatio;
+    }
+
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
     
     const { width, height } = canvas;
     ctx.clearRect(0, 0, width, height);
 
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
     ctx.lineWidth = 2;
-    ctx.strokeRect(width * 0.05, height * 0.05, width * 0.9, height * 0.9);
+    ctx.strokeRect(0, 0, width, height);
     ctx.beginPath();
-    ctx.moveTo(width / 2, height * 0.05);
-    ctx.lineTo(width / 2, height * 0.95);
+    ctx.moveTo(width / 2, 0);
+    ctx.lineTo(width / 2, height);
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(width / 2, height / 2, width * 0.1, 0, 2 * Math.PI);
+    ctx.arc(width / 2, height / 2, width * 0.15, 0, 2 * Math.PI);
     ctx.stroke();
 
-    const playerRadius = width / 50;
+    const playerRadius = width / 40;
     const drawPlayer = (player, pos, color) => {
         const x = (pos[1] / 100) * width;
         const y = (pos[0] / 100) * height;
@@ -529,13 +553,20 @@ function drawMatch() {
 }
 
 function updateScoreboard() {
+    if (!gameState.matchState) return;
     const { score, gameTime, half } = gameState.matchState;
     document.getElementById('match-score-display').innerText = `${score.home} - ${score.away}`;
-    document.getElementById('match-clock').innerText = `${Math.floor(gameTime).toString().padStart(2, '0')}:00`;
-    if(half === 1 && document.getElementById('match-time-status').innerText !== 'INTERVALO') {
-        document.getElementById('match-time-status').innerText = 'PRIMEIRO TEMPO';
-    } else if (half === 2 && document.getElementById('match-time-status').innerText !== 'FIM DE JOGO') {
-        document.getElementById('match-time-status').innerText = 'SEGUNDO TEMPO';
+    
+    const minutes = Math.floor(gameTime);
+    document.getElementById('match-clock').innerText = `${minutes.toString().padStart(2, '0')}:00`;
+
+    const statusEl = document.getElementById('match-time-status');
+    if (statusEl.innerText === 'FIM DE JOGO') return;
+
+    if(half === 1 && statusEl.innerText !== 'INTERVALO' && !gameState.isPaused) {
+        statusEl.innerText = 'PRIMEIRO TEMPO';
+    } else if (half === 2 && !gameState.isPaused) {
+        statusEl.innerText = 'SEGUNDO TEMPO';
     }
 }
 
@@ -551,10 +582,11 @@ function togglePause(forcePause = null) {
     const pauseButton = document.getElementById('pause-match-btn');
     pauseButton.innerText = gameState.isPaused ? '▶' : '❚❚';
 
-    if (gameState.isPaused && gameState.matchState.half === 1) {
-         document.getElementById('match-time-status').innerText = "PAUSA";
-    } else if (!gameState.isPaused && gameState.matchState.half === 1 && document.getElementById('match-time-status').innerText !== "INTERVALO") {
-        document.getElementById('match-time-status').innerText = 'PRIMEIRO TEMPO';
+    const statusEl = document.getElementById('match-time-status');
+    if (gameState.isPaused && statusEl.innerText !== 'INTERVALO') {
+         statusEl.innerText = "PAUSA";
+    } else if (!gameState.isPaused) {
+        updateScoreboard(); // Para restaurar o texto 'PRIMEIRO TEMPO' ou 'SEGUNDO TEMPO'
     }
 }
 
@@ -582,7 +614,7 @@ function endMatch() {
     gameState.isMatchLive = false;
     document.getElementById('match-time-status').innerText = 'FIM DE JOGO';
     
-    const match = gameState.schedule.find(m => m.date === gameState.nextUserMatch.date && (m.home.name === gameState.userClub.name || m.away.name === gameState.userClub.name));
+    const match = gameState.schedule.find(m => isSameDay(new Date(m.date), new Date(gameState.nextUserMatch.date)) && (m.home.name === gameState.userClub.name || m.away.name === gameState.userClub.name));
     if (match) {
         match.status = 'played';
         match.homeScore = gameState.matchState.score.home;
@@ -664,7 +696,7 @@ function initializeEventListeners() {
         });
     });
 
-    // NOVO: Listeners da simulação de partida
+    // Listeners da simulação de partida
     document.getElementById('confirm-and-play-btn').addEventListener('click', startMatchSimulation);
     document.getElementById('cancel-play-btn').addEventListener('click', () => {
         document.getElementById('match-confirmation-modal').classList.remove('active');
@@ -683,4 +715,13 @@ function initializeEventListeners() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => { initializeEventListeners(); loadLeagues(); });
+document.addEventListener('DOMContentLoaded', () => { 
+    initializeEventListeners(); 
+    loadLeagues(); 
+    // Garante que o canvas se redimensione se a janela mudar
+    window.addEventListener('resize', () => {
+        if(gameState.isMatchLive) {
+            drawMatch();
+        }
+    });
+});
