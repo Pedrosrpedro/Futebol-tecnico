@@ -3,7 +3,7 @@ const leaguesData = {
         "name": "Brasileirão Série A",
         "logo": "logo_brasileirao_a.png",
         "leagueInfo": {
-            "startDate": "2025-04-10", // Data de início da temporada (Sábado)
+            "startDate": "2025-04-12", // Data de início da temporada (Sábado)
             "format": "round-robin", // Todos contra todos, ida e volta
             "gamesPerWeek": 2, // Jogos no meio e fim de semana
             "tiebreakers": ["points", "wins", "goalDifference", "goalsFor"] // Critérios de desempate em ordem
