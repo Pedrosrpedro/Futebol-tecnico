@@ -11,6 +11,10 @@ const gameState = {
     currentMainContent: 'home-content',
     tactics: {
         formation: '4-2-3-1',
+        offensiveStyle: 'possession',
+        defensiveStyle: 'press_on_error',
+        defensiveLine: 50, // Range 0-100
+        pressureIntensity: 60, // Range 0-100
     },
     // Gerenciamento detalhado do time
     squadManagement: {
@@ -230,20 +234,28 @@ function loadTacticsScreen() {
     subsList.innerHTML = '';
     reservesList.innerHTML = '';
 
+    // Carrega os valores das táticas salvas na interface
+    document.getElementById('tactic-formation').value = gameState.tactics.formation;
+    document.getElementById('tactic-offensive-style').value = gameState.tactics.offensiveStyle;
+    document.getElementById('tactic-defensive-style').value = gameState.tactics.defensiveStyle;
+    document.getElementById('tactic-defensive-line').value = gameState.tactics.defensiveLine;
+    document.getElementById('tactic-pressure-intensity').value = gameState.tactics.pressureIntensity;
+
+
     // Desenha os slots no campo
     const positions = formationLayouts[formation];
     for (const pos in positions) {
         const slot = document.createElement('div');
         slot.className = 'player-slot drop-zone';
         slot.dataset.position = pos;
-        slot.style.top = `${positions[pos][0] - 8}%`;
-        slot.style.left = `${positions[pos][1] - 8}%`;
-        slot.innerText = pos;
-
+        slot.style.top = `${positions[pos][0] - 5}%`; // Ajuste para centralizar melhor
+        slot.style.left = `${positions[pos][1] - 6}%`; // Ajuste para centralizar melhor
+        
         const player = gameState.squadManagement.startingXI[pos];
         if (player) {
             slot.appendChild(createPlayerChip(player, pos));
-            slot.innerText = '';
+        } else {
+            slot.innerText = pos;
         }
         
         field.appendChild(slot);
@@ -272,7 +284,9 @@ let draggedPlayerId = null;
 let sourceZoneInfo = null;
 
 function handleDragStart(e) {
-    e.target.classList.add('dragging');
+    // Timeout para permitir que o 'ghost' da imagem seja criado antes da classe ser adicionada
+    setTimeout(() => e.target.classList.add('dragging'), 0);
+    
     draggedPlayerId = e.target.dataset.playerId;
     const sourceZone = e.target.closest('.drop-zone');
     
@@ -280,7 +294,7 @@ function handleDragStart(e) {
         sourceZoneInfo = { type: 'field', position: sourceZone.dataset.position };
     } else if (sourceZone.id === 'substitutes-list') {
         sourceZoneInfo = { type: 'subs' };
-    } else {
+    } else { // reserves-list
         sourceZoneInfo = { type: 'reserves' };
     }
 }
@@ -304,40 +318,59 @@ function handleDragLeave(e) {
 function handleDrop(e) {
     e.preventDefault();
     e.currentTarget.classList.remove('drag-over');
-    if (!draggedPlayerId) return;
+    if (!draggedPlayerId || !sourceZoneInfo) return;
 
     const draggedPlayer = gameState.userClub.players.find(p => p.name === draggedPlayerId);
-    
+    if (!draggedPlayer) return;
+
     const destZone = e.currentTarget;
     let destInfo;
     if (destZone.classList.contains('player-slot')) {
         destInfo = { type: 'field', position: destZone.dataset.position };
     } else if (destZone.id === 'substitutes-list') {
         destInfo = { type: 'subs' };
-    } else {
+    } else { // 'reserves-list'
         destInfo = { type: 'reserves' };
     }
     
+    // Identifica se já existe um jogador no destino
     const playerInDestElement = destZone.querySelector('.player-chip');
     const playerInDest = playerInDestElement ? gameState.userClub.players.find(p => p.name === playerInDestElement.dataset.playerId) : null;
     
     // --- LÓGICA DE MOVIMENTAÇÃO ---
-    // 1. Remove jogador da sua origem
+
+    // VALIDAÇÃO: Não deixar colocar mais do que o máximo no banco, a menos que seja uma troca
+    if (destInfo.type === 'subs' && gameState.squadManagement.substitutes.length >= MAX_SUBSTITUTES && !playerInDest) {
+        alert(`O banco de reservas está cheio! (Máx. ${MAX_SUBSTITUTES})`);
+        return; // Aborta a operação
+    }
+    
+    // 1. Remove jogador da sua origem (do estado do jogo)
     if (sourceZoneInfo.type === 'field') {
         delete gameState.squadManagement.startingXI[sourceZoneInfo.position];
     } else if (sourceZoneInfo.type === 'subs') {
         gameState.squadManagement.substitutes = gameState.squadManagement.substitutes.filter(p => p.name !== draggedPlayer.name);
-    } else {
+    } else { // reserves
         gameState.squadManagement.reserves = gameState.squadManagement.reserves.filter(p => p.name !== draggedPlayer.name);
     }
     
-    // 2. Adiciona o jogador que estava no destino (se houver) para a origem do arrastado
+    // 2. Se havia um jogador no destino (troca), remove ele do destino e o coloca na origem do jogador arrastado
     if (playerInDest) {
+        // Remove da lista do destino (necessário para não duplicar)
+         if (destInfo.type === 'field') {
+            delete gameState.squadManagement.startingXI[destInfo.position];
+        } else if (destInfo.type === 'subs') {
+            gameState.squadManagement.substitutes = gameState.squadManagement.substitutes.filter(p => p.name !== playerInDest.name);
+        } else { // reserves
+            gameState.squadManagement.reserves = gameState.squadManagement.reserves.filter(p => p.name !== playerInDest.name);
+        }
+
+        // Adiciona ao local de origem
         if (sourceZoneInfo.type === 'field') {
             gameState.squadManagement.startingXI[sourceZoneInfo.position] = playerInDest;
         } else if (sourceZoneInfo.type === 'subs') {
             gameState.squadManagement.substitutes.push(playerInDest);
-        } else {
+        } else { // reserves
             gameState.squadManagement.reserves.push(playerInDest);
         }
     }
@@ -346,19 +379,12 @@ function handleDrop(e) {
     if (destInfo.type === 'field') {
         gameState.squadManagement.startingXI[destInfo.position] = draggedPlayer;
     } else if (destInfo.type === 'subs') {
-        if (gameState.squadManagement.substitutes.length < MAX_SUBSTITUTES || playerInDest) {
-            gameState.squadManagement.substitutes.push(draggedPlayer);
-        } else {
-             // Devolve o jogador para a origem se o banco estiver cheio e não for uma troca
-             if (sourceZoneInfo.type === 'field') gameState.squadManagement.startingXI[sourceZoneInfo.position] = draggedPlayer;
-             else if (sourceZoneInfo.type === 'subs') gameState.squadManagement.substitutes.push(draggedPlayer);
-             else gameState.squadManagement.reserves.push(draggedPlayer);
-             alert(`O banco de reservas está cheio! (Máx. ${MAX_SUBSTITUTES})`);
-        }
+        gameState.squadManagement.substitutes.push(draggedPlayer);
     } else { // 'reserves'
         gameState.squadManagement.reserves.push(draggedPlayer);
     }
-
+    
+    // 4. Redesenha toda a interface de táticas para refletir as mudanças
     loadTacticsScreen();
 }
 
@@ -406,13 +432,20 @@ function simulateDayMatches() {
 function loadSquadTable() {
     const playerListDiv = document.getElementById('player-list-table');
     if (!gameState.userClub || !gameState.userClub.players) return;
+    // Ordena os jogadores por uma ordem hierárquica de posição
+    const positionOrder = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST'];
+    const sortedPlayers = [...gameState.userClub.players].sort((a, b) => {
+        return positionOrder.indexOf(a.position) - positionOrder.indexOf(b.position);
+    });
+
     let tableHTML = `<table><thead><tr><th>Nome</th><th>Pos.</th><th>Veloc.</th><th>Finaliz.</th><th>Passe</th><th>Drible</th><th>Defesa</th><th>Físico</th><th>GERAL</th></tr></thead><tbody>`;
-    for (const player of gameState.userClub.players) {
+    for (const player of sortedPlayers) {
         tableHTML += `<tr><td>${player.name}</td><td>${player.position}</td><td>${player.attributes.pace}</td><td>${player.attributes.shooting}</td><td>${player.attributes.passing}</td><td>${player.attributes.dribbling}</td><td>${player.attributes.defending}</td><td>${player.attributes.physical}</td><td><b>${player.overall}</b></td></tr>`;
     }
     tableHTML += `</tbody></table>`;
     playerListDiv.innerHTML = tableHTML;
 }
+
 
 function updateTableWithResult(match) {
     const homeTeam = gameState.leagueTable.find(t => t.name === match.home.name);
@@ -518,7 +551,7 @@ function generateSchedule(teams, leagueInfo) {
     let roundDate = new Date(leagueInfo.startDate + 'T12:00:00Z');
     for (let i = 0; i < allMatches.length; i++) {
         if (i > 0 && i % matchesPerRound === 0) {
-            roundDate.setDate(roundDate.getDate() + (roundDate.getDay() === 3 ? 3 : 4));
+            roundDate.setDate(roundDate.getDate() + (roundDate.getDay() === 3 ? 4 : 3)); // Alterna entre jogos de Quarta e Sábado/Domingo
         }
         schedule.push({ ...allMatches[i], date: new Date(roundDate).toISOString(), status: 'scheduled' });
     }
@@ -548,15 +581,29 @@ function initializeEventListeners() {
         item.addEventListener('click', () => showMainContent(item.dataset.content));
     });
     
+    // Listeners das Táticas
     document.getElementById('tactic-formation').addEventListener('change', (e) => {
         // Antes de mudar a formação, todos os jogadores do campo voltam para a reserva
         Object.values(gameState.squadManagement.startingXI).forEach(player => {
-            gameState.squadManagement.reserves.push(player);
+            if(player) gameState.squadManagement.reserves.push(player);
         });
         gameState.squadManagement.startingXI = {}; // Limpa os titulares
         
         gameState.tactics.formation = e.target.value;
         loadTacticsScreen();
+    });
+
+    document.getElementById('tactic-offensive-style').addEventListener('change', (e) => {
+        gameState.tactics.offensiveStyle = e.target.value;
+    });
+    document.getElementById('tactic-defensive-style').addEventListener('change', (e) => {
+        gameState.tactics.defensiveStyle = e.target.value;
+    });
+    document.getElementById('tactic-defensive-line').addEventListener('input', (e) => {
+        gameState.tactics.defensiveLine = parseInt(e.target.value, 10);
+    });
+    document.getElementById('tactic-pressure-intensity').addEventListener('input', (e) => {
+        gameState.tactics.pressureIntensity = parseInt(e.target.value, 10);
     });
 }
 
