@@ -152,4 +152,4 @@ function initializeEventListeners() {
 
 // Inicialização do Jogo
 document.addEventListener('DOMContentLoaded', () => { initializeEventListeners(); loadLeagues(); });
-}
+
