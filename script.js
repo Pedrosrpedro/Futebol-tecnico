@@ -3,32 +3,24 @@ const gameState = {
     managerName: null, userClub: null, currentLeagueId: null, currentDate: null, leagueTable: [],
     schedule: [], nextUserMatch: null, currentScreen: 'manager-creation-screen', currentMainContent: 'home-content',
     tactics: {
-        formation: '4-2-3-1',
-        mentality: 'balanced',
-        // NOVAS OPÇÕES
-        attackingWidth: 'normal',
-        buildUp: 'play_out_defence',
-        chanceCreation: 'mixed',
-        tempo: 'normal',
-        onPossessionLoss: 'counter_press',
-        onPossessionGain: 'counter',
-        lineOfEngagement: 'mid_block',
-        defensiveLine: 'standard',
-        tackling: 'stay_on_feet',
-        offsideTrap: false // Booleano para o checkbox
+        formation: '4-2-3-1', mentality: 'balanced', attackingWidth: 'normal',
+        buildUp: 'play_out_defence', chanceCreation: 'mixed', tempo: 'normal',
+        onPossessionLoss: 'counter_press', onPossessionGain: 'counter', lineOfEngagement: 'mid_block',
+        defensiveLine: 'standard', tackling: 'stay_on_feet', offsideTrap: false
     },
     squadManagement: { startingXI: {}, substitutes: [], reserves: [], }
 };
-
-// O restante do script permanece exatamente o mesmo da resposta anterior.
-// Apenas a seção gameState.tactics foi modificada.
-// Para garantir, aqui está o script completo novamente.
-
 let selectedPlayerInfo = null;
-
 const MAX_SUBSTITUTES = 7;
 const positionMatrix = { 'GK': { 'GK': 0, 'CB': 4, 'LB': 4, 'RB': 4, 'CDM': 4, 'CM': 4, 'CAM': 4, 'LW': 4, 'RW': 4, 'ST': 4 }, 'CB': { 'GK': 4, 'CB': 0, 'LB': 1, 'RB': 1, 'CDM': 1, 'CM': 2, 'CAM': 3, 'LW': 3, 'RW': 3, 'ST': 3 }, 'LB': { 'GK': 4, 'CB': 1, 'LB': 0, 'RB': 2, 'CDM': 2, 'CM': 2, 'CAM': 3, 'LW': 1, 'RW': 3, 'ST': 3 }, 'RB': { 'GK': 4, 'CB': 1, 'LB': 2, 'RB': 0, 'CDM': 2, 'CM': 2, 'CAM': 3, 'LW': 3, 'RW': 1, 'ST': 3 }, 'CDM': { 'GK': 4, 'CB': 1, 'LB': 2, 'RB': 2, 'CDM': 0, 'CM': 1, 'CAM': 2, 'LW': 3, 'RW': 3, 'ST': 3 }, 'CM': { 'GK': 4, 'CB': 2, 'LB': 2, 'RB': 2, 'CDM': 1, 'CM': 0, 'CAM': 1, 'LW': 2, 'RW': 2, 'ST': 2 }, 'CAM': { 'GK': 4, 'CB': 3, 'LB': 3, 'RB': 3, 'CDM': 2, 'CM': 1, 'CAM': 0, 'LW': 1, 'RW': 1, 'ST': 1 }, 'LW': { 'GK': 4, 'CB': 3, 'LB': 1, 'RB': 3, 'CDM': 3, 'CM': 2, 'CAM': 1, 'LW': 0, 'RW': 2, 'ST': 2 }, 'RW': { 'GK': 4, 'CB': 3, 'LB': 3, 'RB': 1, 'CDM': 3, 'CM': 2, 'CAM': 1, 'LW': 2, 'RW': 0, 'ST': 2 }, 'ST': { 'GK': 4, 'CB': 3, 'LB': 3, 'RB': 3, 'CDM': 3, 'CM': 2, 'CAM': 1, 'LW': 2, 'RW': 2, 'ST': 0 }, };
-const formationLayouts = { '4-4-2': { 'GK': [88, 50], 'LB': [68, 15], 'CB1': [75, 35], 'CB2': [75, 65], 'RB': [68, 85], 'LM': [45, 15], 'CM1': [50, 35], 'CM2': [50, 65], 'RM': [45, 85], 'ST1': [20, 35], 'ST2': [20, 65] }, '4-3-3': { 'GK': [88, 50], 'LB': [70, 15], 'CB1': [75, 35], 'CB2': [75, 65], 'RB': [70, 85], 'CM1': [50, 25], 'CM2': [55, 50], 'CM3': [50, 75], 'LW': [25, 15], 'ST': [20, 50], 'RW': [25, 85] }, '3-5-2': { 'GK': [88, 50], 'CB1': [75, 20], 'CB2': [80, 50], 'CB3': [75, 80], 'LWB': [45, 10], 'CDM': [60, 50], 'CM1': [45, 35], 'CM2': [45, 65], 'RWB': [45, 90], 'ST1': [20, 35], 'ST2': [20, 65] }, '4-2-3-1': { 'GK': [88, 50], 'LB': [70, 15], 'CB1': [75, 35], 'CB2': [75, 65], 'RB': [70, 85], 'CDM1': [58, 35], 'CDM2': [58, 65], 'CAM': [38, 50], 'LW': [35, 18], 'RW': [35, 82], 'ST': [18, 50] }, };
+
+// COORDENADAS ATUALIZADAS PARA CAMPO VERTICAL
+const formationLayouts = {
+    '4-4-2': { 'GK': [92, 50], 'LB': [75, 20], 'CB1': [78, 40], 'CB2': [78, 60], 'RB': [75, 80], 'LM': [50, 20], 'CM1': [55, 40], 'CM2': [55, 60], 'RM': [50, 80], 'ST1': [25, 40], 'ST2': [25, 60] },
+    '4-3-3': { 'GK': [92, 50], 'LB': [75, 20], 'CB1': [78, 40], 'CB2': [78, 60], 'RB': [75, 80], 'CM1': [58, 30], 'CM2': [60, 50], 'CM3': [58, 70], 'LW': [30, 25], 'ST': [22, 50], 'RW': [30, 75] },
+    '3-5-2': { 'GK': [92, 50], 'CB1': [78, 30], 'CB2': [80, 50], 'CB3': [78, 70], 'LWB': [55, 18], 'CDM': [65, 50], 'CM1': [50, 35], 'CM2': [50, 65], 'RWB': [55, 82], 'ST1': [25, 35], 'ST2': [25, 65] },
+    '4-2-3-1': { 'GK': [92, 50], 'LB': [75, 20], 'CB1': [78, 40], 'CB2': [78, 60], 'RB': [75, 80], 'CDM1': [63, 35], 'CDM2': [63, 65], 'LW': [40, 20], 'CAM': [42, 50], 'RW': [40, 80], 'ST': [20, 50] }
+};
 
 function openSettingsModal() { document.getElementById('settings-modal').classList.add('active'); }
 function closeSettingsModal() { document.getElementById('settings-modal').classList.remove('active'); }
@@ -40,21 +32,35 @@ function loadLeagues() { const leagueSelectionDiv = document.getElementById('lea
 function loadTeams(leagueId) { gameState.currentLeagueId = leagueId; const teamSelectionDiv = document.getElementById('team-selection'); teamSelectionDiv.innerHTML = ''; const teams = leaguesData[leagueId].teams; for (const team of teams) { const teamCard = document.createElement('div'); teamCard.className = 'team-card'; teamCard.innerHTML = `<img src="images/${team.logo}" alt="${team.name}"><span>${team.name}</span>`; teamCard.addEventListener('click', () => startGame(team)); teamSelectionDiv.appendChild(teamCard); } showScreen('select-team-screen'); }
 function createClub() { const clubName = document.getElementById('club-name-input').value; if (!clubName) { alert("Por favor, preencha o nome do clube."); return; } gameState.currentLeagueId = Object.keys(leaguesData)[0]; const generatedPlayers = []; for (let i = 0; i < 22; i++) { generatedPlayers.push({ name: `*Jogador Gerado ${i + 1}`, position: "Genérico", attributes: { pace: 55, shooting: 55, passing: 55, dribbling: 55, defending: 55, physical: 55 }, overall: 55 }); } const newClub = { name: clubName, logo: 'logo_default.png', players: generatedPlayers }; startGame(newClub); }
 function startGame(team) { gameState.userClub = team; const leagueInfo = leaguesData[gameState.currentLeagueId].leagueInfo; const teams = leaguesData[gameState.currentLeagueId].teams; gameState.squadManagement.reserves = [...gameState.userClub.players]; gameState.squadManagement.startingXI = {}; gameState.squadManagement.substitutes = []; gameState.currentDate = new Date(leagueInfo.startDate + 'T12:00:00'); gameState.schedule = generateSchedule(teams, leagueInfo); gameState.leagueTable = initializeLeagueTable(teams); findNextUserMatch(); document.getElementById('header-manager-name').innerText = gameState.managerName; document.getElementById('header-club-name').innerText = gameState.userClub.name; document.getElementById('header-club-logo').src = `images/${gameState.userClub.logo}`; loadSquadTable(); updateLeagueTable(); updateCalendar(); updateContinueButton(); showScreen('main-game-screen'); showMainContent('home-content'); }
-function handleTacticsInteraction(e) { const clickedElement = e.target.closest('[data-player-id], .player-slot, .player-list'); if (!clickedElement) { clearSelection(); return; } const playerId = clickedElement.dataset.playerId; if (playerId) { const player = gameState.userClub.players.find(p => p.name === playerId); const sourceInfo = getPlayerLocation(player); if (selectedPlayerInfo) { if (selectedPlayerInfo.player.name === player.name) { clearSelection(); } else { swapPlayers(selectedPlayerInfo, sourceInfo); clearSelection(); } } else { selectPlayer(player, sourceInfo.type, sourceInfo.id); } } else if (selectedPlayerInfo) { let destInfo; if (clickedElement.classList.contains('player-slot')) { destInfo = { type: 'field', id: clickedElement.dataset.position }; } else if (clickedElement.id === 'substitutes-list') { destInfo = { type: 'subs', id: 'substitutes-list' }; } else if (clickedElement.id === 'reserves-list') { destInfo = { type: 'reserves', id: 'reserves-list' }; } if (destInfo) { movePlayer(selectedPlayerInfo, destInfo); clearSelection(); } } }
+
+function handleTacticsInteraction(e) { const clickedElement = e.target.closest('[data-player-id], .player-slot, .player-list'); if (!clickedElement) { clearSelection(); return; } const playerId = clickedElement.dataset.playerId; if (playerId) { const player = gameState.userClub.players.find(p => p.name === playerId); const sourceInfo = getPlayerLocation(player); if (selectedPlayerInfo) { if (selectedPlayerInfo.player.name === player.name) { clearSelection(); } else { swapPlayers(selectedPlayerInfo, sourceInfo); clearSelection(); } } else { selectPlayer(player, sourceInfo.type, sourceInfo.id); } } else if (selectedPlayerInfo) { let destInfo; if (clickedElement.classList.contains('player-slot')) { destInfo = { type: 'field', id: clickedElement.dataset.position }; } else if (clickedElement.id === 'substitutes-list' || clickedElement.closest('#substitutes-list')) { destInfo = { type: 'subs', id: 'substitutes-list' }; } else if (clickedElement.id === 'reserves-list' || clickedElement.closest('#reserves-list')) { destInfo = { type: 'reserves', id: 'reserves-list' }; } if (destInfo) { movePlayer(selectedPlayerInfo, destInfo); clearSelection(); } } }
 function selectPlayer(player, sourceType, sourceId) { clearSelection(); selectedPlayerInfo = { player, sourceType, sourceId }; const element = document.querySelector(`[data-player-id="${player.name}"]`); if(element) element.classList.add('selected'); }
 function clearSelection() { if (selectedPlayerInfo) { const element = document.querySelector(`[data-player-id="${selectedPlayerInfo.player.name}"]`); if(element) element.classList.remove('selected'); } selectedPlayerInfo = null; }
 function getPlayerLocation(player) { for (const pos in gameState.squadManagement.startingXI) { if (gameState.squadManagement.startingXI[pos]?.name === player.name) { return { type: 'field', id: pos }; } } if (gameState.squadManagement.substitutes.some(p => p.name === player.name)) { return { type: 'subs', id: 'substitutes-list' }; } return { type: 'reserves', id: 'reserves-list' }; }
 function removePlayerFromSource(playerInfo) { if (playerInfo.sourceType === 'field') { delete gameState.squadManagement.startingXI[playerInfo.sourceId]; } else if (playerInfo.sourceType === 'subs') { gameState.squadManagement.substitutes = gameState.squadManagement.substitutes.filter(p => p.name !== playerInfo.player.name); } else { gameState.squadManagement.reserves = gameState.squadManagement.reserves.filter(p => p.name !== playerInfo.player.name); } }
 function addPlayerToDest(player, destInfo) { if (destInfo.type === 'field') { gameState.squadManagement.startingXI[destInfo.id] = player; } else if (destInfo.type === 'subs') { gameState.squadManagement.substitutes.push(player); } else { gameState.squadManagement.reserves.push(player); } }
 function movePlayer(playerInfo, destInfo) { if (destInfo.type === 'subs' && gameState.squadManagement.substitutes.length >= MAX_SUBSTITUTES) { alert(`O banco de reservas está cheio! (Máx. ${MAX_SUBSTITUTES})`); return; } removePlayerFromSource(playerInfo); addPlayerToDest(playerInfo.player, destInfo); loadTacticsScreen(); }
-function swapPlayers(sourcePlayerInfo, destPlayerInfo) { if ((sourcePlayerInfo.sourceType !== 'subs' && destPlayerInfo.type === 'subs' && gameState.squadManagement.substitutes.length >= MAX_SUBSTITUTES) || (destPlayerInfo.sourceType !== 'subs' && sourcePlayerInfo.type === 'subs' && gameState.squadManagement.substitutes.length >= MAX_SUBSTITUTES)) { } removePlayerFromSource(sourcePlayerInfo); removePlayerFromSource({player: destPlayerInfo.player, sourceType: destPlayerInfo.type, sourceId: destPlayerInfo.id}); addPlayerToDest(sourcePlayerInfo.player, destPlayerInfo); addPlayerToDest(destPlayerInfo.player, {type: sourcePlayerInfo.sourceType, id: sourcePlayerInfo.sourceId}); loadTacticsScreen(); }
-function calculateModifiedOverall(player, targetPosition) { if (!player || !targetPosition) return player.overall; const naturalPosition = player.position; const penaltyFactor = 4; const distance = positionMatrix[naturalPosition]?.[targetPosition.replace(/\d/g, '')] ?? 4; const penalty = distance * penaltyFactor; return Math.max(40, player.overall - penalty); }
-function loadTacticsScreen() { const formation = gameState.tactics.formation; const field = document.querySelector('#field-container .field-background'); const subsList = document.getElementById('substitutes-list'); const reservesList = document.getElementById('reserves-list'); field.innerHTML = ''; subsList.innerHTML = ''; reservesList.innerHTML = ''; Object.keys(gameState.tactics).forEach(key => { const elementId = `tactic-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`; const element = document.getElementById(elementId); if (element) { if (element.type === 'checkbox') { element.checked = gameState.tactics[key]; } else { element.value = gameState.tactics[key]; } } }); const positions = formationLayouts[formation]; for (const pos in positions) { const slot = document.createElement('div'); slot.className = 'player-slot'; slot.dataset.position = pos; slot.style.top = `${positions[pos][0] - 6}%`; slot.style.left = `${positions[pos][1] - 5}%`; const player = gameState.squadManagement.startingXI[pos]; if (player) { slot.appendChild(createPlayerChip(player, pos)); } else { slot.innerText = pos; } field.appendChild(slot); } gameState.squadManagement.substitutes.forEach(player => subsList.appendChild(createSquadListPlayer(player))); gameState.squadManagement.reserves.forEach(player => reservesList.appendChild(createSquadListPlayer(player))); document.getElementById('subs-count').innerText = gameState.squadManagement.substitutes.length; if (selectedPlayerInfo) { const element = document.querySelector(`[data-player-id="${selectedPlayerInfo.player.name}"]`); if (element) element.classList.add('selected'); } }
+function swapPlayers(sourcePlayerInfo, destPlayerInfo) { removePlayerFromSource(sourcePlayerInfo); removePlayerFromSource({player: destPlayerInfo.player, sourceType: destPlayerInfo.type, sourceId: destPlayerInfo.id}); addPlayerToDest(sourcePlayerInfo.player, destPlayerInfo); addPlayerToDest(destPlayerInfo.player, {type: sourcePlayerInfo.sourceType, id: sourcePlayerInfo.sourceId}); loadTacticsScreen(); }
+
+// FUNÇÃO DE OVERALL CORRIGIDA
+function calculateModifiedOverall(player, targetPosition) {
+    if (!player || !targetPosition) return player.overall;
+    const naturalPosition = player.position;
+    // Se a posição natural não existe na matriz (ex: "Genérico"), não há penalidade.
+    if (!positionMatrix[naturalPosition]) return player.overall;
+    const penaltyFactor = 4;
+    const cleanTargetPosition = targetPosition.replace(/\d/g, '');
+    const distance = positionMatrix[naturalPosition][cleanTargetPosition] ?? 4;
+    const penalty = distance * penaltyFactor;
+    return Math.max(40, player.overall - penalty);
+}
+
+function loadTacticsScreen() { const formation = gameState.tactics.formation; const field = document.querySelector('#field-container .field-background'); const subsList = document.getElementById('substitutes-list'); const reservesList = document.getElementById('reserves-list'); field.innerHTML = ''; subsList.innerHTML = ''; reservesList.innerHTML = ''; Object.keys(gameState.tactics).forEach(key => { const elementId = `tactic-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`; const element = document.getElementById(elementId); if (element) { if (element.type === 'checkbox') { element.checked = gameState.tactics[key]; } else { element.value = gameState.tactics[key]; } } }); const positions = formationLayouts[formation]; for (const pos in positions) { const slot = document.createElement('div'); slot.className = 'player-slot'; slot.dataset.position = pos; slot.style.top = `${positions[pos][0]}%`; slot.style.left = `${positions[pos][1]}%`; const player = gameState.squadManagement.startingXI[pos]; if (player) { slot.appendChild(createPlayerChip(player, pos)); } else { slot.innerText = pos; } field.appendChild(slot); } gameState.squadManagement.substitutes.forEach(player => subsList.appendChild(createSquadListPlayer(player))); gameState.squadManagement.reserves.forEach(player => reservesList.appendChild(createSquadListPlayer(player))); document.getElementById('subs-count').innerText = gameState.squadManagement.substitutes.length; if (selectedPlayerInfo) { const element = document.querySelector(`[data-player-id="${selectedPlayerInfo.player.name}"]`); if (element) element.classList.add('selected'); } }
 function createPlayerChip(player, currentPosition) { const chip = document.createElement('div'); chip.className = 'player-chip'; chip.dataset.playerId = player.name; const modifiedOverall = calculateModifiedOverall(player, currentPosition); let overallClass = 'player-overall'; if (modifiedOverall < player.overall) overallClass += ' penalty'; chip.innerHTML = ` <span class="player-name">${player.name.split(' ').slice(-1).join(' ')}</span> <span class="${overallClass}">${modifiedOverall}</span> <span class="player-pos">${player.position}</span> `; return chip; }
 function createSquadListPlayer(player) { const item = document.createElement('div'); item.className = 'squad-list-player'; item.dataset.playerId = player.name; item.innerHTML = ` <div class="player-info"> <div class="player-name">${player.name}</div> <div class="player-pos">${player.position}</div> </div> <div class="player-overall">${player.overall}</div> `; return item; }
-function loadSquadTable() { const playerListDiv = document.getElementById('player-list-table'); if (!gameState.userClub || !gameState.userClub.players) return; const positionOrder = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST']; const sortedPlayers = [...gameState.userClub.players].sort((a, b) => { return positionOrder.indexOf(a.position) - positionOrder.indexOf(b.position); }); let tableHTML = `<table><thead><tr><th>Nome</th><th>Pos.</th><th>Veloc.</th><th>Finaliz.</th><th>Passe</th><th>Drible</th><th>Defesa</th><th>Físico</th><th>GERAL</th></tr></thead><tbody>`; for (const player of sortedPlayers) { tableHTML += `<tr><td>${player.name}</td><td>${player.position}</td><td>${player.attributes.pace}</td><td>${player.attributes.shooting}</td><td>${player.attributes.passing}</td><td>${player.attributes.dribbling}</td><td>${player.attributes.defending}</td><td>${player.attributes.physical}</td><td><b>${player.overall}</b></td></tr>`; } tableHTML += `</tbody></table>`; playerListDiv.innerHTML = tableHTML; }
+function loadSquadTable() { const playerListDiv = document.getElementById('player-list-table'); playerListDiv.innerHTML = ""; playerListDiv.classList.add("table-container"); if (!gameState.userClub || !gameState.userClub.players) return; const positionOrder = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST']; const sortedPlayers = [...gameState.userClub.players].sort((a, b) => { return positionOrder.indexOf(a.position) - positionOrder.indexOf(b.position); }); let tableHTML = `<table><thead><tr><th>Nome</th><th>Pos.</th><th>Veloc.</th><th>Finaliz.</th><th>Passe</th><th>Drible</th><th>Defesa</th><th>Físico</th><th>GERAL</th></tr></thead><tbody>`; for (const player of sortedPlayers) { tableHTML += `<tr><td>${player.name}</td><td>${player.position}</td><td>${player.attributes.pace}</td><td>${player.attributes.shooting}</td><td>${player.attributes.passing}</td><td>${player.attributes.dribbling}</td><td>${player.attributes.defending}</td><td>${player.attributes.physical}</td><td><b>${player.overall}</b></td></tr>`; } tableHTML += `</tbody></table>`; playerListDiv.innerHTML = tableHTML; }
 function updateTableWithResult(match) { const homeTeam = gameState.leagueTable.find(t => t.name === match.home.name); const awayTeam = gameState.leagueTable.find(t => t.name === match.away.name); if (!homeTeam || !awayTeam) return; homeTeam.played++; awayTeam.played++; homeTeam.goalsFor += match.homeScore; homeTeam.goalsAgainst += match.awayScore; awayTeam.goalsFor += match.awayScore; awayTeam.goalsAgainst += match.homeScore; homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst; awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst; if (match.homeScore > match.awayScore) { homeTeam.wins++; homeTeam.points += 3; awayTeam.losses++; } else if (match.awayScore > match.homeScore) { awayTeam.wins++; awayTeam.points += 3; homeTeam.losses++; } else { homeTeam.draws++; awayTeam.draws++; homeTeam.points += 1; awayTeam.points += 1; } }
-function updateLeagueTable() { const container = document.getElementById('league-table-container'); const tiebreakers = leaguesData[gameState.currentLeagueId].leagueInfo.tiebreakers; gameState.leagueTable.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); let tableHTML = `<table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>`; gameState.leagueTable.forEach((team, index) => { const isUserTeam = team.name === gameState.userClub.name; tableHTML += `<tr class="${isUserTeam ? 'user-team-row' : ''}"><td>${index + 1}</td><td>${team.name}</td><td>${team.points}</td><td>${team.played}</td><td>${team.wins}</td><td>${team.draws}</td><td>${team.losses}</td><td>${team.goalsFor}</td><td>${team.goalsAgainst}</td><td>${team.goalDifference}</td></tr>`; }); tableHTML += `</tbody></table>`; container.innerHTML = tableHTML; }
+function updateLeagueTable() { const container = document.getElementById('league-table-container'); container.classList.add("table-container"); const tiebreakers = leaguesData[gameState.currentLeagueId].leagueInfo.tiebreakers; gameState.leagueTable.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); let tableHTML = `<table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>`; gameState.leagueTable.forEach((team, index) => { const isUserTeam = team.name === gameState.userClub.name; tableHTML += `<tr class="${isUserTeam ? 'user-team-row' : ''}"><td>${index + 1}</td><td>${team.name}</td><td>${team.points}</td><td>${team.played}</td><td>${team.wins}</td><td>${team.draws}</td><td>${team.losses}</td><td>${team.goalsFor}</td><td>${team.goalsAgainst}</td><td>${team.goalDifference}</td></tr>`; }); tableHTML += `</tbody></table>`; container.innerHTML = tableHTML; }
 function updateCalendar() { const container = document.getElementById('calendar-container'); const date = gameState.currentDate; const month = date.getMonth(); const year = date.getFullYear(); const firstDay = new Date(year, month, 1); const lastDay = new Date(year, month + 1, 0); let html = `<div class="calendar-header"><h3>${date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3></div> <div class="calendar-grid"><div class="calendar-weekday">Dom</div><div class="calendar-weekday">Seg</div><div class="calendar-weekday">Ter</div><div class="calendar-weekday">Qua</div><div class="calendar-weekday">Qui</div><div class="calendar-weekday">Sex</div><div class="calendar-weekday">Sáb</div>`; for (let i = 0; i < firstDay.getDay(); i++) { html += `<div class="calendar-day other-month"></div>`; } for (let i = 1; i <= lastDay.getDate(); i++) { const loopDate = new Date(year, month, i); const isCurrent = isSameDay(loopDate, gameState.currentDate); const hasMatch = gameState.schedule.some(m => isSameDay(new Date(m.date), loopDate)); let dayClasses = 'calendar-day'; if (hasMatch) dayClasses += ' match-day'; if (isCurrent) dayClasses += ' current-day'; html += `<div class="${dayClasses}">${i}</div>`; } html += '</div>'; container.innerHTML = html; }
 function advanceDay() { gameState.currentDate.setDate(gameState.currentDate.getDate() + 1); simulateDayMatches(); updateLeagueTable(); updateCalendar(); updateContinueButton(); }
 function updateContinueButton() { const button = document.getElementById('advance-day-button'); const displayDate = document.getElementById('current-date-display'); displayDate.innerText = gameState.currentDate.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); if (gameState.nextUserMatch && isSameDay(gameState.currentDate, new Date(gameState.nextUserMatch.date))) { button.innerText = "JOGAR PARTIDA"; button.disabled = true; } else { button.innerText = "Avançar"; button.disabled = false; } }
@@ -75,47 +81,35 @@ function initializeEventListeners() {
     document.getElementById('advance-day-button').addEventListener('click', advanceDay);
     document.getElementById('exit-game-btn').addEventListener('click', () => window.location.reload());
     
-    document.querySelectorAll('#sidebar li').forEach(item => {
-        item.addEventListener('click', () => showMainContent(item.dataset.content));
-    });
+    document.querySelectorAll('#sidebar li').forEach(item => { item.addEventListener('click', () => showMainContent(item.dataset.content)); });
 
     document.getElementById('settings-btn').addEventListener('click', openSettingsModal);
     document.getElementById('close-modal-btn').addEventListener('click', closeSettingsModal);
     document.getElementById('fullscreen-btn').addEventListener('click', toggleFullScreen);
-    document.getElementById('settings-modal').addEventListener('click', (e) => {
-        if (e.target.id === 'settings-modal') {
-            closeSettingsModal();
-        }
-    });
+    document.getElementById('settings-modal').addEventListener('click', (e) => { if (e.target.id === 'settings-modal') { closeSettingsModal(); } });
 
     const tacticsContent = document.getElementById('tactics-content');
-    if (tacticsContent) {
-        tacticsContent.addEventListener('click', handleTacticsInteraction);
-    }
+    if (tacticsContent) { tacticsContent.addEventListener('click', handleTacticsInteraction); }
     
     document.querySelectorAll('#tactics-content select, #tactics-content input[type="checkbox"]').forEach(element => {
         element.addEventListener('change', (e) => {
             e.stopPropagation(); 
             const tacticKey = e.target.id.replace('tactic-', '').replace(/-([a-z])/g, g => g[1].toUpperCase());
-            
-            if (e.target.type === 'checkbox') {
-                gameState.tactics[tacticKey] = e.target.checked;
-            } else {
-                gameState.tactics[tacticKey] = e.target.value;
-            }
-
-            if (tacticKey === 'formation') {
-                 Object.values(gameState.squadManagement.startingXI).forEach(player => {
-                    if(player) gameState.squadManagement.reserves.push(player);
-                });
-                gameState.squadManagement.startingXI = {};
-            }
+            if (e.target.type === 'checkbox') { gameState.tactics[tacticKey] = e.target.checked; } else { gameState.tactics[tacticKey] = e.target.value; }
+            if (tacticKey === 'formation') { Object.values(gameState.squadManagement.startingXI).forEach(player => { if(player) gameState.squadManagement.reserves.push(player); }); gameState.squadManagement.startingXI = {}; }
             loadTacticsScreen();
+        });
+    });
+
+    document.querySelectorAll('.panel-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const panelName = e.currentTarget.dataset.panel;
+            const container = document.getElementById('tactics-layout-container');
+            container.classList.toggle(`${panelName}-collapsed`);
+            document.querySelector(`.tactics-${panelName}-column`).classList.toggle('collapsed');
         });
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    initializeEventListeners();
-    loadLeagues();
-});
+document.addEventListener('DOMContentLoaded', () => { initializeEventListeners(); loadLeagues(); });
