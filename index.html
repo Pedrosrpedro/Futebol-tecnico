@@ -54,7 +54,7 @@
             </div>
         </div>
 
-        <!-- Tela Principal do Jogo (COM ALTERAÇÕES) -->
+        <!-- Tela Principal do Jogo -->
         <div id="main-game-screen" class="screen">
             <header id="main-header">
                 <div class="header-club-info">
@@ -74,7 +74,6 @@
                 <ul>
                     <li data-content="home-content" class="active">Início</li>
                     <li data-content="squad-content">Elenco</li>
-                    <!-- NOVO BOTÃO DE TÁTICAS -->
                     <li data-content="tactics-content">Táticas</li>
                     <li data-content="league-content">Liga</li>
                     <li data-content="calendar-content">Calendário</li>
@@ -92,46 +91,73 @@
                     <div id="player-list-table"></div>
                 </div>
 
-                <!-- NOVO PAINEL DE TÁTICAS -->
+                <!-- PAINEL DE TÁTICAS (TOTALMENTE REFEITO) -->
                 <div id="tactics-content" class="main-content-panel">
-    <div class="tactics-layout-container">
-        <!-- Coluna Esquerda: Campo e Opções -->
-        <div class="tactics-field-column">
-            <h3>Plano Tático</h3>
-            <div class="tactic-option">
-                <label for="tactic-formation">Formação:</label>
-                <select id="tactic-formation">
-                    <option value="4-4-2">4-4-2</option>
-                    <option value="4-3-3">4-3-3</option>
-                    <option value="3-5-2">3-5-2</option>
-                    <option value="4-2-3-1" selected>4-2-3-1</option>
-                </select>
-            </div>
-            <div id="field-container">
-                <div class="field-background">
-                    <!-- As posições dos jogadores serão inseridas aqui pelo JS -->
-                </div>
-            </div>
-        </div>
+                    <div class="tactics-layout-container">
+                        <!-- Coluna Esquerda: Campo e Formação -->
+                        <div class="tactics-field-column">
+                            <h3>Plano de Jogo</h3>
+                            <div class="tactic-option" style="width: 50%;">
+                                <label for="tactic-formation">Formação:</label>
+                                <select id="tactic-formation">
+                                    <option value="4-4-2">4-4-2</option>
+                                    <option value="4-3-3">4-3-3</option>
+                                    <option value="3-5-2">3-5-2</option>
+                                    <option value="4-2-3-1" selected>4-2-3-1</option>
+                                </select>
+                            </div>
+                            <div id="field-container">
+                                <div class="field-background drop-zone">
+                                    <!-- Os slots dos jogadores serão inseridos aqui pelo JS -->
+                                </div>
+                            </div>
+                        </div>
 
-        <!-- Coluna Direita: Gerenciamento do Elenco -->
-        <div class="tactics-squad-column">
-            <h3>Gerenciamento do Elenco</h3>
-            <div class="squad-list-container">
-                <h4>Banco de Reservas (<span id="subs-count">0</span>/7)</h4>
-                <div id="substitutes-list" class="player-list drop-zone">
-                    <!-- Jogadores no banco -->
+                        <!-- Coluna Direita: Gerenciamento e Instruções -->
+                        <div class="tactics-squad-column">
+                            <!-- Instruções Táticas -->
+                            <div class="tactics-instructions-panel">
+                                <h4>Instruções Táticas</h4>
+                                <div class="tactic-option">
+                                    <label for="tactic-offensive-style">Estilo Ofensivo:</label>
+                                    <select id="tactic-offensive-style">
+                                        <option value="possession">Posse de Bola</option>
+                                        <option value="counter_attack">Contra-Ataque Rápido</option>
+                                        <option value="long_ball">Lançamentos Longos</option>
+                                    </select>
+                                </div>
+                                <div class="tactic-option">
+                                    <label for="tactic-defensive-style">Estilo Defensivo:</label>
+                                    <select id="tactic-defensive-style">
+                                        <option value="press_on_error">Pressão no Erro do Adv.</option>
+                                        <option value="press_after_loss">Pressionar Pós-Perda</option>
+                                        <option value="balanced">Equilibrado</option>
+                                        <option value="deep_block">Bloco Baixo Recuado</option>
+                                    </select>
+                                </div>
+                                 <div class="tactic-option">
+                                    <label for="tactic-defensive-line">Altura da Linha Defensiva:</label>
+                                    <input type="range" id="tactic-defensive-line" min="10" max="90" value="50">
+                                </div>
+                                 <div class="tactic-option">
+                                    <label for="tactic-pressure-intensity">Intensidade da Pressão:</label>
+                                    <input type="range" id="tactic-pressure-intensity" min="10" max="100" value="60">
+                                </div>
+                            </div>
+
+                            <!-- Gerenciamento do Elenco -->
+                            <div class="squad-list-container">
+                                <h4>Banco de Reservas (<span id="subs-count">0</span>/7)</h4>
+                                <div id="substitutes-list" class="player-list drop-zone"></div>
+                            </div>
+                            <div class="squad-list-container">
+                                <h4>Não Relacionados</h4>
+                                <div id="reserves-list" class="player-list drop-zone"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="squad-list-container">
-                <h4>Não Relacionados</h4>
-                <div id="reserves-list" class="player-list drop-zone">
-                    <!-- Jogadores não relacionados -->
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
                 <div id="league-content" class="main-content-panel">
                     <h3>Tabela de Classificação</h3>
                     <div id="league-table-container"></div>
