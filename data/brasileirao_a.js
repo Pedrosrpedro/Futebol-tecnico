@@ -551,7 +551,6 @@ const leaguesData = {
                 { "name": "Alerrandro", "position": "Atacante", "attributes": { "pace": 77, "shooting": 76, "passing": 65, "dribbling": 73, "defending": 40, "physical": 74 }, "overall": 73 }
             ]
         }
-    ]
 }
     // Adicione outras ligas aqui no futuro (brasileirao_b, etc.)
 };
