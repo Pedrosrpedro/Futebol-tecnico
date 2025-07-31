@@ -7,7 +7,7 @@ const leaguesData = {
             "format": "round-robin", // Todos contra todos, ida e volta
             "gamesPerWeek": 2, // Jogos no meio e fim de semana
             "tiebreakers": ["points", "wins", "goalDifference", "goalsFor"] // Critérios de desempate em ordem
-                {,
+         {,
     "teams": [
         {
             "name": "Atlético-MG",
