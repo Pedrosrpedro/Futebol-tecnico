@@ -377,3 +377,146 @@ input[type="range"]::-moz-range-thumb {
     border: 2px solid var(--text-primary);
     background-color: var(--bg-medium);
 }
+
+/* Adicione estas novas regras ao final do seu arquivo style.css */
+
+/* --- Layout da Tela de Táticas --- */
+.tactics-layout-container {
+    display: flex;
+    gap: 20px;
+    width: 100%;
+}
+
+.tactics-field-column {
+    flex-basis: 65%;
+}
+
+.tactics-squad-column {
+    flex-basis: 35%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- Campo de Futebol Visual --- */
+#field-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 7 / 5; /* Proporção de um campo */
+    background-color: #5d8a6a;
+    border-radius: 8px;
+    border: 2px solid var(--bg-light);
+    margin-top: 15px;
+    overflow: hidden;
+}
+
+.field-background {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+/* Linhas do Campo (usando pseudo-elementos) */
+.field-background::before {
+    content: '';
+    position: absolute;
+    width: 2px;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.4);
+    left: 50%;
+    transform: translateX(-50%);
+}
+.field-background::after {
+    content: '';
+    position: absolute;
+    width: 15%;
+    aspect-ratio: 1 / 1;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* --- Slots de Jogadores no Campo e Listas --- */
+.player-slot, .player-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 12px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.player-slot {
+    position: absolute;
+    width: 90px;
+    height: 60px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 2px dashed var(--border-color);
+    transition: background-color 0.2s;
+}
+
+.player-chip {
+    width: 90px;
+    height: 60px;
+    background-color: var(--bg-dark);
+    border: 1px solid var(--accent-color);
+    cursor: grab;
+    transition: transform 0.2s ease;
+    user-select: none;
+    padding: 4px;
+}
+
+.player-chip:active {
+    cursor: grabbing;
+}
+
+.player-chip.dragging {
+    opacity: 0.5;
+    transform: scale(1.05);
+}
+
+.player-chip .player-name {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.player-chip .player-overall {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.player-chip .player-overall.penalty {
+    color: #e66a6a; /* Vermelho para overall penalizado */
+}
+.player-chip .player-overall.boost {
+    color: #a3be8c; /* Verde para overall com bônus (se houver) */
+}
+
+
+/* --- Listas de Jogadores --- */
+.squad-list-container {
+    margin-bottom: 15px;
+    background-color: var(--bg-medium);
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.player-list {
+    min-height: 80px;
+    background-color: var(--bg-dark);
+    border-radius: 4px;
+    padding: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+/* --- Estilo das Áreas de Soltar (Drop Zones) --- */
+.drop-zone.drag-over {
+    background-color: var(--accent-color);
+    border-color: #fff;
+}
