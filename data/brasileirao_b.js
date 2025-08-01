@@ -1,6 +1,6 @@
-const leaguesData = {
-    "brasileirao_b_2025": {
-        "name": "Brasileirão Série B 2025",
+Object.assign(leaguesData, {
+    "brasileirao_b": {
+        "name": "Brasileirão Série B",
         "logo": "logo_brasileirao_b.png",
         "leagueInfo": {
             "startDate": "2025-04-19",
