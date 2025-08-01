@@ -758,7 +758,6 @@ function initializeEventListeners() {
     document.getElementById('new-club-back-btn').addEventListener('click', () => showScreen('start-screen'));
     document.getElementById('select-league-back-btn').addEventListener('click', () => showScreen('start-screen'));
     document.getElementById('select-team-back-btn').addEventListener('click', () => showScreen('select-league-screen'));
-    
     document.getElementById('exit-game-btn').addEventListener('click', () => window.location.reload());
     document.querySelectorAll('#sidebar li').forEach(item => { item.addEventListener('click', () => showMainContent(item.dataset.content)); });
     
@@ -818,4 +817,4 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeEventListeners(); 
     loadLeagues();
     window.addEventListener('resize', resizeCanvas);
-});```
+});
