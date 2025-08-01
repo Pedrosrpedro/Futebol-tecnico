@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Football Manager</title>
     <link rel="stylesheet" href="style.css">
-    <script src="data/brasileirao_a.js" defer></script>
-    <script src="data/brasileirao_b.js" defer></script>
-    <script src="data/brasileirao_c.js" defer></script>
-    <script src="script.js" defer></script>
+    
+    <!-- ORDEM CORRIGIDA E CRÍTICA -->
+    <script src="data/brasileirao_a.js" defer></script> <!-- 1º: Cria o leaguesData -->
+    <script src="data/brasileirao_b.js" defer></script> <!-- 2º: Adiciona a Série B -->
+    <script src="data/brasileirao_c.js" defer></script> <!-- 3º: Adiciona a Série C -->
+    
+    <script src="script.js" defer></script> <!-- 4º: Roda a lógica do jogo -->
 </head>
 <body>
     <div id="game-container">
