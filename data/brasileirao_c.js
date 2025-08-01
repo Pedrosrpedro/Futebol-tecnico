@@ -1,5 +1,4 @@
-{
-    "leaguesData": {
+Object.assign(leaguesData, {
         "brasileirao_c": {
             "name": "Brasileirão Série C",
             "logo": "logo_brasileirao_c.png",
