@@ -363,3 +363,52 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
 #cancel-holiday-btn:hover {
     filter: brightness(1.2);
 }
+
+/* ... (todo o seu CSS anterior) ... */
+
+/* --- NOVO: Estilos para a Página de Notícias --- */
+#news-content {
+    align-items: center;
+}
+#news-feed-container {
+    width: 100%;
+    max-width: 800px;
+    height: 100%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 10px;
+}
+.news-article {
+    background-color: var(--bg-dark);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+.news-article h4 {
+    color: var(--accent-color);
+    margin-bottom: 5px;
+}
+.news-article .news-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+}
+.news-article .news-body {
+    line-height: 1.6;
+}
+
+/* --- NOVO: Estilo para o botão de cancelar férias --- */
+#cancel-holiday-btn {
+    background-color: var(--danger-color);
+    color: var(--text-primary);
+    margin: 0 auto 15px auto;
+    display: block;
+    width: 100%;
+    max-width: 580px; /* Alinha com a largura do calendário */
+    border: 1px solid var(--border-color);
+}
+#cancel-holiday-btn:hover {
+    filter: brightness(1.2);
+}
