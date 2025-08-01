@@ -15,7 +15,11 @@ const gameState = {
     isPaused: false,
     matchState: null,
     pendingTacticalChanges: null,
+    // NOVAS PROPRIEDADES PARA FÉRIAS
+    isOnHoliday: false,
+    holidayEndDate: null,
 };
+let holidayInterval = null; // Para controlar o avanço automático
 let selectedPlayerInfo = null;
 const MAX_SUBSTITUTES = 7;
 
@@ -187,6 +191,7 @@ function createSquadListPlayer(player) { const item = document.createElement('di
 function loadSquadTable() { const playerListDiv = document.getElementById('player-list-table'); if (!playerListDiv) return; const positionOrder = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST']; const sortedPlayers = [...gameState.userClub.players].sort((a, b) => { return positionOrder.indexOf(a.position) - positionOrder.indexOf(b.position); }); let tableHTML = `<table><thead><tr><th>Nome</th><th>Pos.</th><th>Veloc.</th><th>Finaliz.</th><th>Passe</th><th>Drible</th><th>Defesa</th><th>Físico</th><th>GERAL</th></tr></thead><tbody>`; for (const player of sortedPlayers) { tableHTML += `<tr><td>${player.name}</td><td>${player.position}</td><td>${player.attributes.pace}</td><td>${player.attributes.shooting}</td><td>${player.attributes.passing}</td><td>${player.attributes.dribbling}</td><td>${player.attributes.defending}</td><td>${player.attributes.physical}</td><td><b>${player.overall}</b></td></tr>`; } tableHTML += `</tbody></table>`; playerListDiv.innerHTML = tableHTML; }
 function updateTableWithResult(match) { const homeTeam = gameState.leagueTable.find(t => t.name === match.home.name); const awayTeam = gameState.leagueTable.find(t => t.name === match.away.name); if (!homeTeam || !awayTeam) return; homeTeam.played++; awayTeam.played++; homeTeam.goalsFor += match.homeScore; homeTeam.goalsAgainst += match.awayScore; awayTeam.goalsFor += match.awayScore; awayTeam.goalsAgainst += match.homeScore; homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst; awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst; if (match.homeScore > match.awayScore) { homeTeam.wins++; homeTeam.points += 3; awayTeam.losses++; } else if (match.awayScore > match.homeScore) { awayTeam.wins++; awayTeam.points += 3; homeTeam.losses++; } else { homeTeam.draws++; awayTeam.draws++; homeTeam.points += 1; awayTeam.points += 1; } }
 function updateLeagueTable() { const container = document.getElementById('league-table-container'); if (!container) return; const tiebreakers = leaguesData[gameState.currentLeagueId].leagueInfo.tiebreakers; gameState.leagueTable.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); let tableHTML = `<table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>`; gameState.leagueTable.forEach((team, index) => { const isUserTeam = team.name === gameState.userClub.name; tableHTML += `<tr class="${isUserTeam ? 'user-team-row' : ''}"><td>${index + 1}</td><td>${team.name}</td><td>${team.points}</td><td>${team.played}</td><td>${team.wins}</td><td>${team.draws}</td><td>${team.losses}</td><td>${team.goalsFor}</td><td>${team.goalsAgainst}</td><td>${team.goalDifference}</td></tr>`; }); tableHTML += `</tbody></table>`; container.innerHTML = tableHTML; }
+
 function updateCalendar() {
     const container = document.getElementById('calendar-container'); if (!container || !gameState.calendarDisplayDate) return;
     const date = gameState.calendarDisplayDate; const month = date.getMonth(); const year = date.getFullYear();
@@ -199,11 +204,11 @@ function updateCalendar() {
         let dayClasses = 'calendar-day'; let dayContent = `<span class="day-number">${i}</span>`;
         if (matchOnThisDay) { dayClasses += ' match-day'; const opponent = matchOnThisDay.home.name === gameState.userClub.name ? `vs ${matchOnThisDay.away.name}` : `@ ${matchOnThisDay.home.name}`; dayContent += `<div class="match-details">${opponent}</div>`; }
         if (isCurrent) { dayClasses += ' current-day'; }
-        html += `<div class="${dayClasses}">${dayContent}</div>`;
+        html += `<div class="${dayClasses}" data-date="${loopDate.toISOString().split('T')[0]}">${dayContent}</div>`;
     }
     html += '</div>'; container.innerHTML = html;
-    document.getElementById('prev-month-btn').addEventListener('click', () => { gameState.calendarDisplayDate.setMonth(gameState.calendarDisplayDate.getMonth() - 1); updateCalendar(); });
-    document.getElementById('next-month-btn').addEventListener('click', () => { gameState.calendarDisplayDate.setMonth(gameState.calendarDisplayDate.getMonth() + 1); updateCalendar(); });
+    document.getElementById('prev-month-btn').addEventListener('click', () => { if (!gameState.isOnHoliday) { gameState.calendarDisplayDate.setMonth(gameState.calendarDisplayDate.getMonth() - 1); updateCalendar(); } });
+    document.getElementById('next-month-btn').addEventListener('click', () => { if (!gameState.isOnHoliday) { gameState.calendarDisplayDate.setMonth(gameState.calendarDisplayDate.getMonth() + 1); updateCalendar(); } });
 }
 
 function loadMatchesPage() {
@@ -262,7 +267,6 @@ function advanceDay() {
     updateLeagueTable(); 
     updateContinueButton(); 
     if(gameState.currentMainContent === 'calendar-content') { 
-        gameState.calendarDisplayDate = new Date(gameState.currentDate); 
         updateCalendar();
     } 
 }
@@ -271,6 +275,8 @@ function updateContinueButton() {
     const button = document.getElementById('advance-day-button');
     const displayDate = document.getElementById('current-date-display');
     displayDate.innerText = gameState.currentDate.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    
+    button.disabled = gameState.isOnHoliday;
     
     if (gameState.nextUserMatch && isSameDay(gameState.currentDate, new Date(gameState.nextUserMatch.date))) {
         button.innerText = "DIA DO JOGO";
@@ -281,7 +287,55 @@ function updateContinueButton() {
     }
 }
 
-function simulateDayMatches() { const todayMatches = gameState.schedule.filter(match => isSameDay(new Date(match.date), gameState.currentDate)); for (const match of todayMatches) { if (match.status === 'scheduled') { if (match.home.name !== gameState.userClub.name && match.away.name !== gameState.userClub.name) { match.homeScore = Math.floor(Math.random() * 4); match.awayScore = Math.floor(Math.random() * 4); match.status = 'played'; updateTableWithResult(match); } } } }
+function simulateDayMatches() {
+    const todayMatches = gameState.schedule.filter(match => isSameDay(new Date(match.date), gameState.currentDate));
+    for (const match of todayMatches) {
+        if (match.status === 'scheduled') {
+            const isUserMatch = match.home.name === gameState.userClub.name || match.away.name === gameState.userClub.name;
+            if (isUserMatch && !gameState.isOnHoliday) {
+                continue;
+            }
+            simulateSingleMatch(match, isUserMatch);
+            updateTableWithResult(match);
+        }
+    }
+}
+
+function simulateSingleMatch(match, isUserMatch) {
+    if (isUserMatch) {
+        const userTeam = leaguesData[gameState.currentLeagueId].teams.find(t => t.name === gameState.userClub.name);
+        const opponentTeamData = match.home.name === userTeam.name ? match.away : match.home;
+
+        let userTeamStrength = 0;
+        const startingXI = Object.values(gameState.squadManagement.startingXI);
+        if (startingXI.length === 11 && startingXI.every(p => p)) {
+            userTeamStrength = startingXI.reduce((acc, player) => acc + player.overall, 0) / 11;
+        } else {
+            userTeamStrength = userTeam.players.slice(0, 11).reduce((acc, p) => acc + p.overall, 0) / 11;
+        }
+
+        const opponentBestXI = opponentTeamData.players.sort((a, b) => b.overall - a.overall).slice(0, 11);
+        const opponentStrength = opponentBestXI.reduce((acc, player) => acc + player.overall, 0) / 11;
+
+        let homeScore = 0;
+        let awayScore = 0;
+        const homeStrength = match.home.name === userTeam.name ? userTeamStrength : opponentStrength;
+        const awayStrength = match.away.name === userTeam.name ? userTeamStrength : opponentStrength;
+
+        for(let i = 0; i < 5; i++) {
+            if ((homeStrength / (homeStrength + awayStrength)) * (Math.random() * 1.5) > 0.5) homeScore++;
+            if ((awayStrength / (homeStrength + awayStrength)) * (Math.random() * 1.5) > 0.5) awayScore++;
+        }
+        
+        match.homeScore = homeScore;
+        match.awayScore = awayScore;
+    } else {
+        match.homeScore = Math.floor(Math.random() * 4);
+        match.awayScore = Math.floor(Math.random() * 4);
+    }
+    match.status = 'played';
+}
+
 function findNextUserMatch() { gameState.nextUserMatch = gameState.schedule.filter(m => m.status === 'scheduled' && (m.home.name === gameState.userClub.name || m.away.name === gameState.userClub.name)).sort((a, b) => new Date(a.date) - new Date(b.date))[0] || null; }
 function initializeLeagueTable(teams) { return teams.map(team => ({ name: team.name, logo: team.logo, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 })); }
 
@@ -310,25 +364,84 @@ function generateSchedule(teams, leagueInfo) {
     const allMatches = [...firstHalf, ...secondHalf];
     const schedule = [];
     let currentRoundDate = new Date(leagueInfo.startDate + 'T12:00:00Z');
-    let dateIncrement = 4;
+    let dateIncrement = leagueInfo.gamesPerWeek === 2 ? 4 : 7;
+    let gamesInWeek = 0;
 
     for (let i = 0; i < allMatches.length; i += matchesPerRound) {
         const roundFixtures = allMatches.slice(i, i + matchesPerRound);
         for(const match of roundFixtures) {
             schedule.push({ ...match, date: new Date(currentRoundDate).toISOString(), status: 'scheduled' });
         }
-        currentRoundDate.setDate(currentRoundDate.getDate() + dateIncrement);
-        dateIncrement = 7 - dateIncrement;
+        
+        gamesInWeek++;
+        if (leagueInfo.gamesPerWeek === 2 && gamesInWeek < 2) {
+             currentRoundDate.setDate(currentRoundDate.getDate() + (7-dateIncrement));
+        } else {
+            currentRoundDate.setDate(currentRoundDate.getDate() + dateIncrement);
+            gamesInWeek = 0;
+        }
     }
     return schedule.map((match, index) => ({ ...match, round: Math.floor(index / matchesPerRound) + 1 }));
 }
 
 function isSameDay(date1, date2) { if(!date1 || !date2) return false; return date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth() && date1.getDate() === date2.getDate(); }
 
-// =================================================================================
-// --- LÓGICA DA SIMULAÇÃO DE PARTIDA ---
-// =================================================================================
+// --- Funções para o Modo Férias ---
+function handleCalendarDayClick(e) {
+    if (gameState.isOnHoliday) return;
 
+    const dayElement = e.target.closest('.calendar-day:not(.other-month)');
+    if (!dayElement) return;
+
+    const dateStr = dayElement.dataset.date;
+    const clickedDate = new Date(dateStr + 'T12:00:00Z');
+    
+    if (clickedDate <= gameState.currentDate) return;
+
+    const modal = document.getElementById('holiday-confirmation-modal');
+    const dateDisplay = document.getElementById('holiday-target-date');
+    dateDisplay.innerText = clickedDate.toLocaleDateString('pt-BR');
+    
+    document.getElementById('confirm-holiday-btn').dataset.endDate = clickedDate.toISOString();
+    
+    modal.classList.add('active');
+}
+
+function startHoliday() {
+    const endDateStr = document.getElementById('confirm-holiday-btn').dataset.endDate;
+    if (!endDateStr) return;
+
+    gameState.holidayEndDate = new Date(endDateStr);
+    gameState.isOnHoliday = true;
+
+    document.getElementById('holiday-confirmation-modal').classList.remove('active');
+    document.getElementById('cancel-holiday-btn').style.display = 'block';
+    
+    updateContinueButton();
+
+    holidayInterval = setInterval(advanceDayOnHoliday, 500);
+}
+
+function advanceDayOnHoliday() {
+    if (gameState.currentDate >= gameState.holidayEndDate) {
+        stopHoliday();
+        return;
+    }
+    advanceDay();
+}
+
+function stopHoliday() {
+    clearInterval(holidayInterval);
+    holidayInterval = null;
+    gameState.isOnHoliday = false;
+    gameState.holidayEndDate = null;
+    
+    document.getElementById('cancel-holiday-btn').style.display = 'none';
+    updateContinueButton();
+    findNextUserMatch();
+}
+
+// --- Lógica da Simulação de Partida ---
 let matchInterval;
 
 function promptMatchConfirmation() {
@@ -403,7 +516,6 @@ function setupOpponentSquad(team) {
 
 function initializeMatchPlayers() {
     const { home, away } = gameState.matchState;
-    // CORREÇÃO: Adiciona uma verificação para garantir que as propriedades existem antes de espalhá-las.
     const allPlayers = [
         ...Object.values(home.startingXI || {}), 
         ...Object.values(away.startingXI || {}),
@@ -504,7 +616,6 @@ function resizeCanvas() {
     
     if(gameState.isMatchLive) drawMatch();
 }
-
 
 function drawMatch() {
     const canvas = document.getElementById('match-pitch-canvas');
@@ -647,16 +758,24 @@ function initializeEventListeners() {
     document.getElementById('new-club-back-btn').addEventListener('click', () => showScreen('start-screen'));
     document.getElementById('select-league-back-btn').addEventListener('click', () => showScreen('start-screen'));
     document.getElementById('select-team-back-btn').addEventListener('click', () => showScreen('select-league-screen'));
-    // CORREÇÃO: Removida a linha abaixo para evitar o clique duplo
-    // document.getElementById('advance-day-button').addEventListener('click', advanceDay); 
+    
     document.getElementById('exit-game-btn').addEventListener('click', () => window.location.reload());
     document.querySelectorAll('#sidebar li').forEach(item => { item.addEventListener('click', () => showMainContent(item.dataset.content)); });
+    
+    document.getElementById('calendar-content').addEventListener('click', handleCalendarDayClick);
+    document.getElementById('confirm-holiday-btn').addEventListener('click', startHoliday);
+    document.getElementById('cancel-holiday-btn').addEventListener('click', stopHoliday);
+    document.getElementById('close-holiday-modal-btn').addEventListener('click', () => document.getElementById('holiday-confirmation-modal').classList.remove('active'));
+    document.getElementById('cancel-holiday-btn-modal').addEventListener('click', () => document.getElementById('holiday-confirmation-modal').classList.remove('active'));
+
     document.getElementById('settings-btn').addEventListener('click', openSettingsModal);
     document.getElementById('close-modal-btn').addEventListener('click', closeSettingsModal);
     document.getElementById('fullscreen-btn').addEventListener('click', toggleFullScreen);
     document.getElementById('settings-modal').addEventListener('click', (e) => { if (e.target.id === 'settings-modal') { closeSettingsModal(); } });
+    
     const tacticsContent = document.getElementById('tactics-content');
     if (tacticsContent) { tacticsContent.addEventListener('click', handleTacticsInteraction); }
+    
     document.querySelectorAll('#tactics-content select, #tactics-content input[type="checkbox"]').forEach(element => {
         element.addEventListener('change', (e) => {
             e.stopPropagation();
@@ -666,6 +785,7 @@ function initializeEventListeners() {
             loadTacticsScreen();
         });
     });
+    
     document.querySelectorAll('.panel-toggle-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -698,4 +818,4 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeEventListeners(); 
     loadLeagues();
     window.addEventListener('resize', resizeCanvas);
-});
+});```
