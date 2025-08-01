@@ -5,13 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Football Manager</title>
     <link rel="stylesheet" href="style.css">
-    
-    <!-- ORDEM CORRIGIDA E CRÍTICA -->
-    <script src="data/brasileirao_a.js" defer></script> <!-- 1º: Cria o leaguesData -->
-    <script src="data/brasileirao_b.js" defer></script> <!-- 2º: Adiciona a Série B -->
-    <script src="data/brasileirao_c.js" defer></script> <!-- 3º: Adiciona a Série C -->
-    
-    <script src="script.js" defer></script> <!-- 4º: Roda a lógica do jogo -->
+    <!-- Ordem correta dos scripts de dados -->
+    <script src="data/brasileirao_a.js" defer></script>
+    <script src="data/brasileirao_b.js" defer></script>
+    <script src="data/brasileirao_c.js" defer></script>
+    <script src="script.js" defer></script>
 </head>
 <body>
     <div id="game-container">
@@ -69,6 +67,7 @@
                 <div id="league-content" class="main-content-panel"><h3>Tabela de Classificação</h3><div id="league-table-container" class="table-container"></div></div>
                 <div id="calendar-content" class="main-content-panel">
                     <h3>Calendário da Temporada</h3>
+                    <button id="cancel-holiday-btn" style="display: none;">Cancelar Férias</button>
                     <div id="calendar-container">
                         <!-- O conteúdo do calendário será gerado pelo JS -->
                     </div>
@@ -93,7 +92,7 @@
             </main>
         </div>
         
-        <!-- NOVO: Tela de Simulação de Partida -->
+        <!-- Tela de Simulação de Partida -->
         <div id="match-simulation-screen" class="screen">
             <div id="match-header">
                 <div id="match-scoreboard">
@@ -115,11 +114,9 @@
             </div>
 
             <div id="match-pitch-container">
-                <!-- O canvas é onde os "botões" dos jogadores serão desenhados -->
                 <canvas id="match-pitch-canvas"></canvas>
             </div>
 
-            <!-- Overlay de Pausa -->
             <div id="pause-overlay" class="modal-overlay">
                 <div class="pause-menu">
                     <h2>PAUSA</h2>
@@ -129,11 +126,10 @@
                 </div>
             </div>
 
-            <!-- Notificações durante a partida -->
             <div id="match-notification-area"></div>
         </div>
 
-        <!-- NOVO: Modal de Confirmação de Partida -->
+        <!-- Modal de Confirmação de Partida -->
         <div id="match-confirmation-modal" class="modal-overlay">
             <div class="modal-content">
                 <button id="close-confirmation-modal-btn" class="icon-btn modal-close-btn">×</button>
@@ -144,12 +140,10 @@
             </div>
         </div>
 
-        <!-- NOVO: Modal de Táticas Dentro do Jogo -->
-        <div id="ingame-tactics-modal" class="modal-overlay">
-            <!-- O conteúdo de táticas será injetado aqui pelo JS, similar à tela principal -->
-        </div>
+        <!-- Modal de Táticas Dentro do Jogo -->
+        <div id="ingame-tactics-modal" class="modal-overlay"></div>
 
-        <!-- NOVO: Modal de Relatório Pós-Jogo -->
+        <!-- Modal de Relatório Pós-Jogo -->
         <div id="post-match-report-modal" class="modal-overlay">
             <div class="modal-content post-match-report">
                 <h2 id="post-match-title">Fim de Jogo!</h2>
@@ -159,6 +153,18 @@
                     <p id="post-match-summary">Um resumo de como a partida se desenrolou, quem jogou melhor, e o resultado final.</p>
                 </div>
                 <button id="close-post-match-btn">Continuar</button>
+            </div>
+        </div>
+
+        <!-- Modal de Confirmação de Férias -->
+        <div id="holiday-confirmation-modal" class="modal-overlay">
+            <div class="modal-content">
+                <button id="close-holiday-modal-btn" class="icon-btn modal-close-btn">×</button>
+                <h2>Ir de Férias</h2>
+                <p>Deseja simular os dias automaticamente até <b id="holiday-target-date">DD/MM/YYYY</b>?</p>
+                <p><small>O jogo usará sua escalação e táticas atuais para simular suas partidas.</small></p>
+                <button id="confirm-holiday-btn">Confirmar e Viajar</button>
+                <button class="secondary" id="cancel-holiday-btn-modal">Cancelar</button>
             </div>
         </div>
 
