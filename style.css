@@ -346,3 +346,20 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     color: var(--selected-color);
     margin-left: 10px;
 }
+
+/* ... (todo o seu CSS anterior) ... */
+
+/* NOVO: Estilo para o botão de cancelar férias */
+#cancel-holiday-btn {
+    background-color: var(--danger-color);
+    color: var(--text-primary);
+    margin: 0 auto 15px auto;
+    display: block;
+    width: 100%;
+    max-width: 580px; /* Alinha com a largura do calendário */
+    border: 1px solid var(--border-color);
+}
+
+#cancel-holiday-btn:hover {
+    filter: brightness(1.2);
+}
