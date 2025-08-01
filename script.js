@@ -15,11 +15,17 @@ const gameState = {
     isPaused: false,
     matchState: null,
     pendingTacticalChanges: null,
-    // NOVAS PROPRIEDADES PARA FÉRIAS
     isOnHoliday: false,
     holidayEndDate: null,
+    newsFeed: [], // Armazena todas as notícias
+    season: 1, // Contador da temporada
+    serieCState: { // Para controlar as fases da Série C
+        phase: 1,
+        groups: { A: [], B: [] },
+        finalists: [],
+    }
 };
-let holidayInterval = null; // Para controlar o avanço automático
+let holidayInterval = null;
 let selectedPlayerInfo = null;
 const MAX_SUBSTITUTES = 7;
 
@@ -31,6 +37,46 @@ const formationLayouts = {
     '3-5-2':    { 'GK': [93, 50], 'CB1': [80, 70], 'CB2': [82, 50], 'CB3': [80, 30], 'RWB': [55, 85], 'CM1': [50, 65], 'CDM': [68, 50], 'CM2': [50, 35], 'LWB': [55, 15], 'ST1': [25, 65], 'ST2': [25, 35] },
     '4-2-3-1':  { 'GK': [93, 50], 'RB': [75, 82], 'CB1': [78, 62], 'CB2': [78, 38], 'LB': [75, 18], 'CDM1': [65, 65], 'CDM2': [65, 35], 'RW': [42, 82], 'CAM': [45, 50], 'LW': [42, 18], 'ST': [20, 50] }
 };
+
+// --- Funções de Notícias ---
+function addNews(headline, body, isUserRelated = false) {
+    const newsItem = {
+        date: new Date(gameState.currentDate),
+        headline,
+        body
+    };
+    gameState.newsFeed.unshift(newsItem); // Adiciona no início
+    if (isUserRelated) {
+        showUserNewsModal(headline, body);
+    }
+}
+
+function showUserNewsModal(headline, body) {
+    document.getElementById('user-news-headline').innerText = headline;
+    document.getElementById('user-news-body').innerText = body;
+    document.getElementById('user-news-modal').classList.add('active');
+}
+
+function displayNewsFeed() {
+    const container = document.getElementById('news-feed-container');
+    container.innerHTML = '';
+    if (gameState.newsFeed.length === 0) {
+        container.innerHTML = '<p>Nenhuma notícia por enquanto.</p>';
+        return;
+    }
+    let newsHTML = '';
+    gameState.newsFeed.forEach(item => {
+        newsHTML += `
+            <div class="news-article">
+                <h4>${item.headline}</h4>
+                <div class="news-date">${item.date.toLocaleDateString('pt-BR')}</div>
+                <p class="news-body">${item.body}</p>
+            </div>
+        `;
+    });
+    container.innerHTML = newsHTML;
+}
+
 
 // --- Funções de UI ---
 function openSettingsModal() { document.getElementById('settings-modal').classList.add('active'); }
@@ -57,6 +103,7 @@ function showMainContent(contentId) {
         updateCalendar();
     }
     if (contentId === 'matches-content') loadMatchesPage();
+    if (contentId === 'news-content') displayNewsFeed();
 }
 
 // --- Funções de Inicialização do Jogo ---
@@ -98,6 +145,15 @@ function setupInitialSquad() {
 
 function startGame(team) {
     gameState.userClub = team;
+    initializeSeason();
+    document.getElementById('header-manager-name').innerText = gameState.managerName;
+    document.getElementById('header-club-name').innerText = gameState.userClub.name;
+    document.getElementById('header-club-logo').src = `images/${gameState.userClub.logo}`;
+    showScreen('main-game-screen');
+    showMainContent('home-content');
+}
+
+function initializeSeason() {
     const leagueInfo = leaguesData[gameState.currentLeagueId].leagueInfo;
     const teams = leaguesData[gameState.currentLeagueId].teams;
     
@@ -110,17 +166,15 @@ function startGame(team) {
     firstMatchDate.setDate(firstMatchDate.getDate() - 5);
     gameState.currentDate = firstMatchDate;
 
-    findNextUserMatch();
+    gameState.serieCState = { phase: 1, groups: { A: [], B: [] }, finalists: [] };
 
-    document.getElementById('header-manager-name').innerText = gameState.managerName;
-    document.getElementById('header-club-name').innerText = gameState.userClub.name;
-    document.getElementById('header-club-logo').src = `images/${gameState.userClub.logo}`;
+    findNextUserMatch();
     loadSquadTable();
     updateLeagueTable();
     updateContinueButton();
-    showScreen('main-game-screen');
-    showMainContent('home-content');
+    addNews(`Começa a Temporada ${2024 + gameState.season}!`, `A bola vai rolar para a ${leaguesData[gameState.currentLeagueId].name}. Boa sorte, ${gameState.managerName}!`, gameState.userClub.name);
 }
+
 
 // --- Lógica de Táticas ---
 function handleTacticsInteraction(e) {
@@ -190,7 +244,45 @@ function createSquadListPlayer(player) { const item = document.createElement('di
 // --- Funções de UI (Tabelas, Calendário, Jogos) ---
 function loadSquadTable() { const playerListDiv = document.getElementById('player-list-table'); if (!playerListDiv) return; const positionOrder = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST']; const sortedPlayers = [...gameState.userClub.players].sort((a, b) => { return positionOrder.indexOf(a.position) - positionOrder.indexOf(b.position); }); let tableHTML = `<table><thead><tr><th>Nome</th><th>Pos.</th><th>Veloc.</th><th>Finaliz.</th><th>Passe</th><th>Drible</th><th>Defesa</th><th>Físico</th><th>GERAL</th></tr></thead><tbody>`; for (const player of sortedPlayers) { tableHTML += `<tr><td>${player.name}</td><td>${player.position}</td><td>${player.attributes.pace}</td><td>${player.attributes.shooting}</td><td>${player.attributes.passing}</td><td>${player.attributes.dribbling}</td><td>${player.attributes.defending}</td><td>${player.attributes.physical}</td><td><b>${player.overall}</b></td></tr>`; } tableHTML += `</tbody></table>`; playerListDiv.innerHTML = tableHTML; }
 function updateTableWithResult(match) { const homeTeam = gameState.leagueTable.find(t => t.name === match.home.name); const awayTeam = gameState.leagueTable.find(t => t.name === match.away.name); if (!homeTeam || !awayTeam) return; homeTeam.played++; awayTeam.played++; homeTeam.goalsFor += match.homeScore; homeTeam.goalsAgainst += match.awayScore; awayTeam.goalsFor += match.awayScore; awayTeam.goalsAgainst += match.homeScore; homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst; awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst; if (match.homeScore > match.awayScore) { homeTeam.wins++; homeTeam.points += 3; awayTeam.losses++; } else if (match.awayScore > match.homeScore) { awayTeam.wins++; awayTeam.points += 3; homeTeam.losses++; } else { homeTeam.draws++; awayTeam.draws++; homeTeam.points += 1; awayTeam.points += 1; } }
-function updateLeagueTable() { const container = document.getElementById('league-table-container'); if (!container) return; const tiebreakers = leaguesData[gameState.currentLeagueId].leagueInfo.tiebreakers; gameState.leagueTable.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); let tableHTML = `<table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>`; gameState.leagueTable.forEach((team, index) => { const isUserTeam = team.name === gameState.userClub.name; tableHTML += `<tr class="${isUserTeam ? 'user-team-row' : ''}"><td>${index + 1}</td><td>${team.name}</td><td>${team.points}</td><td>${team.played}</td><td>${team.wins}</td><td>${team.draws}</td><td>${team.losses}</td><td>${team.goalsFor}</td><td>${team.goalsAgainst}</td><td>${team.goalDifference}</td></tr>`; }); tableHTML += `</tbody></table>`; container.innerHTML = tableHTML; }
+
+function updateLeagueTable() {
+    const container = document.getElementById('league-table-container');
+    if (!container) return;
+    const leagueInfo = leaguesData[gameState.currentLeagueId].leagueInfo;
+    const tiebreakers = leagueInfo.tiebreakers;
+
+    let tableHTML = '';
+
+    if (gameState.currentLeagueId === 'brasileirao_c' && gameState.serieCState.phase === 2) {
+        // Fase 2 da Série C: Mostrar Grupos
+        const groupA = gameState.leagueTable.filter(t => gameState.serieCState.groups.A.includes(t.name));
+        const groupB = gameState.leagueTable.filter(t => gameState.serieCState.groups.B.includes(t.name));
+        groupA.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; });
+        groupB.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; });
+        
+        tableHTML += '<h3>Grupo A</h3>';
+        tableHTML += renderTable(groupA);
+        tableHTML += '<h3 style="margin-top: 20px;">Grupo B</h3>';
+        tableHTML += renderTable(groupB);
+    } else {
+        // Tabela normal para todas as outras ligas e fases
+        gameState.leagueTable.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; });
+        tableHTML = renderTable(gameState.leagueTable);
+    }
+    
+    container.innerHTML = tableHTML;
+}
+
+function renderTable(tableData) {
+    let html = `<table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>`;
+    tableData.forEach((team, index) => {
+        const isUserTeam = team.name === gameState.userClub.name;
+        html += `<tr class="${isUserTeam ? 'user-team-row' : ''}"><td>${index + 1}</td><td>${team.name}</td><td>${team.points}</td><td>${team.played}</td><td>${team.wins}</td><td>${team.draws}</td><td>${team.losses}</td><td>${team.goalsFor}</td><td>${team.goalsAgainst}</td><td>${team.goalDifference}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+    return html;
+}
+
 
 function updateCalendar() {
     const container = document.getElementById('calendar-container'); if (!container || !gameState.calendarDisplayDate) return;
@@ -268,7 +360,8 @@ function advanceDay() {
     updateContinueButton(); 
     if(gameState.currentMainContent === 'calendar-content') { 
         updateCalendar();
-    } 
+    }
+    checkSeasonEvents();
 }
 
 function updateContinueButton() {
@@ -343,7 +436,14 @@ function generateSchedule(teams, leagueInfo) {
     let clubes = [...teams];
     if (clubes.length % 2 !== 0) { clubes.push({ name: "BYE", logo: "logo_default.png" }); }
     const numTeams = clubes.length;
-    const rounds = numTeams - 1;
+    let rounds = numTeams - 1;
+    
+    // Série C tem turno único na primeira fase
+    const isSerieCPhase1 = leagueInfo.format.includes("Fases") && gameState.serieCState.phase === 1;
+    if (isSerieCPhase1) {
+        rounds = numTeams - 1;
+    }
+
     const matchesPerRound = numTeams / 2;
     const firstHalf = [];
 
@@ -353,36 +453,46 @@ function generateSchedule(teams, leagueInfo) {
             const home = clubes[i];
             const away = clubes[numTeams - 1 - i];
             if (home.name !== "BYE" && away.name !== "BYE") {
-                if (round % 2 === 0) { roundMatches.push({ home, away }); } else { roundMatches.push({ home: away, away: home }); }
+                // Para turno único, não precisa alternar mando
+                if(isSerieCPhase1) {
+                     roundMatches.push({ home, away });
+                } else {
+                     if (round % 2 === 0) { roundMatches.push({ home, away }); } else { roundMatches.push({ home: away, away: home }); }
+                }
             }
         }
         firstHalf.push(...roundMatches);
         clubes.splice(1, 0, clubes.pop());
     }
+    
+    let allMatches = [...firstHalf];
+    if (!isSerieCPhase1) {
+        const secondHalf = firstHalf.map(match => ({ home: match.away, away: match.home }));
+        allMatches.push(...secondHalf);
+    }
 
-    const secondHalf = firstHalf.map(match => ({ home: match.away, away: match.home }));
-    const allMatches = [...firstHalf, ...secondHalf];
     const schedule = [];
-    let currentRoundDate = new Date(leagueInfo.startDate + 'T12:00:00Z');
-    let dateIncrement = leagueInfo.gamesPerWeek === 2 ? 4 : 7;
-    let gamesInWeek = 0;
+    let currentRoundDate = new Date(gameState.currentDate);
+    currentRoundDate.setDate(currentRoundDate.getDate() + 7); // Começa na próxima semana
 
+    const gamesPerWeek = leagueInfo.gamesPerWeek || 2; // Default 2 jogos por semana
+    
     for (let i = 0; i < allMatches.length; i += matchesPerRound) {
         const roundFixtures = allMatches.slice(i, i + matchesPerRound);
         for(const match of roundFixtures) {
             schedule.push({ ...match, date: new Date(currentRoundDate).toISOString(), status: 'scheduled' });
         }
         
-        gamesInWeek++;
-        if (leagueInfo.gamesPerWeek === 2 && gamesInWeek < 2) {
-             currentRoundDate.setDate(currentRoundDate.getDate() + (7-dateIncrement));
-        } else {
-            currentRoundDate.setDate(currentRoundDate.getDate() + dateIncrement);
-            gamesInWeek = 0;
+        // Avança 3 ou 4 dias para simular meio e fim de semana
+        if (currentRoundDate.getDay() < 4) { // Se for Dom, Seg, Ter (início da semana)
+            currentRoundDate.setDate(currentRoundDate.getDate() + 3); // Jogo no meio da semana
+        } else { // Se for Qua, Qui, Sex, Sab
+            currentRoundDate.setDate(currentRoundDate.getDate() + 4); // Jogo no fim de semana
         }
     }
     return schedule.map((match, index) => ({ ...match, round: Math.floor(index / matchesPerRound) + 1 }));
 }
+
 
 function isSameDay(date1, date2) { if(!date1 || !date2) return false; return date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth() && date1.getDate() === date2.getDate(); }
 
@@ -441,7 +551,7 @@ function stopHoliday() {
     findNextUserMatch();
 }
 
-// --- Lógica da Simulação de Partida ---
+// --- Lógica de Simulação de Partida (visual) ---
 let matchInterval;
 
 function promptMatchConfirmation() {
@@ -749,6 +859,130 @@ function showPostMatchReport() {
     modal.classList.add('active');
 }
 
+// --- Lógica de Fim de Temporada e Fases ---
+function checkSeasonEvents() {
+    const remainingMatches = gameState.schedule.filter(m => m.status === 'scheduled');
+    if (remainingMatches.length > 0) return; // Temporada ainda não acabou
+
+    // Lógica para Série C
+    if (gameState.currentLeagueId === 'brasileirao_c') {
+        if (gameState.serieCState.phase === 1) {
+            handleEndOfSerieCFirstPhase();
+            return;
+        }
+        if (gameState.serieCState.phase === 2) {
+            handleEndOfSerieCSecondPhase();
+            return;
+        }
+        if (gameState.serieCState.phase === 3) {
+            // Final terminou, então a temporada acabou
+        }
+    }
+
+    // Se chegou aqui, a temporada acabou para Série A, B ou C (pós-final)
+    handleEndOfSeason();
+}
+
+function handleEndOfSerieCFirstPhase() {
+    gameState.serieCState.phase = 2;
+    const qualified = [...gameState.leagueTable].sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference).slice(0, 8);
+    
+    // Divide nos grupos
+    const groupA_teams = [qualified[0], qualified[3], qualified[4], qualified[7]];
+    const groupB_teams = [qualified[1], qualified[2], qualified[5], qualified[6]];
+    gameState.serieCState.groups.A = groupA_teams.map(t => t.name);
+    gameState.serieCState.groups.B = groupB_teams.map(t => t.name);
+
+    const groupA_data = groupA_teams.map(t => leaguesData.brasileirao_c.teams.find(team => team.name === t.name));
+    const groupB_data = groupB_teams.map(t => leaguesData.brasileirao_c.teams.find(team => team.name === t.name));
+
+    // Gera novos calendários para os grupos
+    const scheduleA = generateSchedule(groupA_data, { gamesPerWeek: 2 });
+    const scheduleB = generateSchedule(groupB_data, { gamesPerWeek: 2 });
+    gameState.schedule = [...scheduleA, ...scheduleB];
+    
+    // Reseta a tabela para a fase de grupos
+    gameState.leagueTable = initializeLeagueTable([...groupA_data, ...groupB_data]);
+    findNextUserMatch();
+    updateLeagueTable();
+    
+    const qualifiedNames = qualified.map(t => t.name).join(', ');
+    const isUserTeamQualified = qualified.some(t => t.name === gameState.userClub.name);
+    addNews("Definidos os classificados na Série C!", `Os 8 times que avançam para a segunda fase são: ${qualifiedNames}.`, isUserTeamQualified);
+}
+
+function handleEndOfSerieCSecondPhase() {
+    gameState.serieCState.phase = 3;
+    const tiebreakers = leaguesData.brasileirao_c.leagueInfo.tiebreakers;
+
+    const groupA = gameState.leagueTable.filter(t => gameState.serieCState.groups.A.includes(t.name)).sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; });
+    const groupB = gameState.leagueTable.filter(t => gameState.serieCState.groups.B.includes(t.name)).sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; });
+
+    const finalists = [groupA[0], groupB[0]];
+    gameState.serieCState.finalists = finalists.map(t => t.name);
+    
+    // Times que subiram para a Série B
+    const promoted = [groupA[0], groupA[1], groupB[0], groupB[1]];
+    const promotedNames = promoted.map(t => t.name).join(', ');
+    const isUserTeamPromoted = promoted.some(t => t.name === gameState.userClub.name);
+    addNews("Gigantes na Série B! Times garantem o acesso!", `Parabéns a ${promotedNames} pelo acesso à Série B de 2026!`, isUserTeamPromoted);
+
+    // Gera a final (ida e volta)
+    const finalistData = finalists.map(t => leaguesData.brasileirao_c.teams.find(team => team.name === t.name));
+    const finalMatches = [
+        { home: finalistData[0], away: finalistData[1], date: new Date(gameState.currentDate.setDate(gameState.currentDate.getDate() + 7)).toISOString(), status: 'scheduled' },
+        { home: finalistData[1], away: finalistData[0], date: new Date(gameState.currentDate.setDate(gameState.currentDate.getDate() + 7)).toISOString(), status: 'scheduled' }
+    ];
+    gameState.schedule = finalMatches;
+    findNextUserMatch();
+
+    addNews(`Final da Série C definida: ${finalists[0].name} x ${finalists[1].name}!`, "Os campeões de cada grupo agora disputam o título máximo da competição em dois jogos emocionantes.", finalists.some(t => t.name === gameState.userClub.name));
+}
+
+
+function handleEndOfSeason() {
+    // Para evitar múltiplos acionamentos
+    if (gameState.isOnHoliday) stopHoliday();
+    alert("Fim da temporada! Verifique as notícias para ver os resultados e prepare-se para a próxima temporada.");
+
+    const table = [...gameState.leagueTable].sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference);
+    const userTeamRank = table.findIndex(t => t.name === gameState.userClub.name) + 1;
+    const userTeam = leaguesData[gameState.currentLeagueId].teams.find(t => t.name === gameState.userClub.name);
+    
+    // Lógica específica por divisão
+    if (gameState.currentLeagueId === 'brasileirao_a') {
+        const champion = table[0];
+        const relegated = table.slice(-4);
+        addNews(`${champion.name} é o campeão do Brasileirão Série A!`, `Após uma temporada disputada, o ${champion.name} levanta a taça!`, champion.name === userTeam.name);
+        addNews(`Rebaixados na Série A!`, `Os quatro times rebaixados para a Série B são: ${relegated.map(t=>t.name).join(', ')}.`, relegated.some(t=>t.name === userTeam.name));
+    } else if (gameState.currentLeagueId === 'brasileirao_b') {
+        const promoted = table.slice(0, 4);
+        const relegated = table.slice(-4);
+        addNews(`Acesso à Elite!`, `Os quatro times promovidos para a Série A são: ${promoted.map(t=>t.name).join(', ')}.`, promoted.some(t=>t.name === userTeam.name));
+        addNews(`Rebaixados na Série B!`, `Os quatro times rebaixados para a Série C são: ${relegated.map(t=>t.name).join(', ')}.`, relegated.some(t=>t.name === userTeam.name));
+    } else if (gameState.currentLeagueId === 'brasileirao_c') {
+        const finalMatch1 = gameState.schedule[0];
+        let champion;
+        if (finalMatch1.homeScore + gameState.schedule[1].awayScore > finalMatch1.awayScore + gameState.schedule[1].homeScore) {
+            champion = finalMatch1.home;
+        } else {
+            champion = finalMatch1.away;
+        }
+        addNews(`${champion.name} é o grande campeão da Série C!`, `Após vencer a final, o ${champion.name} conquista o título!`, champion.name === userTeam.name);
+        
+        // Rebaixados da fase 1
+        // (Nota: esta lógica precisaria de mais detalhes, por ora apenas geramos a notícia)
+    }
+
+    // SIMULAÇÃO DE PROMOÇÃO E REBAIXAMENTO (ATENÇÃO: não altera o `leaguesData` original)
+    // Para uma versão persistente, você precisaria salvar e carregar o estado do `leaguesData`.
+    // Por enquanto, apenas reiniciamos a temporada na mesma liga.
+    
+    gameState.season++;
+    initializeSeason();
+}
+
+
 // --- Event Listeners ---
 function initializeEventListeners() {
     document.getElementById('confirm-manager-name-btn').addEventListener('click', createManager);
@@ -766,6 +1000,11 @@ function initializeEventListeners() {
     document.getElementById('cancel-holiday-btn').addEventListener('click', stopHoliday);
     document.getElementById('close-holiday-modal-btn').addEventListener('click', () => document.getElementById('holiday-confirmation-modal').classList.remove('active'));
     document.getElementById('cancel-holiday-btn-modal').addEventListener('click', () => document.getElementById('holiday-confirmation-modal').classList.remove('active'));
+
+    // Listeners para o novo modal de notícias
+    document.getElementById('close-user-news-modal-btn').addEventListener('click', () => document.getElementById('user-news-modal').classList.remove('active'));
+    document.getElementById('confirm-user-news-btn').addEventListener('click', () => document.getElementById('user-news-modal').classList.remove('active'));
+
 
     document.getElementById('settings-btn').addEventListener('click', openSettingsModal);
     document.getElementById('close-modal-btn').addEventListener('click', closeSettingsModal);
