@@ -25,6 +25,7 @@ const gameState = {
     leagueStates: {},
     matchesView: { leagueId: null, round: 1 },
     tableView: { leagueId: null },
+    isOffSeason: false, // NOVO: Controle da pré-temporada
 };
 let holidayInterval = null;
 let selectedPlayerInfo = null;
@@ -45,7 +46,7 @@ function addNews(headline, body, isUserRelated = false, imageHint = null) {
         date: new Date(gameState.currentDate),
         headline,
         body,
-        imageHint // ex: 'logo_flamengo.png'
+        imageHint
     };
     gameState.newsFeed.unshift(newsItem);
     if (isUserRelated) showUserNewsModal(headline, body);
@@ -65,9 +66,9 @@ function displayNewsFeed() {
         return;
     }
 
-    // Notícia Principal (a mais recente)
     const mainNews = gameState.newsFeed[0];
-    let mainImage = mainNews.imageHint ? `images/${findTeamInLeagues(mainNews.imageHint)?.logo}` : `images/${leaguesData[Object.keys(leaguesData)[0]].logo}`;
+    const mainTeam = findTeamInLeagues(mainNews.imageHint);
+    let mainImage = mainTeam ? `images/${mainTeam.logo}` : `images/${leaguesData[Object.keys(leaguesData)[0]].logo}`;
     
     container.innerHTML += `
         <div class="news-article news-article-main">
@@ -80,13 +81,13 @@ function displayNewsFeed() {
         </div>
     `;
 
-    // Lista de notícias secundárias
     const secondaryNewsContainer = document.createElement('div');
     secondaryNewsContainer.id = 'news-list-secondary';
     
-    const secondaryNews = gameState.newsFeed.slice(1, 5); // Pega as próximas 4
+    const secondaryNews = gameState.newsFeed.slice(1, 5);
     secondaryNews.forEach(item => {
-        let itemImage = item.imageHint ? `images/${findTeamInLeagues(item.imageHint)?.logo}` : `images/logo_default.png`;
+        const itemTeam = findTeamInLeagues(item.imageHint);
+        let itemImage = itemTeam ? `images/${itemTeam.logo}` : `images/logo_default.png`;
         secondaryNewsContainer.innerHTML += `
             <div class="news-article news-article-secondary">
                  <img src="${itemImage}" alt="Notícia secundária">
@@ -100,6 +101,7 @@ function displayNewsFeed() {
     
     container.appendChild(secondaryNewsContainer);
 }
+
 
 // --- Funções de UI ---
 function openSettingsModal() { document.getElementById('settings-modal').classList.add('active'); }
@@ -126,12 +128,12 @@ function showMainContent(contentId) {
         updateCalendar();
     }
     if (contentId === 'matches-content') {
-        gameState.matchesView.leagueId = gameState.currentLeagueId;
-        gameState.matchesView.round = findCurrentRound(gameState.currentLeagueId);
+        gameState.matchesView.leagueId = gameState.matchesView.leagueId || gameState.currentLeagueId;
+        gameState.matchesView.round = findCurrentRound(gameState.matchesView.leagueId);
         displayRound(gameState.matchesView.leagueId, gameState.matchesView.round);
     }
     if (contentId === 'league-content') {
-        gameState.tableView.leagueId = gameState.currentLeagueId;
+        gameState.tableView.leagueId = gameState.tableView.leagueId || gameState.currentLeagueId;
         updateLeagueTable(gameState.tableView.leagueId);
     }
     if (contentId === 'news-content') displayNewsFeed();
@@ -183,18 +185,24 @@ function startGame(team) {
 
 function initializeSeason() {
     const year = 2024 + gameState.season;
-    const firstMatchDate = new Date(`${year}-02-01T12:00:00Z`);
-    gameState.currentDate = firstMatchDate;
+    gameState.isOffSeason = false;
+    gameState.newsFeed = []; // CORREÇÃO: Reseta as notícias
     
+    // Inicializa o estado para todas as ligas
     for(const leagueId in leaguesData) {
         const leagueInfo = leaguesData[leagueId];
+        const leagueStartDate = new Date(`${year}-${leagueInfo.startDate.substring(5)}T12:00:00Z`);
+        
         gameState.leagueStates[leagueId] = {
             table: initializeLeagueTable(leagueInfo.teams),
-            schedule: generateSchedule(leagueInfo.teams, leagueInfo, new Date(firstMatchDate)),
+            schedule: generateSchedule(leagueInfo.teams, leagueInfo, leagueStartDate),
             serieCState: { phase: 1, groups: { A: [], B: [] }, finalists: [] }
         };
     }
     
+    // Define a data atual para o início da pré-temporada
+    gameState.currentDate = new Date(`${year}-01-01T12:00:00Z`);
+
     setupInitialSquad();
     findNextUserMatch();
     loadSquadTable();
@@ -202,6 +210,7 @@ function initializeSeason() {
     updateContinueButton();
     addNews(`Começa a Temporada ${year}!`, `A bola vai rolar para a ${leaguesData[gameState.currentLeagueId].name}. Boa sorte, ${gameState.managerName}!`, true, gameState.userClub.name);
 }
+
 
 // --- Lógica de Táticas ---
 function handleTacticsInteraction(e) {
@@ -348,9 +357,6 @@ function displayRound(leagueId, roundNumber) {
     const leagueState = gameState.leagueStates[leagueId];
     if (!leagueState) return;
 
-    const matchesPerRound = leaguesData[leagueId].teams.length / 2;
-    const startIndex = (roundNumber - 1) * matchesPerRound;
-    const endIndex = startIndex + matchesPerRound;
     const roundMatches = leagueState.schedule.filter(m => m.round === roundNumber);
 
     roundDisplay.innerText = `Rodada ${roundNumber}`;
@@ -381,19 +387,34 @@ function displayRound(leagueId, roundNumber) {
     container.innerHTML = roundHTML;
 
     prevBtn.disabled = roundNumber === 1;
-    const totalRounds = (leaguesData[leagueId].teams.length -1) * (leagueId === 'brasileirao_c' ? 1 : 2);
+    const totalRounds = Math.max(...leagueState.schedule.map(m => m.round));
     nextBtn.disabled = roundNumber >= totalRounds;
 }
 
 // --- Funções de Avanço e Simulação ---
-function advanceDay() { 
-    gameState.currentDate.setDate(gameState.currentDate.getDate() + 1); 
-    simulateDayMatches(); 
-    updateLeagueTable(gameState.tableView.leagueId); 
-    updateContinueButton(); 
-    if(gameState.currentMainContent === 'calendar-content') updateCalendar();
+function advanceDay() {
+    // NOVO: Lógica de virada de ano e início de temporada
+    const nextDay = new Date(gameState.currentDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    
+    if (gameState.isOffSeason && nextDay.getFullYear() > gameState.currentDate.getFullYear()) {
+        gameState.currentDate = nextDay;
+        gameState.season++;
+        processPromotionRelegation();
+        alert("Fim da temporada! As ligas foram atualizadas. Iniciando nova temporada...");
+        initializeSeason();
+        return;
+    }
+    
+    gameState.currentDate = nextDay;
+
+    simulateDayMatches();
+    updateLeagueTable(gameState.tableView.leagueId);
+    updateContinueButton();
+    if (gameState.currentMainContent === 'calendar-content') updateCalendar();
     checkSeasonEvents();
 }
+
 
 function updateContinueButton() {
     const button = document.getElementById('advance-day-button');
@@ -402,6 +423,12 @@ function updateContinueButton() {
     
     button.disabled = gameState.isOnHoliday;
     
+    if (gameState.isOffSeason) {
+        button.innerText = "Pré-Temporada";
+        button.onclick = advanceDay;
+        return;
+    }
+
     if (gameState.nextUserMatch && isSameDay(gameState.currentDate, new Date(gameState.nextUserMatch.date))) {
         button.innerText = "DIA DO JOGO";
         button.onclick = promptMatchConfirmation;
@@ -482,7 +509,7 @@ function getTeamStrength(teamData, isUser) {
             strength = teamData.players.slice(0, 11).reduce((acc, p) => acc + p.overall, 0) / 11;
         }
     } else {
-        strength = teamData.players.slice(0, 11).reduce((acc, p) => acc + p.overall, 0) / 11;
+        strength = teamData.players.sort((a,b)=>b.overall-a.overall).slice(0, 11).reduce((acc, p) => acc + p.overall, 0) / 11;
     }
     return strength;
 }
@@ -508,17 +535,17 @@ function generateSchedule(teams, leagueInfo, startDate) {
     const matchesPerRound = numTeams / 2;
     let allMatches = [];
     
-    // Gerador de confrontos
+    let tempClubes = [...clubes];
     for (let r = 0; r < roundsToPlay; r++) {
         for (let i = 0; i < matchesPerRound; i++) {
-            const home = clubes[i];
-            const away = clubes[numTeams - 1 - i];
+            const home = tempClubes[i];
+            const away = tempClubes[numTeams - 1 - i];
             if(home.name !== "BYE" && away.name !== "BYE") allMatches.push({home, away});
         }
-        clubes.splice(1, 0, clubes.pop());
+        tempClubes.splice(1, 0, tempClubes.pop());
     }
     
-    if(!isSerieCPhase1 || teams.length <= 4) { // Gera jogos de volta para ligas normais e quadrangulares
+    if(!isSerieCPhase1 || teams.length <= 4) {
          allMatches = allMatches.concat(allMatches.map(m => ({home: m.away, away: m.home})));
     }
 
@@ -570,7 +597,7 @@ function startHoliday() {
     
     updateContinueButton();
 
-    holidayInterval = setInterval(advanceDayOnHoliday, 250); // Mais rápido
+    holidayInterval = setInterval(advanceDayOnHoliday, 250);
 }
 
 function advanceDayOnHoliday() {
@@ -902,11 +929,30 @@ function showPostMatchReport() {
 
 // --- Lógica de Fim de Temporada e Fases ---
 function checkSeasonEvents() {
-    const allMatchesFinished = Object.values(gameState.leagueStates).every(ls => ls.schedule.every(m => m.status === 'played'));
+    if (gameState.isOffSeason) return;
+
+    const leagueState = gameState.leagueStates[gameState.currentLeagueId];
+    const allMatchesFinished = leagueState.schedule.every(m => m.status === 'played');
     if (!allMatchesFinished) return;
 
-    handleEndOfSeason();
+    if (gameState.currentLeagueId === 'brasileirao_c') {
+        if (leagueState.serieCState.phase === 1) {
+            handleEndOfSerieCFirstPhase();
+            return;
+        }
+        if (leagueState.serieCState.phase === 2) {
+            handleEndOfSerieCSecondPhase();
+            return;
+        }
+    }
+    
+    // Se todas as partidas de todas as ligas acabaram, entra em pré-temporada
+    const allLeaguesFinished = Object.values(gameState.leagueStates).every(ls => ls.schedule.every(m => m.status === 'played'));
+    if (allLeaguesFinished) {
+        handleEndOfSeason();
+    }
 }
+
 
 function handleEndOfSerieCFirstPhase() {
     const leagueState = gameState.leagueStates['brasileirao_c'];
@@ -931,7 +977,8 @@ function handleEndOfSerieCFirstPhase() {
     updateLeagueTable('brasileirao_c');
     
     const qualifiedNames = qualified.map(t => t.name).join(', ');
-    addNews("Definidos os classificados na Série C!", `Os 8 times que avançam para a segunda fase são: ${qualifiedNames}.`, qualified.some(t => t.name === gameState.userClub.name), qualified[0].name);
+    const isUserTeamQualified = qualified.some(t => t.name === gameState.userClub.name);
+    addNews("Definidos os classificados na Série C!", `Os 8 times que avançam para a segunda fase são: ${qualifiedNames}.`, isUserTeamQualified, qualified[0].name);
 }
 
 function handleEndOfSerieCSecondPhase() {
@@ -963,6 +1010,9 @@ function handleEndOfSerieCSecondPhase() {
 function handleEndOfSeason() {
     if (gameState.isOnHoliday) stopHoliday();
     
+    gameState.isOffSeason = true;
+    gameState.nextUserMatch = null;
+    
     const tableA = getFullSeasonTable('brasileirao_a');
     const championA = tableA[0];
     addNews(`${championA.name} é o campeão do Brasileirão Série A!`, ``, championA.name === gameState.userClub.name, championA.name);
@@ -971,24 +1021,28 @@ function handleEndOfSeason() {
     const championB = tableB[0];
     addNews(`${championB.name} é o campeão da Série B!`, ``, championB.name === gameState.userClub.name, championB.name);
     
-    const tableC = gameState.leagueStates['brasileirao_c'].table;
-    const champC = gameState.leagueStates['brasileirao_c'].serieCState.finalists[0]; // Simplified
-    addNews(`${champC} é o campeão da Série C!`, ``, champC === gameState.userClub.name, champC);
-
-    processPromotionRelegation(tableA, tableB, tableC);
+    const scheduleC = gameState.leagueStates['brasileirao_c'].schedule;
+    const finalMatch1 = scheduleC[scheduleC.length - 2];
+    const finalMatch2 = scheduleC[scheduleC.length - 1];
+    const score1 = finalMatch1.homeScore + finalMatch2.awayScore;
+    const score2 = finalMatch1.awayScore + finalMatch2.homeScore;
+    const champC = score1 >= score2 ? finalMatch1.home : finalMatch1.away;
+    addNews(`${champC.name} é o grande campeão da Série C!`, ``, champC.name === gameState.userClub.name, champC.name);
     
-    gameState.season++;
-    alert("Fim da temporada! As ligas foram atualizadas com os times promovidos e rebaixados. Iniciando nova temporada...");
-    initializeSeason();
+    alert("Fim de temporada! Avance os dias até 1 de Janeiro para iniciar a nova temporada.");
 }
 
-function processPromotionRelegation(tableA, tableB, tableC) {
+function processPromotionRelegation() {
+    const tableA = getFullSeasonTable('brasileirao_a');
     const relegatedFromA = tableA.slice(-4).map(t => findTeamInLeagues(t.name));
+    
+    const tableB = getFullSeasonTable('brasileirao_b');
     const promotedFromB = tableB.slice(0, 4).map(t => findTeamInLeagues(t.name));
     const relegatedFromB = tableB.slice(-4).map(t => findTeamInLeagues(t.name));
-    
-    const groupA = gameState.leagueStates['brasileirao_c'].table.filter(t => gameState.leagueStates['brasileirao_c'].serieCState.groups.A.includes(t.name)).sort((a,b)=>b.points-a.points);
-    const groupB = gameState.leagueStates['brasileirao_c'].table.filter(t => gameState.leagueStates['brasileirao_c'].serieCState.groups.B.includes(t.name)).sort((a,b)=>b.points-a.points);
+
+    const leagueStateC = gameState.leagueStates['brasileirao_c'];
+    const groupA = leagueStateC.table.filter(t => leagueStateC.serieCState.groups.A.includes(t.name)).sort((a,b)=>b.points-a.points);
+    const groupB = leagueStateC.table.filter(t => leagueStateC.serieCState.groups.B.includes(t.name)).sort((a,b)=>b.points-a.points);
     const promotedFromC = [...groupA.slice(0,2), ...groupB.slice(0,2)].map(t => findTeamInLeagues(t.name));
     
     // Trocas
@@ -996,7 +1050,7 @@ function processPromotionRelegation(tableA, tableB, tableC) {
     leaguesData.brasileirao_b.teams = leaguesData.brasileirao_b.teams.filter(t => !promotedFromB.some(p => p.name === t.name) && !relegatedFromB.some(r => r.name === t.name)).concat(relegatedFromA).concat(promotedFromC);
     leaguesData.brasileirao_c.teams = leaguesData.brasileirao_c.teams.filter(t => !promotedFromC.some(p => p.name === t.name)).concat(relegatedFromB);
     
-    // Atualiza o clube do usuário
+    // Atualiza a liga do usuário
     if(promotedFromB.some(t => t.name === gameState.userClub.name)) gameState.currentLeagueId = 'brasileirao_a';
     if(relegatedFromA.some(t => t.name === gameState.userClub.name)) gameState.currentLeagueId = 'brasileirao_b';
     if(promotedFromC.some(t => t.name === gameState.userClub.name)) gameState.currentLeagueId = 'brasileirao_b';
@@ -1004,6 +1058,7 @@ function processPromotionRelegation(tableA, tableB, tableC) {
 }
 
 function findTeamInLeagues(teamName) {
+    if (!teamName) return null;
     for (const leagueId in leaguesData) {
         const team = leaguesData[leagueId].teams.find(t => t.name === teamName);
         if (team) return team;
@@ -1057,26 +1112,7 @@ function initializeEventListeners() {
     document.getElementById('close-user-news-modal-btn').addEventListener('click', () => document.getElementById('user-news-modal').classList.remove('active'));
     document.getElementById('confirm-user-news-btn').addEventListener('click', () => document.getElementById('user-news-modal').classList.remove('active'));
     
-    document.getElementById('league-table-selector')?.addEventListener('change', (e) => {
-        gameState.tableView.leagueId = e.target.value;
-        updateLeagueTable(gameState.tableView.leagueId);
-    });
-    document.getElementById('matches-league-selector')?.addEventListener('change', (e) => {
-        gameState.matchesView.leagueId = e.target.value;
-        gameState.matchesView.round = findCurrentRound(gameState.matchesView.leagueId);
-        displayRound(gameState.matchesView.leagueId, gameState.matchesView.round);
-    });
-    document.getElementById('prev-round-btn')?.addEventListener('click', () => {
-        if (gameState.matchesView.round > 1) {
-            gameState.matchesView.round--;
-            displayRound(gameState.matchesView.leagueId, gameState.matchesView.round);
-        }
-    });
-    document.getElementById('next-round-btn')?.addEventListener('click', () => {
-        gameState.matchesView.round++;
-        displayRound(gameState.matchesView.leagueId, gameState.matchesView.round);
-    });
-
+    // CORREÇÃO: Mover a adição destes listeners para depois que a tela principal é criada
     document.getElementById('settings-btn').addEventListener('click', openSettingsModal);
     document.getElementById('close-modal-btn').addEventListener('click', closeSettingsModal);
     document.getElementById('fullscreen-btn').addEventListener('click', toggleFullScreen);
@@ -1121,10 +1157,52 @@ function initializeEventListeners() {
         updateLeagueTable(gameState.currentLeagueId);
         updateContinueButton();
     });
+
+    // Adiciona listeners aos seletores APENAS quando a tela do jogo estiver ativa
+    if(document.getElementById('main-game-screen').classList.contains('active')){
+        addMainScreenEventListeners();
+    }
 }
+
+// NOVO: Função para adicionar listeners específicos da tela principal
+function addMainScreenEventListeners() {
+    document.getElementById('league-table-selector')?.addEventListener('change', (e) => {
+        gameState.tableView.leagueId = e.target.value;
+        updateLeagueTable(gameState.tableView.leagueId);
+    });
+    document.getElementById('matches-league-selector')?.addEventListener('change', (e) => {
+        gameState.matchesView.leagueId = e.target.value;
+        gameState.matchesView.round = findCurrentRound(gameState.matchesView.leagueId);
+        displayRound(gameState.matchesView.leagueId, gameState.matchesView.round);
+    });
+    document.getElementById('prev-round-btn')?.addEventListener('click', () => {
+        if (gameState.matchesView.round > 1) {
+            gameState.matchesView.round--;
+            displayRound(gameState.matchesView.leagueId, gameState.matchesView.round);
+        }
+    });
+    document.getElementById('next-round-btn')?.addEventListener('click', () => {
+        gameState.matchesView.round++;
+        displayRound(gameState.matchesView.leagueId, gameState.matchesView.round);
+    });
+}
+
 
 document.addEventListener('DOMContentLoaded', () => { 
     initializeEventListeners(); 
     loadLeagues();
     window.addEventListener('resize', resizeCanvas);
+    
+    // CORREÇÃO: Adiciona os listeners da tela principal depois que ela é criada
+    const observer = new MutationObserver((mutations) => {
+        for(let mutation of mutations) {
+            if (mutation.attributeName === 'class') {
+                const node = mutation.target;
+                if(node.id === 'main-game-screen' && node.classList.contains('active')) {
+                    addMainScreenEventListeners();
+                }
+            }
+        }
+    });
+    observer.observe(document.getElementById('main-game-screen'), { attributes: true });
 });
