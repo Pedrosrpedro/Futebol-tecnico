@@ -11,12 +11,10 @@ const gameState = {
         defensiveLine: 'standard', tackling: 'stay_on_feet', offsideTrap: false
     },
     squadManagement: { startingXI: {}, substitutes: [], reserves: [], },
-
-    // NOVO: Variáveis para a simulação da partida
     isMatchLive: false,
     isPaused: false,
-    matchState: null, // Vai guardar tudo sobre a partida atual
-    pendingTacticalChanges: null, // Guarda mudanças para aplicar depois
+    matchState: null,
+    pendingTacticalChanges: null,
 };
 let selectedPlayerInfo = null;
 const MAX_SUBSTITUTES = 7;
@@ -105,8 +103,7 @@ function startGame(team) {
     gameState.leagueTable = initializeLeagueTable(teams);
     findNextUserMatch();
 
-    // CORREÇÃO: Define a data de início para 5 dias antes da primeira rodada
-    const firstMatchDate = new Date(leagueInfo.startDate + 'T12:00:00');
+    const firstMatchDate = new Date(leagueInfo.startDate + 'T12:00:00Z');
     firstMatchDate.setDate(firstMatchDate.getDate() - 5);
     gameState.currentDate = firstMatchDate;
 
@@ -124,7 +121,6 @@ function startGame(team) {
 function handleTacticsInteraction(e) {
     const clickedElement = e.target.closest('[data-player-id], .player-slot, #substitutes-list, #reserves-list');
     if (!clickedElement) { clearSelection(); return; }
-
     const clickedPlayerId = clickedElement.dataset.playerId;
 
     if (clickedPlayerId) {
@@ -213,14 +209,10 @@ function loadMatchesPage() {
     const selector = document.getElementById('competition-selector');
     selector.innerHTML = '';
     const currentLeague = leaguesData[gameState.currentLeagueId];
-    const option = document.createElement('option');
-    option.value = gameState.currentLeagueId;
-    option.innerText = currentLeague.name;
-    option.selected = true;
     selector.innerHTML = `<option value="${gameState.currentLeagueId}" selected>${currentLeague.name}</option>`;
     
     document.getElementById('prev-round-btn').onclick = () => { if (gameState.currentRoundView > 1) { gameState.currentRoundView--; displayRound(gameState.currentRoundView); } };
-    document.getElementById('next-round-btn').onclick = () => { if (gameState.currentRoundView < 38) { gameState.currentRoundView++; displayRound(gameState.currentRoundView); } };
+    document.getElementById('next-round-btn').onclick = () => { if (gameState.currentRoundView < (leaguesData[gameState.currentLeagueId].teams.length - 1) * 2) { gameState.currentRoundView++; displayRound(gameState.currentRoundView); } };
 
     displayRound(gameState.currentRoundView);
 }
@@ -280,7 +272,7 @@ function updateContinueButton() {
     displayDate.innerText = gameState.currentDate.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     
     if (gameState.nextUserMatch && isSameDay(gameState.currentDate, new Date(gameState.nextUserMatch.date))) {
-        button.innerText = "DIA DO JOGO"; // CORRIGIDO
+        button.innerText = "DIA DO JOGO";
         button.disabled = false;
         button.onclick = promptMatchConfirmation;
     } else {
@@ -291,14 +283,12 @@ function updateContinueButton() {
 }
 
 function simulateDayMatches() { const todayMatches = gameState.schedule.filter(match => isSameDay(new Date(match.date), gameState.currentDate)); for (const match of todayMatches) { if (match.status === 'scheduled') { if (match.home.name !== gameState.userClub.name && match.away.name !== gameState.userClub.name) { match.homeScore = Math.floor(Math.random() * 4); match.awayScore = Math.floor(Math.random() * 4); match.status = 'played'; updateTableWithResult(match); } } } }
-function findNextUserMatch() { gameState.nextUserMatch = gameState.schedule .filter(m => m.status === 'scheduled' && (m.home.name === gameState.userClub.name || m.away.name === gameState.userClub.name)) .sort((a, b) => new Date(a.date) - new Date(b.date))[0] || null; }
+function findNextUserMatch() { gameState.nextUserMatch = gameState.schedule.filter(m => m.status === 'scheduled' && (m.home.name === gameState.userClub.name || m.away.name === gameState.userClub.name)).sort((a, b) => new Date(a.date) - new Date(b.date))[0] || null; }
 function initializeLeagueTable(teams) { return teams.map(team => ({ name: team.name, logo: team.logo, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 })); }
 
 function generateSchedule(teams, leagueInfo) {
     let clubes = [...teams];
-    if (clubes.length % 2 !== 0) {
-        clubes.push({ name: "BYE", logo: "logo_default.png" });
-    }
+    if (clubes.length % 2 !== 0) { clubes.push({ name: "BYE", logo: "logo_default.png" }); }
     const numTeams = clubes.length;
     const rounds = numTeams - 1;
     const matchesPerRound = numTeams / 2;
@@ -335,10 +325,7 @@ function generateSchedule(teams, leagueInfo) {
         currentRoundDate.setDate(currentRoundDate.getDate() + dateIncrement);
         dateIncrement = 7 - dateIncrement;
     }
-    return schedule.map((match, index) => ({
-        ...match,
-        round: Math.floor(index / matchesPerRound) + 1
-    }));
+    return schedule.map((match, index) => ({ ...match, round: Math.floor(index / matchesPerRound) + 1 }));
 }
 
 function isSameDay(date1, date2) { if(!date1 || !date2) return false; return date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth() && date1.getDate() === date2.getDate(); }
@@ -368,7 +355,13 @@ function startMatchSimulation() {
     gameState.isPaused = false;
 
     const userTeam = gameState.userClub;
-    const opponentTeam = gameState.schedule.find(m => m.date === gameState.nextUserMatch.date && m.home.name !== userTeam.name)?.home || gameState.schedule.find(m => m.date === gameState.nextUserMatch.date && m.away.name !== userTeam.name)?.away;
+    // CORRIGIDO: Lógica simplificada para encontrar o time adversário
+    let opponentTeam;
+    if (gameState.nextUserMatch.home.name === userTeam.name) {
+        opponentTeam = gameState.nextUserMatch.away;
+    } else {
+        opponentTeam = gameState.nextUserMatch.home;
+    }
     
     const opponentSquad = setupOpponentSquad(opponentTeam);
 
@@ -390,7 +383,8 @@ function startMatchSimulation() {
     document.getElementById('match-away-team-name').innerText = gameState.matchState.away.team.name;
     document.getElementById('match-away-team-logo').src = `images/${gameState.matchState.away.team.logo}`;
     updateScoreboard();
-
+    
+    resizeCanvas();
     showScreen('match-simulation-screen');
 
     matchInterval = setInterval(gameLoop, 50);
@@ -421,12 +415,7 @@ function setupOpponentSquad(team) {
 
 function initializeMatchPlayers() {
     const { home, away } = gameState.matchState;
-    const allPlayers = [
-        ...Object.values(home.startingXI), 
-        ...Object.values(away.startingXI),
-        ...home.substitutes,
-        ...away.substitutes
-    ];
+    const allPlayers = [ ...Object.values(home.startingXI), ...Object.values(away.startingXI), ...home.substitutes, ...away.substitutes ];
 
     allPlayers.forEach(player => {
         if(player) {
@@ -456,7 +445,6 @@ function gameLoop() {
 
     const totalMatchDuration = 240;
     const halfTime = totalMatchDuration / 2;
-
     gameState.matchState.gameTime += 0.05 * (45 / halfTime) * 2;
 
     if (gameState.matchState.gameTime >= 45 && gameState.matchState.half === 1) {
@@ -468,7 +456,6 @@ function gameLoop() {
             pos[0] = 100 - pos[0];
             pos[1] = 100 - pos[1];
         }
-
     } else if (gameState.matchState.gameTime >= 90 && gameState.matchState.half === 2) {
         endMatch();
         return;
@@ -483,8 +470,8 @@ function updateSimulationLogic() {
     for (const [player, pos] of gameState.matchState.playerPositions.entries()) {
         pos[0] += (Math.random() - 0.5) * 0.5;
         pos[1] += (Math.random() - 0.5) * 0.5;
-        pos[0] = Math.max(0, Math.min(100, pos[0]));
-        pos[1] = Math.max(0, Math.min(100, pos[1]));
+        pos[0] = Math.max(2, Math.min(98, pos[0]));
+        pos[1] = Math.max(2, Math.min(98, pos[1]));
     }
     
     if (Math.random() < 0.002) {
@@ -495,12 +482,11 @@ function updateSimulationLogic() {
     }
 }
 
-function drawMatch() {
+function resizeCanvas() {
     const canvas = document.getElementById('match-pitch-canvas');
-    if (!canvas.getContext) return;
-    const ctx = canvas.getContext('2d');
-
     const container = document.getElementById('match-pitch-container');
+    if (!canvas || !container) return;
+
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
     
@@ -516,6 +502,15 @@ function drawMatch() {
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
     
+    if(gameState.isMatchLive) drawMatch();
+}
+
+
+function drawMatch() {
+    const canvas = document.getElementById('match-pitch-canvas');
+    if (!canvas.getContext) return;
+    const ctx = canvas.getContext('2d');
+    
     const { width, height } = canvas;
     ctx.clearRect(0, 0, width, height);
 
@@ -527,11 +522,11 @@ function drawMatch() {
     ctx.lineTo(width / 2, height);
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(width / 2, height / 2, width * 0.15, 0, 2 * Math.PI);
+    ctx.arc(width / 2, height / 2, height * 0.1, 0, 2 * Math.PI);
     ctx.stroke();
 
-    const playerRadius = width / 40;
-    const drawPlayer = (player, pos, color) => {
+    const playerRadius = height / 40;
+    const drawPlayer = (pos, color) => {
         const x = (pos[1] / 100) * width;
         const y = (pos[0] / 100) * height;
         ctx.beginPath();
@@ -544,11 +539,11 @@ function drawMatch() {
     
     for (const player of Object.values(gameState.matchState.home.startingXI)) {
         const pos = gameState.matchState.playerPositions.get(player.name);
-        if(pos) drawPlayer(player, pos, '#c0392b');
+        if(pos) drawPlayer(pos, '#c0392b');
     }
     for (const player of Object.values(gameState.matchState.away.startingXI)) {
         const pos = gameState.matchState.playerPositions.get(player.name);
-        if(pos) drawPlayer(player, pos, '#f1c40f');
+        if(pos) drawPlayer(pos, '#f1c40f');
     }
 }
 
@@ -572,21 +567,16 @@ function updateScoreboard() {
 
 function togglePause(forcePause = null) {
     if (gameState.isMatchLive === false) return;
-    if (forcePause !== null) {
-        gameState.isPaused = forcePause;
-    } else {
-        gameState.isPaused = !gameState.isPaused;
-    }
+    gameState.isPaused = forcePause !== null ? forcePause : !gameState.isPaused;
 
-    document.getElementById('pause-overlay').style.display = gameState.isPaused ? 'flex' : 'none';
-    const pauseButton = document.getElementById('pause-match-btn');
-    pauseButton.innerText = gameState.isPaused ? '▶' : '❚❚';
+    document.getElementById('pause-overlay').classList.toggle('active', gameState.isPaused);
+    document.getElementById('pause-match-btn').innerText = gameState.isPaused ? '▶' : '❚❚';
 
     const statusEl = document.getElementById('match-time-status');
     if (gameState.isPaused && statusEl.innerText !== 'INTERVALO') {
          statusEl.innerText = "PAUSA";
     } else if (!gameState.isPaused) {
-        updateScoreboard(); // Para restaurar o texto 'PRIMEIRO TEMPO' ou 'SEGUNDO TEMPO'
+        updateScoreboard();
     }
 }
 
@@ -602,6 +592,7 @@ function showNotification(message) {
 }
 
 function updatePlayerRatings() {
+    if(!gameState.matchState) return;
     for (const [playerName, currentRating] of gameState.matchState.playerRatings.entries()) {
         const performanceChange = (Math.random() - 0.47) * 0.2;
         let newRating = Math.max(0, Math.min(10, currentRating + performanceChange));
@@ -623,7 +614,6 @@ function endMatch() {
     }
     
     showPostMatchReport();
-    
     findNextUserMatch();
 }
 
@@ -655,7 +645,6 @@ function showPostMatchReport() {
     } else {
         summary.innerText = `Com uma performance sólida, o ${winner} controlou a partida e mereceu a vitória sobre o ${loser}. O placar final de ${winnerScore} a ${loserScore} refletiu a superioridade vista em campo.`;
     }
-
     modal.classList.add('active');
 }
 
@@ -668,7 +657,6 @@ function initializeEventListeners() {
     document.getElementById('new-club-back-btn').addEventListener('click', () => showScreen('start-screen'));
     document.getElementById('select-league-back-btn').addEventListener('click', () => showScreen('start-screen'));
     document.getElementById('select-team-back-btn').addEventListener('click', () => showScreen('select-league-screen'));
-    document.getElementById('advance-day-button').addEventListener('click', advanceDay);
     document.getElementById('exit-game-btn').addEventListener('click', () => window.location.reload());
     document.querySelectorAll('#sidebar li').forEach(item => { item.addEventListener('click', () => showMainContent(item.dataset.content)); });
     document.getElementById('settings-btn').addEventListener('click', openSettingsModal);
@@ -717,11 +705,6 @@ function initializeEventListeners() {
 
 document.addEventListener('DOMContentLoaded', () => { 
     initializeEventListeners(); 
-    loadLeagues(); 
-    // Garante que o canvas se redimensione se a janela mudar
-    window.addEventListener('resize', () => {
-        if(gameState.isMatchLive) {
-            drawMatch();
-        }
-    });
+    loadLeagues();
+    window.addEventListener('resize', resizeCanvas);
 });
