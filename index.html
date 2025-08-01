@@ -64,25 +64,30 @@
                         <button class="panel-toggle-btn open-squad-btn" data-panel="squad">☰</button>
                     </div>
                 </div>
-                <div id="league-content" class="main-content-panel"><h3>Tabela de Classificação</h3><div id="league-table-container" class="table-container"></div></div>
+                <div id="league-content" class="main-content-panel">
+                    <div class="matches-header"> 
+                        <div class="competition-selector-container">
+                            <label for="league-table-selector">Competição:</label>
+                            <select id="league-table-selector"></select>
+                        </div>
+                    </div>
+                    <div id="league-table-container" class="table-container"></div>
+                </div>
                 <div id="news-content" class="main-content-panel">
-                    <h3>Últimas Notícias</h3>
-                    <div id="news-feed-container">
-                        <!-- As notícias serão inseridas aqui pelo JS -->
+                    <div id="news-layout-container">
+                        <!-- Conteúdo de notícias gerado pelo JS -->
                     </div>
                 </div>
                 <div id="calendar-content" class="main-content-panel">
                     <h3>Calendário da Temporada</h3>
                     <button id="cancel-holiday-btn" style="display: none;">Cancelar Férias</button>
-                    <div id="calendar-container">
-                        <!-- O conteúdo do calendário será gerado pelo JS -->
-                    </div>
+                    <div id="calendar-container"></div>
                 </div>
                  <div id="matches-content" class="main-content-panel">
                     <div class="matches-header">
                         <div class="competition-selector-container">
-                            <label for="competition-selector">Competição:</label>
-                            <select id="competition-selector"></select>
+                            <label for="matches-league-selector">Competição:</label>
+                            <select id="matches-league-selector"></select>
                         </div>
                         <div class="round-nav">
                             <button id="prev-round-btn">◀</button>
@@ -90,9 +95,7 @@
                             <button id="next-round-btn">▶</button>
                         </div>
                     </div>
-                    <div id="round-matches-container" class="table-container">
-                        <!-- Jogos da rodada serão inseridos aqui -->
-                    </div>
+                    <div id="round-matches-container" class="table-container"></div>
                 </div>
                 <div id="stadium-content" class="main-content-panel"><h3>Editor de Estádio</h3><p>Recurso em desenvolvimento.</p></div>
             </main>
@@ -118,11 +121,7 @@
                 </div>
                 <button id="pause-match-btn" class="icon-btn">❚❚</button>
             </div>
-
-            <div id="match-pitch-container">
-                <canvas id="match-pitch-canvas"></canvas>
-            </div>
-
+            <div id="match-pitch-container"><canvas id="match-pitch-canvas"></canvas></div>
             <div id="pause-overlay" class="modal-overlay">
                 <div class="pause-menu">
                     <h2>PAUSA</h2>
@@ -131,11 +130,10 @@
                     <button id="ingame-tactics-btn">Táticas</button>
                 </div>
             </div>
-
             <div id="match-notification-area"></div>
         </div>
 
-        <!-- Modal de Confirmação de Partida -->
+        <!-- Modais -->
         <div id="match-confirmation-modal" class="modal-overlay">
             <div class="modal-content">
                 <button id="close-confirmation-modal-btn" class="icon-btn modal-close-btn">×</button>
@@ -145,24 +143,18 @@
                 <button class="secondary" id="cancel-play-btn">Voltar para as Táticas</button>
             </div>
         </div>
-
-        <!-- Modal de Táticas Dentro do Jogo -->
         <div id="ingame-tactics-modal" class="modal-overlay"></div>
-
-        <!-- Modal de Relatório Pós-Jogo -->
         <div id="post-match-report-modal" class="modal-overlay">
             <div class="modal-content post-match-report">
                 <h2 id="post-match-title">Fim de Jogo!</h2>
                 <div id="post-match-newspaper">
                     <h3>Jornal Esportivo do Dia</h3>
                     <p id="post-match-headline">Manchete da partida irá aqui.</p>
-                    <p id="post-match-summary">Um resumo de como a partida se desenrolou, quem jogou melhor, e o resultado final.</p>
+                    <p id="post-match-summary">Um resumo de como a partida se desenrolou.</p>
                 </div>
                 <button id="close-post-match-btn">Continuar</button>
             </div>
         </div>
-
-        <!-- Modal de Confirmação de Férias -->
         <div id="holiday-confirmation-modal" class="modal-overlay">
             <div class="modal-content">
                 <button id="close-holiday-modal-btn" class="icon-btn modal-close-btn">×</button>
@@ -173,8 +165,6 @@
                 <button class="secondary" id="cancel-holiday-btn-modal">Cancelar</button>
             </div>
         </div>
-        
-        <!-- Modal para Notícias do Usuário -->
         <div id="user-news-modal" class="modal-overlay">
             <div class="modal-content">
                 <button id="close-user-news-modal-btn" class="icon-btn modal-close-btn">×</button>
