@@ -157,22 +157,24 @@ function initializeSeason() {
     const leagueInfo = leaguesData[gameState.currentLeagueId].leagueInfo;
     const teams = leaguesData[gameState.currentLeagueId].teams;
     
+    // CORREÇÃO: Definir a data ANTES de gerar o calendário
+    const firstMatchDate = new Date(leagueInfo.startDate + 'T12:00:00Z');
+    firstMatchDate.setFullYear(new Date().getFullYear() - 1 + gameState.season); // Ajusta o ano para a temporada atual
+    firstMatchDate.setDate(firstMatchDate.getDate() - 5);
+    gameState.currentDate = firstMatchDate;
+    
     setupInitialSquad();
     
     gameState.schedule = generateSchedule(teams, leagueInfo);
     gameState.leagueTable = initializeLeagueTable(teams);
     
-    const firstMatchDate = new Date(leagueInfo.startDate + 'T12:00:00Z');
-    firstMatchDate.setDate(firstMatchDate.getDate() - 5);
-    gameState.currentDate = firstMatchDate;
-
     gameState.serieCState = { phase: 1, groups: { A: [], B: [] }, finalists: [] };
 
     findNextUserMatch();
     loadSquadTable();
     updateLeagueTable();
     updateContinueButton();
-    addNews(`Começa a Temporada ${2024 + gameState.season}!`, `A bola vai rolar para a ${leaguesData[gameState.currentLeagueId].name}. Boa sorte, ${gameState.managerName}!`, gameState.userClub.name);
+    addNews(`Começa a Temporada ${2024 + gameState.season}!`, `A bola vai rolar para a ${leaguesData[gameState.currentLeagueId].name}. Boa sorte, ${gameState.managerName}!`, true);
 }
 
 
@@ -251,21 +253,19 @@ function updateLeagueTable() {
     const leagueInfo = leaguesData[gameState.currentLeagueId].leagueInfo;
     const tiebreakers = leagueInfo.tiebreakers;
 
-    let tableHTML = '';
+    let tableHTML = '<h3>Classificação</h3>';
 
-    if (gameState.currentLeagueId === 'brasileirao_c' && gameState.serieCState.phase === 2) {
-        // Fase 2 da Série C: Mostrar Grupos
+    if (gameState.currentLeagueId === 'brasileirao_c' && gameState.serieCState.phase > 1) {
         const groupA = gameState.leagueTable.filter(t => gameState.serieCState.groups.A.includes(t.name));
         const groupB = gameState.leagueTable.filter(t => gameState.serieCState.groups.B.includes(t.name));
         groupA.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; });
         groupB.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; });
         
-        tableHTML += '<h3>Grupo A</h3>';
+        tableHTML += '<h4>Grupo A</h4>';
         tableHTML += renderTable(groupA);
-        tableHTML += '<h3 style="margin-top: 20px;">Grupo B</h3>';
+        tableHTML += '<h4 style="margin-top: 20px;">Grupo B</h4>';
         tableHTML += renderTable(groupB);
     } else {
-        // Tabela normal para todas as outras ligas e fases
         gameState.leagueTable.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; });
         tableHTML = renderTable(gameState.leagueTable);
     }
@@ -282,7 +282,6 @@ function renderTable(tableData) {
     html += `</tbody></table>`;
     return html;
 }
-
 
 function updateCalendar() {
     const container = document.getElementById('calendar-container'); if (!container || !gameState.calendarDisplayDate) return;
@@ -433,16 +432,17 @@ function findNextUserMatch() { gameState.nextUserMatch = gameState.schedule.filt
 function initializeLeagueTable(teams) { return teams.map(team => ({ name: team.name, logo: team.logo, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 })); }
 
 function generateSchedule(teams, leagueInfo) {
+    // CORREÇÃO: Usar uma cópia da data atual para não modificar a original
+    let currentMatchDate = new Date(gameState.currentDate);
+    currentMatchDate.setDate(currentMatchDate.getDate() + 7);
+
     let clubes = [...teams];
     if (clubes.length % 2 !== 0) { clubes.push({ name: "BYE", logo: "logo_default.png" }); }
     const numTeams = clubes.length;
     let rounds = numTeams - 1;
     
-    // Série C tem turno único na primeira fase
     const isSerieCPhase1 = leagueInfo.format.includes("Fases") && gameState.serieCState.phase === 1;
-    if (isSerieCPhase1) {
-        rounds = numTeams - 1;
-    }
+    if (isSerieCPhase1) rounds = numTeams - 1;
 
     const matchesPerRound = numTeams / 2;
     const firstHalf = [];
@@ -453,12 +453,7 @@ function generateSchedule(teams, leagueInfo) {
             const home = clubes[i];
             const away = clubes[numTeams - 1 - i];
             if (home.name !== "BYE" && away.name !== "BYE") {
-                // Para turno único, não precisa alternar mando
-                if(isSerieCPhase1) {
-                     roundMatches.push({ home, away });
-                } else {
-                     if (round % 2 === 0) { roundMatches.push({ home, away }); } else { roundMatches.push({ home: away, away: home }); }
-                }
+                roundMatches.push({ home, away });
             }
         }
         firstHalf.push(...roundMatches);
@@ -472,22 +467,18 @@ function generateSchedule(teams, leagueInfo) {
     }
 
     const schedule = [];
-    let currentRoundDate = new Date(gameState.currentDate);
-    currentRoundDate.setDate(currentRoundDate.getDate() + 7); // Começa na próxima semana
-
-    const gamesPerWeek = leagueInfo.gamesPerWeek || 2; // Default 2 jogos por semana
+    const gamesPerWeek = leagueInfo.gamesPerWeek || 2;
     
     for (let i = 0; i < allMatches.length; i += matchesPerRound) {
         const roundFixtures = allMatches.slice(i, i + matchesPerRound);
         for(const match of roundFixtures) {
-            schedule.push({ ...match, date: new Date(currentRoundDate).toISOString(), status: 'scheduled' });
+            schedule.push({ ...match, date: new Date(currentMatchDate).toISOString(), status: 'scheduled' });
         }
         
-        // Avança 3 ou 4 dias para simular meio e fim de semana
-        if (currentRoundDate.getDay() < 4) { // Se for Dom, Seg, Ter (início da semana)
-            currentRoundDate.setDate(currentRoundDate.getDate() + 3); // Jogo no meio da semana
-        } else { // Se for Qua, Qui, Sex, Sab
-            currentRoundDate.setDate(currentRoundDate.getDate() + 4); // Jogo no fim de semana
+        if (currentMatchDate.getDay() < 4) {
+            currentMatchDate.setDate(currentMatchDate.getDate() + 3);
+        } else {
+            currentMatchDate.setDate(currentMatchDate.getDate() + 4);
         }
     }
     return schedule.map((match, index) => ({ ...match, round: Math.floor(index / matchesPerRound) + 1 }));
@@ -551,7 +542,7 @@ function stopHoliday() {
     findNextUserMatch();
 }
 
-// --- Lógica de Simulação de Partida (visual) ---
+// --- Lógica da Simulação de Partida (visual) ---
 let matchInterval;
 
 function promptMatchConfirmation() {
@@ -862,9 +853,8 @@ function showPostMatchReport() {
 // --- Lógica de Fim de Temporada e Fases ---
 function checkSeasonEvents() {
     const remainingMatches = gameState.schedule.filter(m => m.status === 'scheduled');
-    if (remainingMatches.length > 0) return; // Temporada ainda não acabou
+    if (remainingMatches.length > 0) return;
 
-    // Lógica para Série C
     if (gameState.currentLeagueId === 'brasileirao_c') {
         if (gameState.serieCState.phase === 1) {
             handleEndOfSerieCFirstPhase();
@@ -874,20 +864,16 @@ function checkSeasonEvents() {
             handleEndOfSerieCSecondPhase();
             return;
         }
-        if (gameState.serieCState.phase === 3) {
-            // Final terminou, então a temporada acabou
-        }
     }
 
-    // Se chegou aqui, a temporada acabou para Série A, B ou C (pós-final)
     handleEndOfSeason();
 }
 
 function handleEndOfSerieCFirstPhase() {
     gameState.serieCState.phase = 2;
-    const qualified = [...gameState.leagueTable].sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference).slice(0, 8);
+    const tiebreakers = leaguesData.brasileirao_c.leagueInfo.tiebreakers;
+    const qualified = [...gameState.leagueTable].sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }).slice(0, 8);
     
-    // Divide nos grupos
     const groupA_teams = [qualified[0], qualified[3], qualified[4], qualified[7]];
     const groupB_teams = [qualified[1], qualified[2], qualified[5], qualified[6]];
     gameState.serieCState.groups.A = groupA_teams.map(t => t.name);
@@ -896,12 +882,10 @@ function handleEndOfSerieCFirstPhase() {
     const groupA_data = groupA_teams.map(t => leaguesData.brasileirao_c.teams.find(team => team.name === t.name));
     const groupB_data = groupB_teams.map(t => leaguesData.brasileirao_c.teams.find(team => team.name === t.name));
 
-    // Gera novos calendários para os grupos
     const scheduleA = generateSchedule(groupA_data, { gamesPerWeek: 2 });
     const scheduleB = generateSchedule(groupB_data, { gamesPerWeek: 2 });
     gameState.schedule = [...scheduleA, ...scheduleB];
     
-    // Reseta a tabela para a fase de grupos
     gameState.leagueTable = initializeLeagueTable([...groupA_data, ...groupB_data]);
     findNextUserMatch();
     updateLeagueTable();
@@ -921,13 +905,11 @@ function handleEndOfSerieCSecondPhase() {
     const finalists = [groupA[0], groupB[0]];
     gameState.serieCState.finalists = finalists.map(t => t.name);
     
-    // Times que subiram para a Série B
     const promoted = [groupA[0], groupA[1], groupB[0], groupB[1]];
     const promotedNames = promoted.map(t => t.name).join(', ');
     const isUserTeamPromoted = promoted.some(t => t.name === gameState.userClub.name);
-    addNews("Gigantes na Série B! Times garantem o acesso!", `Parabéns a ${promotedNames} pelo acesso à Série B de 2026!`, isUserTeamPromoted);
+    addNews("Acesso à Série B!", `Parabéns a ${promotedNames} pelo acesso à Série B!`, isUserTeamPromoted);
 
-    // Gera a final (ida e volta)
     const finalistData = finalists.map(t => leaguesData.brasileirao_c.teams.find(team => team.name === t.name));
     const finalMatches = [
         { home: finalistData[0], away: finalistData[1], date: new Date(gameState.currentDate.setDate(gameState.currentDate.getDate() + 7)).toISOString(), status: 'scheduled' },
@@ -936,51 +918,135 @@ function handleEndOfSerieCSecondPhase() {
     gameState.schedule = finalMatches;
     findNextUserMatch();
 
-    addNews(`Final da Série C definida: ${finalists[0].name} x ${finalists[1].name}!`, "Os campeões de cada grupo agora disputam o título máximo da competição em dois jogos emocionantes.", finalists.some(t => t.name === gameState.userClub.name));
+    addNews(`Final da Série C: ${finalists[0].name} x ${finalists[1].name}!`, "Os campeões de cada grupo disputam o título.", finalists.some(t => t.name === gameState.userClub.name));
 }
 
 
 function handleEndOfSeason() {
-    // Para evitar múltiplos acionamentos
     if (gameState.isOnHoliday) stopHoliday();
-    alert("Fim da temporada! Verifique as notícias para ver os resultados e prepare-se para a próxima temporada.");
-
-    const table = [...gameState.leagueTable].sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference);
-    const userTeamRank = table.findIndex(t => t.name === gameState.userClub.name) + 1;
-    const userTeam = leaguesData[gameState.currentLeagueId].teams.find(t => t.name === gameState.userClub.name);
     
-    // Lógica específica por divisão
+    const table = [...gameState.leagueTable].sort((a, b) => { for (const key of leaguesData[gameState.currentLeagueId].leagueInfo.tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; });
+
     if (gameState.currentLeagueId === 'brasileirao_a') {
         const champion = table[0];
-        const relegated = table.slice(-4);
-        addNews(`${champion.name} é o campeão do Brasileirão Série A!`, `Após uma temporada disputada, o ${champion.name} levanta a taça!`, champion.name === userTeam.name);
-        addNews(`Rebaixados na Série A!`, `Os quatro times rebaixados para a Série B são: ${relegated.map(t=>t.name).join(', ')}.`, relegated.some(t=>t.name === userTeam.name));
+        addNews(`${champion.name} é o campeão do Brasileirão Série A!`, `Após uma temporada disputada, o ${champion.name} levanta a taça!`, champion.name === gameState.userClub.name);
     } else if (gameState.currentLeagueId === 'brasileirao_b') {
-        const promoted = table.slice(0, 4);
-        const relegated = table.slice(-4);
-        addNews(`Acesso à Elite!`, `Os quatro times promovidos para a Série A são: ${promoted.map(t=>t.name).join(', ')}.`, promoted.some(t=>t.name === userTeam.name));
-        addNews(`Rebaixados na Série B!`, `Os quatro times rebaixados para a Série C são: ${relegated.map(t=>t.name).join(', ')}.`, relegated.some(t=>t.name === userTeam.name));
+        const champion = table[0];
+        addNews(`${champion.name} é o campeão do Brasileirão Série B!`, `Além do título, o ${champion.name} garante o acesso à elite do futebol brasileiro.`, champion.name === gameState.userClub.name);
     } else if (gameState.currentLeagueId === 'brasileirao_c') {
         const finalMatch1 = gameState.schedule[0];
-        let champion;
-        if (finalMatch1.homeScore + gameState.schedule[1].awayScore > finalMatch1.awayScore + gameState.schedule[1].homeScore) {
-            champion = finalMatch1.home;
-        } else {
-            champion = finalMatch1.away;
-        }
-        addNews(`${champion.name} é o grande campeão da Série C!`, `Após vencer a final, o ${champion.name} conquista o título!`, champion.name === userTeam.name);
-        
-        // Rebaixados da fase 1
-        // (Nota: esta lógica precisaria de mais detalhes, por ora apenas geramos a notícia)
+        const finalMatch2 = gameState.schedule[1];
+        const score1 = finalMatch1.homeScore + finalMatch2.awayScore;
+        const score2 = finalMatch1.awayScore + finalMatch2.homeScore;
+        const champion = score1 >= score2 ? finalMatch1.home : finalMatch1.away;
+        addNews(`${champion.name} é o grande campeão da Série C!`, `Após vencer a final, o ${champion.name} conquista o título!`, champion.name === gameState.userClub.name);
     }
 
-    // SIMULAÇÃO DE PROMOÇÃO E REBAIXAMENTO (ATENÇÃO: não altera o `leaguesData` original)
-    // Para uma versão persistente, você precisaria salvar e carregar o estado do `leaguesData`.
-    // Por enquanto, apenas reiniciamos a temporada na mesma liga.
-    
+    // Processar promoção e rebaixamento entre todas as ligas
+    processPromotionRelegation();
+
     gameState.season++;
+    alert("Fim da temporada! As ligas foram atualizadas com os times promovidos e rebaixados. Iniciando nova temporada...");
     initializeSeason();
 }
+
+function processPromotionRelegation() {
+    // Série A <-> Série B
+    const tableA = getLeagueTable('brasileirao_a');
+    const relegatedFromA = tableA.slice(-4).map(t => findTeamInLeagues(t.name));
+    const tableB = getLeagueTable('brasileirao_b');
+    const promotedFromB = tableB.slice(0, 4).map(t => findTeamInLeagues(t.name));
+
+    leaguesData.brasileirao_a.teams = leaguesData.brasileirao_a.teams.filter(t => !relegatedFromA.some(r => r.name === t.name));
+    leaguesData.brasileirao_b.teams.push(...relegatedFromA);
+    leaguesData.brasileirao_b.teams = leaguesData.brasileirao_b.teams.filter(t => !promotedFromB.some(p => p.name === t.name));
+    leaguesData.brasileirao_a.teams.push(...promotedFromB);
+
+    // Série B <-> Série C
+    const relegatedFromB = tableB.slice(-4).map(t => findTeamInLeagues(t.name));
+    const promotedFromC = getPromotedFromSerieC();
+
+    leaguesData.brasileirao_b.teams = leaguesData.brasileirao_b.teams.filter(t => !relegatedFromB.some(r => r.name === t.name));
+    leaguesData.brasileirao_c.teams.push(...relegatedFromB);
+    leaguesData.brasileirao_c.teams = leaguesData.brasileirao_c.teams.filter(t => !promotedFromC.some(p => p.name === t.name));
+    leaguesData.brasileirao_b.teams.push(...promotedFromC);
+
+    // Lógica para Série C -> Série D (simples remoção por enquanto)
+    const tableC_phase1 = getLeagueTable('brasileirao_c', true);
+    const relegatedFromC = tableC_phase1.slice(-4).map(t => findTeamInLeagues(t.name));
+    leaguesData.brasileirao_c.teams = leaguesData.brasileirao_c.teams.filter(t => !relegatedFromC.some(r => r.name === t.name));
+    // Aqui você adicionaria 4 times da "Série D" se ela existisse
+}
+
+function findTeamInLeagues(teamName) {
+    for (const leagueId in leaguesData) {
+        const team = leaguesData[leagueId].teams.find(t => t.name === teamName);
+        if (team) return team;
+    }
+    return null;
+}
+
+function getLeagueTable(leagueId, fullTable = false) {
+    const teams = leaguesData[leagueId].teams;
+    const table = initializeLeagueTable(teams);
+    const schedule = generateSchedule(teams, leaguesData[leagueId].leagueInfo); // Gera um calendário temporário para simular a temporada
+    
+    let roundsToSimulate = (teams.length - 1);
+    if (leagueId !== 'brasileirao_c' || fullTable) {
+        roundsToSimulate *= 2;
+    }
+
+    schedule.filter(m => m.round <= roundsToSimulate).forEach(match => {
+        simulateSingleMatch(match, false);
+        const home = table.find(t => t.name === match.home.name);
+        const away = table.find(t => t.name === match.away.name);
+        home.played++; away.played++;
+        home.goalsFor += match.homeScore; away.goalsFor += match.awayScore;
+        home.goalsAgainst += match.awayScore; away.goalsAgainst += match.homeScore;
+        if(match.homeScore > match.awayScore) { home.wins++; home.points += 3; away.losses++; }
+        else if(match.awayScore > match.homeScore) { away.wins++; away.points += 3; home.losses++; }
+        else { home.draws++; away.draws++; home.points++; away.points++; }
+        home.goalDifference = home.goalsFor - home.goalsAgainst;
+        away.goalDifference = away.goalsFor - away.goalsAgainst;
+    });
+
+    return table.sort((a, b) => { for (const key of leaguesData[leagueId].leagueInfo.tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; });
+}
+
+function getPromotedFromSerieC() {
+    const tableC_phase1 = getLeagueTable('brasileirao_c', true);
+    const qualified = tableC_phase1.slice(0, 8);
+    
+    const groupA_teams = [qualified[0], qualified[3], qualified[4], qualified[7]];
+    const groupB_teams = [qualified[1], qualified[2], qualified[5], qualified[6]];
+    
+    const groupA_data = groupA_teams.map(t => findTeamInLeagues(t.name));
+    const groupB_data = groupB_teams.map(t => findTeamInLeagues(t.name));
+    
+    const tableGroupA = getLeagueTableFromTeams(groupA_data, 'brasileirao_c');
+    const tableGroupB = getLeagueTableFromTeams(groupB_data, 'brasileirao_c');
+
+    return [
+        findTeamInLeagues(tableGroupA[0].name), findTeamInLeagues(tableGroupA[1].name),
+        findTeamInLeagues(tableGroupB[0].name), findTeamInLeagues(tableGroupB[1].name)
+    ];
+}
+
+function getLeagueTableFromTeams(teams, leagueId) {
+    const table = initializeLeagueTable(teams);
+    const schedule = generateSchedule(teams, { gamesPerWeek: 2 });
+    schedule.forEach(match => {
+        simulateSingleMatch(match, false);
+        const home = table.find(t => t.name === match.home.name);
+        const away = table.find(t => t.name === match.away.name);
+        home.played++; away.played++;
+        if(match.homeScore > match.awayScore) { home.points += 3; }
+        else if(match.awayScore > match.homeScore) { away.points += 3; }
+        else { home.points++; away.points++; }
+    });
+    return table.sort((a, b) => b.points - a.points);
+}
+
 
 
 // --- Event Listeners ---
@@ -1001,10 +1067,8 @@ function initializeEventListeners() {
     document.getElementById('close-holiday-modal-btn').addEventListener('click', () => document.getElementById('holiday-confirmation-modal').classList.remove('active'));
     document.getElementById('cancel-holiday-btn-modal').addEventListener('click', () => document.getElementById('holiday-confirmation-modal').classList.remove('active'));
 
-    // Listeners para o novo modal de notícias
     document.getElementById('close-user-news-modal-btn').addEventListener('click', () => document.getElementById('user-news-modal').classList.remove('active'));
     document.getElementById('confirm-user-news-btn').addEventListener('click', () => document.getElementById('user-news-modal').classList.remove('active'));
-
 
     document.getElementById('settings-btn').addEventListener('click', openSettingsModal);
     document.getElementById('close-modal-btn').addEventListener('click', closeSettingsModal);
