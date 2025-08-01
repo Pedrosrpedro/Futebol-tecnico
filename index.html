@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Football Manager</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Ordem correta dos scripts de dados -->
     <script src="data/brasileirao_a.js" defer></script>
     <script src="data/brasileirao_b.js" defer></script>
     <script src="data/brasileirao_c.js" defer></script>
@@ -33,6 +32,7 @@
                     <li data-content="squad-content">Elenco</li>
                     <li data-content="tactics-content">Táticas</li>
                     <li data-content="league-content">Liga</li>
+                    <li data-content="news-content">Notícias</li>
                     <li data-content="calendar-content">Calendário</li>
                     <li data-content="matches-content">Jogos</li>
                     <li data-content="stadium-content">Estádio</li>
@@ -65,6 +65,12 @@
                     </div>
                 </div>
                 <div id="league-content" class="main-content-panel"><h3>Tabela de Classificação</h3><div id="league-table-container" class="table-container"></div></div>
+                <div id="news-content" class="main-content-panel">
+                    <h3>Últimas Notícias</h3>
+                    <div id="news-feed-container">
+                        <!-- As notícias serão inseridas aqui pelo JS -->
+                    </div>
+                </div>
                 <div id="calendar-content" class="main-content-panel">
                     <h3>Calendário da Temporada</h3>
                     <button id="cancel-holiday-btn" style="display: none;">Cancelar Férias</button>
@@ -167,7 +173,16 @@
                 <button class="secondary" id="cancel-holiday-btn-modal">Cancelar</button>
             </div>
         </div>
-
+        
+        <!-- Modal para Notícias do Usuário -->
+        <div id="user-news-modal" class="modal-overlay">
+            <div class="modal-content">
+                <button id="close-user-news-modal-btn" class="icon-btn modal-close-btn">×</button>
+                <h2 id="user-news-headline">Manchete Importante</h2>
+                <p id="user-news-body">Detalhes da notícia que afeta diretamente o seu clube.</p>
+                <button id="confirm-user-news-btn">Ok, entendi</button>
+            </div>
+        </div>
     </div>
     <div id="settings-modal" class="modal-overlay"><div class="modal-content"><button id="close-modal-btn" class="icon-btn modal-close-btn">×</button><h2>Configurações</h2><div class="settings-option"><span>Tela Cheia</span><button id="fullscreen-btn">Ativar</button></div></div></div>
 </body>
