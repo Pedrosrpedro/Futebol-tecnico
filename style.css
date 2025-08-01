@@ -412,3 +412,109 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
 #cancel-holiday-btn:hover {
     filter: brightness(1.2);
 }
+
+/* ... (todo o seu CSS anterior) ... */
+
+/* --- NOVO: Layout Avançado para a Página de Notícias --- */
+#news-content {
+    align-items: flex-start; /* Alinha o conteúdo ao topo */
+}
+
+#news-layout-container {
+    width: 100%;
+    max-width: 1200px;
+    height: 100%;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Grid de 3 colunas */
+    grid-template-rows: auto auto 1fr;
+    gap: 20px;
+    padding: 10px;
+}
+
+.news-article {
+    background-color: var(--bg-dark);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-color);
+}
+
+.news-article img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+}
+
+.news-article-content {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.news-article h4 {
+    color: var(--text-primary);
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+.news-article .news-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.news-article .news-body {
+    line-height: 1.5;
+    color: var(--text-secondary);
+    flex-grow: 1;
+}
+
+/* Artigo Principal (Hero) */
+.news-article-main {
+    grid-column: 1 / 3; /* Ocupa 2 das 3 colunas */
+    grid-row: 1 / 3; /* Ocupa 2 linhas de altura */
+    position: relative;
+    color: white;
+}
+
+.news-article-main img {
+    height: 100%;
+}
+
+.news-article-main .news-article-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 20%, rgba(0,0,0,0));
+    padding: 20px;
+}
+
+.news-article-main h4 {
+    font-size: 28px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+/* Artigos Secundários */
+.news-article-secondary {
+    flex-direction: row;
+    align-items: center;
+}
+
+.news-article-secondary img {
+    width: 100px;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+}
+
+/* Outros artigos no grid */
+#news-list-secondary {
+    grid-column: 3 / 4; /* Ocupa a última coluna */
+    grid-row: 1 / 4;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
