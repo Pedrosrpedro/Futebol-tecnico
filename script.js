@@ -2,8 +2,8 @@
 const gameState = {
     managerName: null, userClub: null, currentLeagueId: null, currentDate: null, leagueTable: [],
     schedule: [], nextUserMatch: null, currentScreen: 'manager-creation-screen', currentMainContent: 'home-content',
-    calendarDisplayDate: null, // Para navegação no calendário
-    currentRoundView: 1, // Para a página de jogos
+    calendarDisplayDate: null, 
+    currentRoundView: 1, 
     tactics: {
         formation: '4-2-3-1', mentality: 'balanced', attackingWidth: 'normal',
         buildUp: 'play_out_defence', chanceCreation: 'mixed', tempo: 'normal',
@@ -101,11 +101,12 @@ function startGame(team) {
     
     gameState.schedule = generateSchedule(teams, leagueInfo);
     gameState.leagueTable = initializeLeagueTable(teams);
-    findNextUserMatch();
-
+    
     const firstMatchDate = new Date(leagueInfo.startDate + 'T12:00:00Z');
     firstMatchDate.setDate(firstMatchDate.getDate() - 5);
     gameState.currentDate = firstMatchDate;
+
+    findNextUserMatch();
 
     document.getElementById('header-manager-name').innerText = gameState.managerName;
     document.getElementById('header-club-name').innerText = gameState.userClub.name;
@@ -273,11 +274,9 @@ function updateContinueButton() {
     
     if (gameState.nextUserMatch && isSameDay(gameState.currentDate, new Date(gameState.nextUserMatch.date))) {
         button.innerText = "DIA DO JOGO";
-        button.disabled = false;
         button.onclick = promptMatchConfirmation;
     } else {
         button.innerText = "Avançar";
-        button.disabled = false;
         button.onclick = advanceDay;
     }
 }
@@ -300,11 +299,7 @@ function generateSchedule(teams, leagueInfo) {
             const home = clubes[i];
             const away = clubes[numTeams - 1 - i];
             if (home.name !== "BYE" && away.name !== "BYE") {
-                if (round % 2 === 0) {
-                    roundMatches.push({ home, away });
-                } else {
-                    roundMatches.push({ home: away, away: home });
-                }
+                if (round % 2 === 0) { roundMatches.push({ home, away }); } else { roundMatches.push({ home: away, away: home }); }
             }
         }
         firstHalf.push(...roundMatches);
@@ -355,14 +350,7 @@ function startMatchSimulation() {
     gameState.isPaused = false;
 
     const userTeam = gameState.userClub;
-    // CORRIGIDO: Lógica simplificada para encontrar o time adversário
-    let opponentTeam;
-    if (gameState.nextUserMatch.home.name === userTeam.name) {
-        opponentTeam = gameState.nextUserMatch.away;
-    } else {
-        opponentTeam = gameState.nextUserMatch.home;
-    }
-    
+    const opponentTeam = gameState.nextUserMatch.home.name === userTeam.name ? gameState.nextUserMatch.away : gameState.nextUserMatch.home;
     const opponentSquad = setupOpponentSquad(opponentTeam);
 
     gameState.matchState = {
@@ -384,8 +372,8 @@ function startMatchSimulation() {
     document.getElementById('match-away-team-logo').src = `images/${gameState.matchState.away.team.logo}`;
     updateScoreboard();
     
-    resizeCanvas();
     showScreen('match-simulation-screen');
+    resizeCanvas(); 
 
     matchInterval = setInterval(gameLoop, 50);
     
@@ -415,7 +403,13 @@ function setupOpponentSquad(team) {
 
 function initializeMatchPlayers() {
     const { home, away } = gameState.matchState;
-    const allPlayers = [ ...Object.values(home.startingXI), ...Object.values(away.startingXI), ...home.substitutes, ...away.substitutes ];
+    // CORREÇÃO: Adiciona uma verificação para garantir que as propriedades existem antes de espalhá-las.
+    const allPlayers = [
+        ...Object.values(home.startingXI || {}), 
+        ...Object.values(away.startingXI || {}),
+        ...(home.substitutes || []),
+        ...(away.substitutes || [])
+    ];
 
     allPlayers.forEach(player => {
         if(player) {
@@ -426,7 +420,7 @@ function initializeMatchPlayers() {
     const homeFormation = formationLayouts[gameState.tactics.formation];
     for(const pos in home.startingXI) {
         const player = home.startingXI[pos];
-        if(player) gameState.matchState.playerPositions.set(player.name, [...formationLayouts['4-2-3-1'][pos]]);
+        if(player) gameState.matchState.playerPositions.set(player.name, [...homeFormation[pos]]);
     }
     
     const awayFormationKey = Object.keys(formationLayouts)[0];
@@ -452,9 +446,15 @@ function gameLoop() {
         gameState.matchState.gameTime = 45;
         togglePause(true);
         document.getElementById('match-time-status').innerText = "INTERVALO";
-        for (const [player, pos] of gameState.matchState.playerPositions.entries()) {
-            pos[0] = 100 - pos[0];
-            pos[1] = 100 - pos[1];
+        for (const [playerName, pos] of gameState.matchState.playerPositions.entries()) {
+            const teamSide = Object.values(gameState.matchState.home.startingXI).find(p => p.name === playerName) ? 'home' : 'away';
+            if (teamSide === 'home') {
+                pos[0] = 100 - pos[0];
+                pos[1] = 100 - pos[1];
+            } else {
+                pos[0] = 100 - pos[0];
+                pos[1] = 100 - pos[1];
+            }
         }
     } else if (gameState.matchState.gameTime >= 90 && gameState.matchState.half === 2) {
         endMatch();
@@ -517,31 +517,23 @@ function drawMatch() {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, width, height);
-    ctx.beginPath();
-    ctx.moveTo(width / 2, 0);
-    ctx.lineTo(width / 2, height);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(width / 2, height / 2, height * 0.1, 0, 2 * Math.PI);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height); ctx.stroke();
+    ctx.beginPath(); ctx.arc(width / 2, height / 2, height * 0.1, 0, 2 * Math.PI); ctx.stroke();
 
     const playerRadius = height / 40;
     const drawPlayer = (pos, color) => {
         const x = (pos[1] / 100) * width;
         const y = (pos[0] / 100) * height;
-        ctx.beginPath();
-        ctx.arc(x, y, playerRadius, 0, 2 * Math.PI);
-        ctx.fillStyle = color;
-        ctx.fill();
-        ctx.strokeStyle = 'black';
-        ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, playerRadius, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle = 'black'; ctx.stroke();
     };
     
     for (const player of Object.values(gameState.matchState.home.startingXI)) {
+        if (!player) continue;
         const pos = gameState.matchState.playerPositions.get(player.name);
         if(pos) drawPlayer(pos, '#c0392b');
     }
     for (const player of Object.values(gameState.matchState.away.startingXI)) {
+        if (!player) continue;
         const pos = gameState.matchState.playerPositions.get(player.name);
         if(pos) drawPlayer(pos, '#f1c40f');
     }
@@ -586,9 +578,7 @@ function showNotification(message) {
     notification.className = 'match-notification';
     notification.innerText = message;
     area.appendChild(notification);
-    setTimeout(() => {
-        notification.remove();
-    }, 5000);
+    setTimeout(() => { notification.remove(); }, 5000);
 }
 
 function updatePlayerRatings() {
@@ -605,7 +595,7 @@ function endMatch() {
     gameState.isMatchLive = false;
     document.getElementById('match-time-status').innerText = 'FIM DE JOGO';
     
-    const match = gameState.schedule.find(m => isSameDay(new Date(m.date), new Date(gameState.nextUserMatch.date)) && (m.home.name === gameState.userClub.name || m.away.name === gameState.userClub.name));
+    const match = gameState.schedule.find(m => isSameDay(new Date(m.date), new Date(gameState.nextUserMatch.date)));
     if (match) {
         match.status = 'played';
         match.homeScore = gameState.matchState.score.home;
@@ -657,6 +647,8 @@ function initializeEventListeners() {
     document.getElementById('new-club-back-btn').addEventListener('click', () => showScreen('start-screen'));
     document.getElementById('select-league-back-btn').addEventListener('click', () => showScreen('start-screen'));
     document.getElementById('select-team-back-btn').addEventListener('click', () => showScreen('select-league-screen'));
+    // CORREÇÃO: Removida a linha abaixo para evitar o clique duplo
+    // document.getElementById('advance-day-button').addEventListener('click', advanceDay); 
     document.getElementById('exit-game-btn').addEventListener('click', () => window.location.reload());
     document.querySelectorAll('#sidebar li').forEach(item => { item.addEventListener('click', () => showMainContent(item.dataset.content)); });
     document.getElementById('settings-btn').addEventListener('click', openSettingsModal);
@@ -684,7 +676,6 @@ function initializeEventListeners() {
         });
     });
 
-    // Listeners da simulação de partida
     document.getElementById('confirm-and-play-btn').addEventListener('click', startMatchSimulation);
     document.getElementById('cancel-play-btn').addEventListener('click', () => {
         document.getElementById('match-confirmation-modal').classList.remove('active');
