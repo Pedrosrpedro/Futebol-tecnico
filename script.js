@@ -180,13 +180,26 @@ let matchInterval;
 function promptMatchConfirmation() { if (!gameState.nextUserMatch) return; document.getElementById('match-confirmation-modal').classList.add('active'); }
 function startMatchSimulation() { document.getElementById('match-confirmation-modal').classList.remove('active'); const startingXIKeys = Object.keys(gameState.squadManagement.startingXI); if (startingXIKeys.length !== 11 || startingXIKeys.some(key => !gameState.squadManagement.startingXI[key])) { showInfoModal("Escalação Incompleta", "Você precisa de 11 jogadores na escalação titular para começar a partida!"); showMainContent('tactics-content'); return; } gameState.isMatchLive = true; gameState.isPaused = false; const userTeam = gameState.userClub; const opponentTeam = gameState.nextUserMatch.home.name === userTeam.name ? gameState.nextUserMatch.away : gameState.nextUserMatch.home; const opponentSquad = setupOpponentSquad(opponentTeam); gameState.matchState = { home: gameState.nextUserMatch.home.name === userTeam.name ? { team: userTeam, ...gameState.squadManagement, formation: formationLayouts[gameState.tactics.formation], tactics: gameState.tactics } : { team: opponentTeam, ...opponentSquad }, away: gameState.nextUserMatch.away.name === userTeam.name ? { team: userTeam, ...gameState.squadManagement, formation: formationLayouts[gameState.tactics.formation], tactics: gameState.tactics } : { team: opponentTeam, ...opponentSquad }, score: { home: 0, away: 0 }, gameTime: 0, half: 1, playerPositions: new Map(), playerRatings: new Map(), possession: 'home', playState: 'kickoff', stateTimer: 0, ball: { y: 50, x: 50, targetY: 50, targetX: 50, speed: 0, owner: null } }; initializeMatchPlayers(); document.getElementById('match-home-team-name').innerText = gameState.matchState.home.team.name; document.getElementById('match-home-team-logo').src = `images/${gameState.matchState.home.team.logo}`; document.getElementById('match-away-team-name').innerText = gameState.matchState.away.team.name; document.getElementById('match-away-team-logo').src = `images/${gameState.matchState.away.team.logo}`; updateScoreboard(); showScreen('match-simulation-screen'); resizeCanvas(); matchInterval = setInterval(gameLoop, 50); setInterval(() => { if (gameState.isMatchLive && !gameState.isPaused) { updatePlayerRatings(); } }, 30000); }
 function setupOpponentSquad(team) { const todosJogadores = [...team.players].sort((a, b) => b.overall - a.overall); const startingXI = {}; const formationKey = Object.keys(formationLayouts)[Math.floor(Math.random() * 4)]; const formation = formationLayouts[formationKey]; const posicoesDaFormacao = Object.keys(formation); let jogadoresDisponiveis = [...todosJogadores]; for (const posicao of posicoesDaFormacao) { if (jogadoresDisponiveis.length > 0) { startingXI[posicao] = jogadoresDisponiveis.shift(); } } const substitutes = jogadoresDisponiveis.splice(0, 7); const reserves = jogadoresDisponiveis; const tactics = { mentality: 'balanced', defensiveLine: 'standard', onPossessionLoss: 'regroup' }; return { startingXI, substitutes, reserves, formation, tactics }; }
-function initializeMatchPlayers() { const { home, away } = gameState.matchState; const allPlayers = [...Object.values(home.startingXI || {}), ...Object.values(away.startingXI || {})]; allPlayers.forEach(player => { if (player) gameState.matchState.playerRatings.set(player.name, 5.5 + Math.random() * 1.5); }); resetPlayersToKickoffPositions(); }
+function initializeMatchPlayers() {
+    const { home, away } = gameState.matchState;
+    const allPlayers = [...Object.values(home.startingXI || {}), ...Object.values(away.startingXI || {})];
+    
+    allPlayers.forEach(player => {
+        if (player) {
+            gameState.matchState.playerRatings.set(player.name, 5.5 + Math.random() * 1.5);
+            // CRIA a entrada no mapa de posições antes de tentar modificar
+            gameState.matchState.playerPositions.set(player.name, { x: 0, y: 0 });
+        }
+    });
+
+    resetPlayersToKickoffPositions();
+}
 
 function gameLoop() {
     if (gameState.isPaused || !gameState.isMatchLive) return;
     const { ball } = gameState.matchState; 
     const timeSpeed = 0.5; // RITMO REDUZIDO
-    
+
     if (gameState.matchState.stateTimer <= 0) {
         gameState.matchState.gameTime += 0.05 * timeSpeed;
     } else {
@@ -229,7 +242,7 @@ function gameLoop() {
             case 'playing_corner':
                  if (ball.speed === 0) {
                     const winner = getClosestPlayer(ball).player;
-                    if (Math.random() < 0.25) { 
+                    if (winner && Math.random() < 0.25) { 
                         resolveShot(winner, true);
                     } else {
                         setPlayState('playing', getPlayerTeam(winner) === 'home' ? 'away' : 'home');
@@ -244,7 +257,62 @@ function gameLoop() {
     movePlayers();
     drawMatch();
 }
-function updatePlayLogic() { const { ball, possession } = gameState.matchState; if (!ball.owner) { const closest = getClosestPlayer(ball); if (closest.player) { ball.owner = closest.player; gameState.matchState.possession = getPlayerTeam(ball.owner); } return; } const ownerPlayer = ball.owner; const ownerTeamKey = possession; const opponentTeamKey = ownerTeamKey === 'home' ? 'away' : 'home'; const opponent = getClosestPlayer(ball, opponentTeamKey); if (opponent.distance < 3) { const tacklePower = (opponent.player.attributes.defending * 0.5) + (Math.random() * 50); const dribblePower = (ownerPlayer.attributes.dribbling * 0.5) + (Math.random() * 50); if (tacklePower > dribblePower) { ball.owner = opponent.player; gameState.matchState.possession = opponentTeamKey; showNotification(`Desarme de ${opponent.player.name}!`); return; } } const playerPos = gameState.matchState.playerPositions.get(ownerPlayer.name); const isHomeTeam = ownerTeamKey === 'home'; const goalX = isHomeTeam ? PITCH_DIMS.right : PITCH_DIMS.left; const distToGoal = Math.abs(playerPos.x - goalX); const shootScore = distToGoal < 40 ? (ownerPlayer.attributes.shooting + (1 - distToGoal / 40) * 20) : 0; const targetPlayer = findBestPassTarget(ownerPlayer); let passScore = 0; if (targetPlayer) { passScore = ownerPlayer.attributes.passing + 20; } const dribbleScore = ownerPlayer.attributes.dribbling - (opponent.distance < 5 ? 20 : 0); const maxScore = Math.max(shootScore, passScore, dribbleScore); if(maxScore === shootScore) { resolveShot(ownerPlayer); } else if (maxScore === passScore) { const targetPos = gameState.matchState.playerPositions.get(targetPlayer.name); ball.targetY = targetPos.y; ball.targetX = targetPos.x; ball.speed = 1.0 + (ownerPlayer.attributes.passing / 150); ball.owner = targetPlayer; } else { ball.targetX += (isHomeTeam ? 5 : -5) * (ownerPlayer.attributes.pace / 100); ball.targetY += (Math.random() - 0.5) * 5; ball.speed = 0.3; } }
+function updatePlayLogic() {
+    const { ball, possession } = gameState.matchState;
+    if (!ball.owner) {
+        const closest = getClosestPlayer(ball);
+        if (closest.player) {
+            ball.owner = closest.player;
+            gameState.matchState.possession = getPlayerTeam(ball.owner);
+        }
+        return;
+    }
+
+    const ownerPlayer = ball.owner;
+    const ownerTeamKey = possession;
+    const opponentTeamKey = ownerTeamKey === 'home' ? 'away' : 'home';
+    const opponent = getClosestPlayer(ball, opponentTeamKey);
+
+    if (opponent.distance < 3) {
+        const tacklePower = (opponent.player.attributes.defending * 0.5) + (Math.random() * 50);
+        const dribblePower = (ownerPlayer.attributes.dribbling * 0.5) + (Math.random() * 50);
+        if (tacklePower > dribblePower) {
+            ball.owner = opponent.player;
+            gameState.matchState.possession = opponentTeamKey;
+            showNotification(`Desarme de ${opponent.player.name}!`);
+            return;
+        }
+    }
+
+    const playerPos = gameState.matchState.playerPositions.get(ownerPlayer.name);
+    const isHomeTeam = ownerTeamKey === 'home';
+    const goalX = isHomeTeam ? PITCH_DIMS.right : PITCH_DIMS.left;
+    const distToGoal = Math.abs(playerPos.x - goalX);
+
+    const shootScore = distToGoal < 40 ? (ownerPlayer.attributes.shooting + (1 - distToGoal / 40) * 20) : 0;
+    const targetPlayer = findBestPassTarget(ownerPlayer);
+    let passScore = 0;
+    if (targetPlayer) {
+        passScore = ownerPlayer.attributes.passing + 20;
+    }
+    const dribbleScore = ownerPlayer.attributes.dribbling - (opponent.distance < 5 ? 20 : 0);
+
+    const maxScore = Math.max(shootScore, passScore, dribbleScore);
+
+    if (maxScore > 0 && maxScore === shootScore) {
+        resolveShot(ownerPlayer);
+    } else if (maxScore > 0 && maxScore === passScore) {
+        const targetPos = gameState.matchState.playerPositions.get(targetPlayer.name);
+        ball.targetY = targetPos.y;
+        ball.targetX = targetPos.x;
+        ball.speed = 1.0 + (ownerPlayer.attributes.passing / 150);
+        ball.owner = targetPlayer;
+    } else {
+        ball.targetX += (isHomeTeam ? 5 : -5) * (ownerPlayer.attributes.pace / 100);
+        ball.targetY += (Math.random() - 0.5) * 5;
+        ball.speed = 0.3;
+    }
+}
 function findBestPassTarget(passer) {
     const passerPos = gameState.matchState.playerPositions.get(passer.name);
     const teamKey = getPlayerTeam(passer);
@@ -278,7 +346,27 @@ function resolveShot(shooter, isFromCorner = false) { const { ball, possession }
 function getClosestPlayer(target, teamKey = null) { let closestPlayer = null; let minDistance = Infinity; const teamsToScan = teamKey ? [teamKey] : ['home', 'away']; teamsToScan.forEach(key => { const team = gameState.matchState[key]; for(const player of Object.values(team.startingXI)) { if(!player) continue; const playerPos = gameState.matchState.playerPositions.get(player.name); const distance = Math.hypot(playerPos.y - target.y, playerPos.x - target.x); if (distance < minDistance) { minDistance = distance; closestPlayer = player; } } }); return { player: closestPlayer, distance: minDistance }; }
 function getPlayerTeam(player) { if(!player) return null; return Object.values(gameState.matchState.home.startingXI).some(p => p && p.name === player.name) ? 'home' : 'away'; }
 function moveBall() { const { ball } = gameState.matchState; if (ball.speed === 0) return; const distY = ball.targetY - ball.y; const distX = ball.targetX - ball.x; const distance = Math.hypot(distY, distX); if (distance < 1) { ball.y = ball.targetY; ball.x = ball.targetX; ball.speed = 0; if(gameState.matchState.playState === 'playing') { const closest = getClosestPlayer(ball); if(closest.player) { ball.owner = closest.player; gameState.matchState.possession = getPlayerTeam(ball.owner); } } } else { const moveSpeed = Math.min(ball.speed, distance); ball.y += (distY / distance) * moveSpeed; ball.x += (distX / distance) * moveSpeed; } if (gameState.matchState.playState === 'playing' || gameState.matchState.playState === 'playing_corner') { if (ball.y < PITCH_DIMS.top || ball.y > PITCH_DIMS.bottom) { setPlayState('throwIn', gameState.matchState.possession === 'home' ? 'away' : 'home'); ball.y = Math.max(PITCH_DIMS.top + 1, Math.min(PITCH_DIMS.bottom - 1, ball.y)); } else if (ball.x < PITCH_DIMS.left) { setPlayState('goalKick', 'home'); } else if (ball.x > PITCH_DIMS.right) { setPlayState('goalKick', 'away'); } } }
-function getPlayerHomePosition(player, playerPosId, teamKey) { const team = gameState.matchState[teamKey]; const [baseX, baseY] = team.formation[playerPosId]; let tacticalX = baseX; let xShift = 0; switch (team.tactics.mentality) { case 'very_attacking': xShift = 5; break; case 'attacking': xShift = 2.5; break; case 'defensive': xShift = -2.5; break; case 'very_defensive': xShift = -5; break; } const isDefender = ['CB', 'RB', 'LB'].some(p => playerPosId.includes(p)); if (isDefender) { switch (team.tactics.defensiveLine) { case 'higher': xShift += 4; break; case 'deeper': xShift -= 4; break; } } tacticalX += xShift; return teamKey === 'home' ? [tacticalX, baseY] : [100 - tacticalX, 100 - baseY]; }
+function getPlayerHomePosition(player, playerPosId, teamKey) {
+    const team = gameState.matchState[teamKey];
+    const [baseX, baseY] = team.formation[playerPosId]; 
+    let tacticalX = baseX;
+    let xShift = 0;
+    switch (team.tactics.mentality) {
+        case 'very_attacking': xShift = 5; break;
+        case 'attacking':      xShift = 2.5;  break;
+        case 'defensive':      xShift = -2.5; break;
+        case 'very_defensive': xShift = -5;  break;
+    }
+    const isDefender = ['CB', 'RB', 'LB'].some(p => playerPosId.includes(p));
+    if (isDefender) {
+        switch (team.tactics.defensiveLine) {
+            case 'higher': xShift += 4; break;
+            case 'deeper': xShift -= 4; break;
+        }
+    }
+    tacticalX += xShift;
+    return teamKey === 'home' ? [tacticalX, baseY] : [100 - tacticalX, 100 - baseY];
+}
 function movePlayers() {
     if (gameState.matchState.stateTimer > 0 && gameState.matchState.playState !== 'playing') return;
     const { ball } = gameState.matchState;
@@ -382,6 +470,7 @@ function resizeCanvas() {
     const container = document.getElementById('match-pitch-container');
     if (!canvas || !container) return;
     
+    // Forçar o canvas a preencher o container
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
 
