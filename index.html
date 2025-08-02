@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Football Manager</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Adicione o seu arquivo de dados financeiros -->
-    <script src="data/verba_times.js" defer></script>
+
+    <!-- Adicionado biblioteca de gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="data/verba_times.js" defer></script> 
     <script src="data/brasileirao_a.js" defer></script>
     <script src="data/brasileirao_b.js" defer></script>
     <script src="data/brasileirao_c.js" defer></script>
@@ -14,7 +17,7 @@
 </head>
 <body>
     <div id="game-container">
-        <!-- Telas de criação (sem alterações) -->
+        <!-- Telas de criação -->
         <div id="manager-creation-screen" class="screen active"><div class="screen-content"><h2>Bem-vindo, Treinador!</h2><p>Qual é o seu nome?</p><input type="text" id="manager-name-input" placeholder="Digite seu nome..."><button id="confirm-manager-name-btn">Confirmar</button></div></div>
         <div id="start-screen" class="screen"><div class="screen-content"><h1>Football Manager</h1><button id="go-to-new-club-btn">Criar Novo Clube</button><button id="go-to-select-league-btn">Treinar Clube Existente</button></div></div>
         <div id="new-club-screen" class="screen"><div class="screen-content"><h2>Crie seu Clube</h2><input type="text" id="club-name-input" placeholder="Nome do Clube"><input type="text" id="club-initials-input" placeholder="Iniciais (3 letras)"><button id="create-new-club-btn">Criar e Jogar</button><button class="secondary" id="new-club-back-btn">Voltar</button></div></div>
@@ -37,13 +40,11 @@
                     <li data-content="news-content">Notícias</li>
                     <li data-content="calendar-content">Calendário</li>
                     <li data-content="matches-content">Jogos</li>
-                    <!-- NOVO: Botão de Finanças -->
                     <li data-content="finances-content">Finanças</li>
                     <li data-content="stadium-content">Estádio</li>
                 </ul>
             </nav>
             <main id="main-content">
-                <!-- Painéis existentes (sem alterações) -->
                 <div id="home-content" class="main-content-panel active"><h3>Página Inicial</h3><p>Bem-vindo ao seu clube!</p></div>
                 <div id="squad-content" class="main-content-panel"><h3>Elenco Principal</h3><div id="player-list-table" class="table-container"></div></div>
                 <div id="tactics-content" class="main-content-panel">
@@ -80,7 +81,6 @@
                 </div>
                 <div id="news-content" class="main-content-panel">
                     <div id="news-layout-container">
-                        <!-- Conteúdo de notícias gerado pelo JS -->
                     </div>
                 </div>
                 <div id="calendar-content" class="main-content-panel">
@@ -88,12 +88,13 @@
                     <button id="cancel-holiday-btn" style="display: none;">Cancelar Férias</button>
                     <div id="calendar-container"></div>
                 </div>
-                 <div id="matches-content" class="main-content-panel">
+                <div id="matches-content" class="main-content-panel">
                     <div class="matches-header">
                         <div class="competition-selector-container">
                             <label for="matches-league-selector">Competição:</label>
                             <select id="matches-league-selector"></select>
                         </div>
+                        <button id="open-friendly-modal-btn">Marcar Amistoso</button>
                         <div class="round-nav">
                             <button id="prev-round-btn">◀</button>
                             <span id="round-display">Rodada 1</span>
@@ -102,13 +103,23 @@
                     </div>
                     <div id="round-matches-container" class="table-container"></div>
                 </div>
-                <!-- NOVO: Painel de Finanças -->
-                <div id="finances-content" class="main-content-panel"></div>
+                <div id="finances-content" class="main-content-panel">
+                    <div class="tabs-container">
+                        <button class="tab-btn active" data-tab="club-finances">Meu Clube</button>
+                        <button class="tab-btn" data-tab="opponent-finances">Info. Adversários</button>
+                    </div>
+                    <div id="club-finances-tab" class="tab-content active">
+                        <!-- Conteúdo das finanças do clube gerado pelo JS -->
+                    </div>
+                    <div id="opponent-finances-tab" class="tab-content">
+                        <!-- Conteúdo das finanças dos adversários gerado pelo JS -->
+                    </div>
+                </div>
                 <div id="stadium-content" class="main-content-panel"><h3>Editor de Estádio</h3><p>Recurso em desenvolvimento.</p></div>
             </main>
         </div>
         
-        <!-- Telas e Modais (sem alterações) -->
+        <!-- Tela de Simulação de Partida -->
         <div id="match-simulation-screen" class="screen">
             <div id="match-header">
                 <div id="match-scoreboard">
@@ -180,25 +191,27 @@
                 <button id="confirm-user-news-btn">Ok, entendi</button>
             </div>
         </div>
-    </div>
-    <div id="settings-modal" class="modal-overlay">
-        <div class="modal-content">
-            <button id="close-modal-btn" class="icon-btn modal-close-btn">×</button>
-            <h2>Configurações</h2>
-            <div class="settings-option">
-                <span>Tela Cheia</span>
-                <button id="fullscreen-btn">Ativar</button>
-            </div>
-            <!-- NOVO: Seletor de Moeda -->
-            <div class="settings-option">
-              <span>Moeda</span>
-              <select id="currency-selector">
-                <option value="BRL">Real (R$)</option>
-                <option value="USD">Dólar (US$)</option>
-                <option value="EUR">Euro (€)</option>
-              </select>
+        <div id="schedule-friendly-modal" class="modal-overlay">
+            <div class="modal-content">
+                <button id="close-friendly-modal-btn" class="icon-btn modal-close-btn">×</button>
+                <h2>Marcar Partida Amistosa</h2>
+                <div class="settings-option">
+                    <span>Adversário</span>
+                    <select id="friendly-opponent-selector"></select>
+                </div>
+                <div class="settings-option">
+                    <span>Período para o Jogo</span>
+                    <select id="friendly-period-selector">
+                        <option value="14">Próximas 2 semanas</option>
+                        <option value="30">Próximo mês</option>
+                        <option value="60">Próximos 2 meses</option>
+                    </select>
+                </div>
+                <button id="confirm-schedule-friendly-btn">Enviar Convite</button>
+                <button class="secondary" id="cancel-schedule-friendly-btn">Cancelar</button>
             </div>
         </div>
     </div>
+    <div id="settings-modal" class="modal-overlay"><div class="modal-content"><button id="close-modal-btn" class="icon-btn modal-close-btn">×</button><h2>Configurações</h2><div class="settings-option"><span>Tela Cheia</span><button id="fullscreen-btn">Ativar</button></div><div class="settings-option"><span>Moeda</span><select id="currency-selector"><option value="BRL">Real (R$)</option><option value="USD">Dólar (US$)</option><option value="EUR">Euro (€)</option></select></div></div></div>
 </body>
 </html>
