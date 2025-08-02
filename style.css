@@ -119,7 +119,6 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
 .field-background::before { width: 100%; height: 2px; top: 50%; left: 0; }
 .field-background::after { width: 18%; aspect-ratio: 1 / 1; border-width: 2px; border-radius: 50%; left: 50%; top: 50%; transform: translate(-50%, -50%); }
 
-/* CORRIGIDO: Layout da coluna do elenco */
 .tactics-squad-column { position: relative; display: flex; flex-direction: column; gap: 15px; min-height: 0; transition: all 0.3s; }
 .squad-list-container { background-color: var(--bg-dark); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
 .squad-list-container h4 { margin-bottom: 10px; font-size: 14px; text-transform: uppercase; color: var(--text-secondary); }
@@ -140,7 +139,7 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
 .player-chip .player-overall.penalty { color: var(--danger-color); }
 .player-chip .player-pos { color: var(--text-secondary); }
 
-/* NOVO: Estilos para a página de Jogos */
+/* Estilos para a página de Jogos */
 #matches-content { gap: 20px; }
 .matches-header { display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-dark); padding: 10px 15px; border-radius: 8px; flex-shrink: 0; }
 .competition-selector-container { display: flex; align-items: center; gap: 10px; }
@@ -161,7 +160,7 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
 ::-webkit-scrollbar-thumb { background: var(--bg-light); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-color); }
 
-/* Modal de Configurações */
+/* Modal de Configurações e outros Modais */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
 .modal-overlay.active { display: flex; }
 .modal-content { background-color: var(--bg-dark); padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; position: relative; border: 1px solid var(--border-color); }
@@ -169,6 +168,7 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
 .settings-option { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border-color); }
 .settings-option:last-child { border-bottom: none; }
 .settings-option span { font-size: 18px; }
+#info-modal .modal-content, #friendly-result-modal .modal-content { text-align: center; }
 
 /* --- ESTILOS DA TELA DE SIMULAÇÃO DE PARTIDA --- */
 #match-simulation-screen.active {
@@ -329,7 +329,6 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
 }
 
 /* --- Modal de Táticas em Jogo --- */
-/* (Reutiliza a estrutura principal, mas dentro do seu próprio modal) */
 #ingame-tactics-modal .modal-content {
     width: 95vw;
     height: 95vh;
@@ -347,9 +346,7 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     margin-left: 10px;
 }
 
-/* ... (todo o seu CSS anterior) ... */
-
-/* NOVO: Estilo para o botão de cancelar férias */
+/* Estilo para o botão de cancelar férias */
 #cancel-holiday-btn {
     background-color: var(--danger-color);
     color: var(--text-primary);
@@ -364,60 +361,9 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     filter: brightness(1.2);
 }
 
-/* ... (todo o seu CSS anterior) ... */
-
-/* --- NOVO: Estilos para a Página de Notícias --- */
+/* --- Layout Avançado para a Página de Notícias --- */
 #news-content {
-    align-items: center;
-}
-#news-feed-container {
-    width: 100%;
-    max-width: 800px;
-    height: 100%;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    padding: 10px;
-}
-.news-article {
-    background-color: var(--bg-dark);
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-}
-.news-article h4 {
-    color: var(--accent-color);
-    margin-bottom: 5px;
-}
-.news-article .news-date {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-bottom: 15px;
-}
-.news-article .news-body {
-    line-height: 1.6;
-}
-
-/* --- NOVO: Estilo para o botão de cancelar férias --- */
-#cancel-holiday-btn {
-    background-color: var(--danger-color);
-    color: var(--text-primary);
-    margin: 0 auto 15px auto;
-    display: block;
-    width: 100%;
-    max-width: 580px; /* Alinha com a largura do calendário */
-    border: 1px solid var(--border-color);
-}
-#cancel-holiday-btn:hover {
-    filter: brightness(1.2);
-}
-
-/* ... (todo o seu CSS anterior) ... */
-
-/* --- NOVO: Layout Avançado para a Página de Notícias --- */
-#news-content {
-    align-items: flex-start; /* Alinha o conteúdo ao topo */
+    align-items: flex-start;
 }
 
 #news-layout-container {
@@ -519,9 +465,7 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     gap: 15px;
 }
 
-/* ... (todo o seu CSS anterior) ... */
-
-/* --- NOVO: Estilos para Abas (Tabs) --- */
+/* --- Estilos para Abas (Tabs) --- */
 .tabs-container {
     display: flex;
     gap: 5px;
@@ -557,7 +501,7 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     display: flex;
 }
 
-/* NOVO: Estilos para a Aba de Finanças do Clube */
+/* Estilos para a Aba de Finanças do Clube */
 #club-finances-tab {
     gap: 20px;
 }
@@ -595,10 +539,10 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    min-height: 0; /* Essencial para o scroll funcionar */
+    min-height: 0;
 }
 .finance-history-container {
-    max-height: 400px; /* Limita a altura para o scroll */
+    max-height: 400px;
 }
 .finance-history-container .table-container {
     max-height: 100%;
@@ -606,6 +550,3 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
 #finance-chart {
     max-height: 300px;
 }
-
-
-/* ... (resto do seu CSS) ... */
