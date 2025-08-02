@@ -52,11 +52,11 @@ const prizeMoney = {
 };
 
 const positionMatrix = { 'GK': { 'GK': 0, 'CB': 4, 'LB': 4, 'RB': 4, 'CDM': 4, 'CM': 4, 'CAM': 4, 'LW': 4, 'RW': 4, 'ST': 4 }, 'CB': { 'GK': 4, 'CB': 0, 'LB': 1, 'RB': 1, 'CDM': 1, 'CM': 2, 'CAM': 3, 'LW': 3, 'RW': 3, 'ST': 3 }, 'LB': { 'GK': 4, 'CB': 1, 'LB': 0, 'RB': 2, 'CDM': 2, 'CM': 2, 'CAM': 3, 'LW': 1, 'RW': 3, 'ST': 3 }, 'RB': { 'GK': 4, 'CB': 1, 'LB': 2, 'RB': 0, 'CDM': 2, 'CM': 2, 'CAM': 3, 'LW': 3, 'RW': 1, 'ST': 3 }, 'CDM': { 'GK': 4, 'CB': 1, 'LB': 2, 'RB': 2, 'CDM': 0, 'CM': 1, 'CAM': 2, 'LW': 3, 'RW': 3, 'ST': 3 }, 'CM': { 'GK': 4, 'CB': 2, 'LB': 2, 'RB': 2, 'CDM': 1, 'CM': 0, 'CAM': 1, 'LW': 2, 'RW': 2, 'ST': 2 }, 'CAM': { 'GK': 4, 'CB': 3, 'LB': 3, 'RB': 3, 'CDM': 2, 'CM': 1, 'CAM': 0, 'LW': 1, 'RW': 1, 'ST': 1 }, 'LW': { 'GK': 4, 'CB': 3, 'LB': 1, 'RB': 3, 'CDM': 3, 'CM': 2, 'CAM': 1, 'LW': 0, 'RW': 2, 'ST': 2 }, 'RW': { 'GK': 4, 'CB': 3, 'LB': 3, 'RB': 1, 'CDM': 3, 'CM': 2, 'CAM': 1, 'LW': 2, 'RW': 0, 'ST': 2 }, 'ST': { 'GK': 4, 'CB': 3, 'LB': 3, 'RB': 3, 'CDM': 3, 'CM': 2, 'CAM': 1, 'LW': 2, 'RW': 2, 'ST': 0 }, };
-const formationLayouts = {
-    '4-4-2':    { 'GK': [93, 50], 'RB': [75, 82], 'CB1': [78, 62], 'CB2': [78, 38], 'LB': [75, 18], 'RM': [50, 82], 'CM1': [55, 62], 'CM2': [55, 38], 'LM': [50, 18], 'ST1': [25, 60], 'ST2': [25, 40] },
-    '4-3-3':    { 'GK': [93, 50], 'RB': [75, 82], 'CB1': [78, 62], 'CB2': [78, 38], 'LB': [75, 18], 'CM1': [58, 72], 'CM2': [62, 50], 'CM3': [58, 28], 'RW': [30, 80], 'ST': [22, 50], 'LW': [30, 20] },
-    '3-5-2':    { 'GK': [93, 50], 'CB1': [80, 70], 'CB2': [82, 50], 'CB3': [80, 30], 'RWB': [55, 85], 'CM1': [50, 65], 'CDM': [68, 50], 'CM2': [50, 35], 'LWB': [55, 15], 'ST1': [25, 65], 'ST2': [25, 35] },
-    '4-2-3-1':  { 'GK': [93, 50], 'RB': [75, 82], 'CB1': [78, 62], 'CB2': [78, 38], 'LB': [75, 18], 'CDM1': [65, 65], 'CDM2': [65, 35], 'RW': [42, 82], 'CAM': [45, 50], 'LW': [42, 18], 'ST': [20, 50] }
+const formationLayouts = { // [Y from top, X from left] -> CONVERTED TO -> [X from left, Y from top] for horizontal pitch
+    '4-4-2':    { 'GK': [7, 50], 'RB': [25, 82], 'CB1': [22, 62], 'CB2': [22, 38], 'LB': [25, 18], 'RM': [50, 82], 'CM1': [45, 62], 'CM2': [45, 38], 'LM': [50, 18], 'ST1': [75, 60], 'ST2': [75, 40] },
+    '4-3-3':    { 'GK': [7, 50], 'RB': [25, 82], 'CB1': [22, 62], 'CB2': [22, 38], 'LB': [25, 18], 'CM1': [42, 72], 'CM2': [38, 50], 'CM3': [42, 28], 'RW': [70, 80], 'ST': [78, 50], 'LW': [70, 20] },
+    '3-5-2':    { 'GK': [7, 50], 'CB1': [20, 70], 'CB2': [18, 50], 'CB3': [20, 30], 'RWB': [45, 85], 'CM1': [50, 65], 'CDM': [32, 50], 'CM2': [50, 35], 'LWB': [45, 15], 'ST1': [75, 65], 'ST2': [75, 35] },
+    '4-2-3-1':  { 'GK': [7, 50], 'RB': [25, 82], 'CB1': [22, 62], 'CB2': [22, 38], 'LB': [25, 18], 'CDM1': [35, 65], 'CDM2': [35, 35], 'RW': [58, 82], 'CAM': [55, 50], 'LW': [58, 18], 'ST': [80, 50] }
 };
 const PITCH_DIMS = { top: 0, bottom: 100, left: 0, right: 100, goalHeight: 30 };
 
@@ -103,7 +103,7 @@ function addPlayerToDest(player, destInfo) { if (destInfo.type === 'field') { ga
 function movePlayer(playerInfo, destInfo) { if (destInfo.type === 'subs' && gameState.squadManagement.substitutes.length >= MAX_SUBSTITUTES) { showInfoModal('Banco Cheio', `O banco de reservas já tem o máximo de ${MAX_SUBSTITUTES} jogadores.`); return; } removePlayerFromSource(playerInfo); addPlayerToDest(playerInfo.player, destInfo); loadTacticsScreen(); }
 function swapPlayers(sourcePlayerInfo, destPlayerInfo) { const isMovingToSubs = destPlayerInfo.type === 'subs'; const isMovingFromSubs = sourcePlayerInfo.sourceType === 'subs'; if (!isMovingFromSubs && isMovingToSubs && gameState.squadManagement.substitutes.length >= MAX_SUBSTITUTES) { showInfoModal('Banco Cheio', `O banco de reservas já tem o máximo de ${MAX_SUBSTITUTES} jogadores.`); return; } removePlayerFromSource(sourcePlayerInfo); removePlayerFromSource(destPlayerInfo); addPlayerToDest(sourcePlayerInfo.player, { type: destPlayerInfo.type, id: destPlayerInfo.id }); addPlayerToDest(destPlayerInfo.player, { type: sourcePlayerInfo.sourceType, id: sourcePlayerInfo.sourceId }); loadTacticsScreen(); }
 function calculateModifiedOverall(player, targetPosition) { if (!player || !targetPosition) return player ? player.overall : 0; const naturalPosition = player.position; const cleanTargetPosition = targetPosition.replace(/\d/g, ''); if (!positionMatrix[naturalPosition] || positionMatrix[naturalPosition][cleanTargetPosition] === undefined) { return Math.max(40, player.overall - 25); } const distance = positionMatrix[naturalPosition][cleanTargetPosition]; const penaltyFactor = 4; const penalty = distance * penaltyFactor; return Math.max(40, player.overall - penalty); }
-function loadTacticsScreen() { const formation = gameState.tactics.formation; const field = document.querySelector('#field-container .field-background'); const subsList = document.getElementById('substitutes-list'); const reservesList = document.getElementById('reserves-list'); field.innerHTML = ''; subsList.innerHTML = ''; reservesList.innerHTML = ''; Object.keys(gameState.tactics).forEach(key => { const elementId = `tactic-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`; const element = document.getElementById(elementId); if (element) { if (element.type === 'checkbox') { element.checked = gameState.tactics[key]; } else { element.value = gameState.tactics[key]; } } }); const positions = formationLayouts[formation]; for (const pos in positions) { const slot = document.createElement('div'); slot.className = 'player-slot'; slot.dataset.position = pos; slot.style.top = `${positions[pos][0]}%`; slot.style.left = `${positions[pos][1]}%`; const player = gameState.squadManagement.startingXI[pos]; if (player) { slot.appendChild(createPlayerChip(player, pos)); } else { slot.innerText = pos; } field.appendChild(slot); } gameState.squadManagement.substitutes.forEach(player => subsList.appendChild(createSquadListPlayer(player))); gameState.squadManagement.reserves.forEach(player => reservesList.appendChild(createSquadListPlayer(player))); document.getElementById('subs-count').innerText = gameState.squadManagement.substitutes.length; if (selectedPlayerInfo) { const element = document.querySelector(`[data-player-id="${selectedPlayerInfo.player.name}"]`); if (element) element.classList.add('selected'); } }
+function loadTacticsScreen() { const formation = gameState.tactics.formation; const field = document.querySelector('#field-container .field-background'); const subsList = document.getElementById('substitutes-list'); const reservesList = document.getElementById('reserves-list'); field.innerHTML = ''; subsList.innerHTML = ''; reservesList.innerHTML = ''; Object.keys(gameState.tactics).forEach(key => { const elementId = `tactic-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`; const element = document.getElementById(elementId); if (element) { if (element.type === 'checkbox') { element.checked = gameState.tactics[key]; } else { element.value = gameState.tactics[key]; } } }); const positions = formationLayouts[formation]; for (const pos in positions) { const slot = document.createElement('div'); slot.className = 'player-slot'; slot.dataset.position = pos; slot.style.left = `${positions[pos][0]}%`; slot.style.top = `${positions[pos][1]}%`; const player = gameState.squadManagement.startingXI[pos]; if (player) { slot.appendChild(createPlayerChip(player, pos)); } else { slot.innerText = pos; } field.appendChild(slot); } gameState.squadManagement.substitutes.forEach(player => subsList.appendChild(createSquadListPlayer(player))); gameState.squadManagement.reserves.forEach(player => reservesList.appendChild(createSquadListPlayer(player))); document.getElementById('subs-count').innerText = gameState.squadManagement.substitutes.length; if (selectedPlayerInfo) { const element = document.querySelector(`[data-player-id="${selectedPlayerInfo.player.name}"]`); if (element) element.classList.add('selected'); } }
 function createPlayerChip(player, currentPosition) { const chip = document.createElement('div'); chip.className = 'player-chip'; chip.dataset.playerId = player.name; const modifiedOverall = calculateModifiedOverall(player, currentPosition); let overallClass = 'player-overall'; if (modifiedOverall < player.overall) { overallClass += ' penalty'; } chip.innerHTML = ` <span class="player-name">${player.name.split(' ').slice(-1).join(' ')}</span> <span class="${overallClass}">${modifiedOverall}</span> <span class="player-pos">${player.position}</span> `; return chip; }
 function createSquadListPlayer(player) { const item = document.createElement('div'); item.className = 'squad-list-player'; item.dataset.playerId = player.name; item.innerHTML = ` <div class="player-info"> <div class="player-name">${player.name}</div> <div class="player-pos">${player.position}</div> </div> <div class="player-overall">${player.overall}</div> `; return item; }
 
@@ -137,35 +137,12 @@ let matchInterval;
 function promptMatchConfirmation() { if (!gameState.nextUserMatch) return; document.getElementById('match-confirmation-modal').classList.add('active'); }
 function startMatchSimulation() { document.getElementById('match-confirmation-modal').classList.remove('active'); const startingXIKeys = Object.keys(gameState.squadManagement.startingXI); if (startingXIKeys.length !== 11 || startingXIKeys.some(key => !gameState.squadManagement.startingXI[key])) { showInfoModal("Escalação Incompleta", "Você precisa de 11 jogadores na escalação titular para começar a partida!"); showMainContent('tactics-content'); return; } gameState.isMatchLive = true; gameState.isPaused = false; const userTeam = gameState.userClub; const opponentTeam = gameState.nextUserMatch.home.name === userTeam.name ? gameState.nextUserMatch.away : gameState.nextUserMatch.home; const opponentSquad = setupOpponentSquad(opponentTeam); gameState.matchState = { home: gameState.nextUserMatch.home.name === userTeam.name ? { team: userTeam, ...gameState.squadManagement, formation: formationLayouts[gameState.tactics.formation], tactics: gameState.tactics } : { team: opponentTeam, ...opponentSquad }, away: gameState.nextUserMatch.away.name === userTeam.name ? { team: userTeam, ...gameState.squadManagement, formation: formationLayouts[gameState.tactics.formation], tactics: gameState.tactics } : { team: opponentTeam, ...opponentSquad }, score: { home: 0, away: 0 }, gameTime: 0, half: 1, playerPositions: new Map(), playerRatings: new Map(), possession: 'home', playState: 'kickoff', stateTimer: 0, ball: { y: 50, x: 50, targetY: 50, targetX: 50, speed: 0, owner: null } }; initializeMatchPlayers(); document.getElementById('match-home-team-name').innerText = gameState.matchState.home.team.name; document.getElementById('match-home-team-logo').src = `images/${gameState.matchState.home.team.logo}`; document.getElementById('match-away-team-name').innerText = gameState.matchState.away.team.name; document.getElementById('match-away-team-logo').src = `images/${gameState.matchState.away.team.logo}`; updateScoreboard(); showScreen('match-simulation-screen'); resizeCanvas(); matchInterval = setInterval(gameLoop, 50); setInterval(() => { if (gameState.isMatchLive && !gameState.isPaused) { updatePlayerRatings(); } }, 30000); }
 function setupOpponentSquad(team) { const todosJogadores = [...team.players].sort((a, b) => b.overall - a.overall); const startingXI = {}; const formationKey = Object.keys(formationLayouts)[Math.floor(Math.random() * 4)]; const formation = formationLayouts[formationKey]; const posicoesDaFormacao = Object.keys(formation); let jogadoresDisponiveis = [...todosJogadores]; for (const posicao of posicoesDaFormacao) { if (jogadoresDisponiveis.length > 0) { startingXI[posicao] = jogadoresDisponiveis.shift(); } } const substitutes = jogadoresDisponiveis.splice(0, 7); const reserves = jogadoresDisponiveis; const tactics = { mentality: 'balanced', defensiveLine: 'standard', onPossessionLoss: 'regroup' }; return { startingXI, substitutes, reserves, formation, tactics }; }
-function initializeMatchPlayers() {
-    const { home, away } = gameState.matchState;
-    const allPlayers = [...Object.values(home.startingXI || {}), ...Object.values(away.startingXI || {})];
-    allPlayers.forEach(player => {
-        if (player) gameState.matchState.playerRatings.set(player.name, 5.5 + Math.random() * 1.5);
-    });
-
-    // POSICIONAMENTO HORIZONTAL
-    for (const posId in home.startingXI) {
-        const player = home.startingXI[posId];
-        if (player) {
-            const [y, x] = home.formation[posId]; // Layout is [depth, width]
-            gameState.matchState.playerPositions.set(player.name, { y: x, x: 100 - y });
-        }
-    }
-    for (const posId in away.startingXI) {
-        const player = away.startingXI[posId];
-        if (player) {
-            const [y, x] = away.formation[posId];
-            gameState.matchState.playerPositions.set(player.name, { y: 100 - x, x: y });
-        }
-    }
-}
+function initializeMatchPlayers() { const { home, away } = gameState.matchState; const allPlayers = [...Object.values(home.startingXI || {}), ...Object.values(away.startingXI || {})]; allPlayers.forEach(player => { if (player) gameState.matchState.playerRatings.set(player.name, 5.5 + Math.random() * 1.5); }); for (const posId in home.startingXI) { const player = home.startingXI[posId]; if (player) { const [x, y] = home.formation[posId]; gameState.matchState.playerPositions.set(player.name, { x: x, y: y }); } } for (const posId in away.startingXI) { const player = away.startingXI[posId]; if (player) { const [x, y] = away.formation[posId]; gameState.matchState.playerPositions.set(player.name, { x: 100 - x, y: 100 - y }); } } }
 
 function gameLoop() {
     if (gameState.isPaused || !gameState.isMatchLive) return;
-    const { ball } = gameState.matchState;
-
-    const timeSpeed = 0.8; // RITMO REDUZIDO
+    const { ball } = gameState.matchState; 
+    const timeSpeed = 0.8; 
     gameState.matchState.stateTimer -= 50;
 
     if (gameState.matchState.stateTimer <= 0) {
@@ -190,7 +167,7 @@ function gameLoop() {
         case 'playing': updatePlayLogic(); break;
         case 'goal': if (gameState.matchState.stateTimer <= 0) { updateScoreboard(); const scoringTeam = gameState.matchState.possession; setPlayState('kickoff', scoringTeam === 'home' ? 'away' : 'home'); } break;
         case 'goalKick':
-             if (gameState.matchState.stateTimer <= 0) {
+            if (gameState.matchState.stateTimer <= 0) {
                 const team = gameState.matchState[gameState.matchState.possession];
                 const target = Object.values(team.startingXI).find(p => p && (p.position === 'CB' || p.position === 'LB' || p.position === 'RB'));
                 if (target) {
@@ -205,18 +182,18 @@ function gameLoop() {
             break;
         case 'corner':
             if (gameState.matchState.stateTimer <= 0) {
-                ball.targetX = gameState.matchState.possession === 'home' ? PITCH_DIMS.right - 10 : PITCH_DIMS.left + 10;
-                ball.targetY = 50 + (Math.random() - 0.5) * 30;
-                ball.speed = 2.0;
-                gameState.matchState.stateTimer = 1000;
+                ball.targetX = gameState.matchState.possession === 'home' ? PITCH_DIMS.right - 15 : PITCH_DIMS.left + 15;
+                ball.targetY = 50 + (Math.random() - 0.5) * 25;
+                ball.speed = 1.5;
+                gameState.matchState.stateTimer = 1500;
                 gameState.matchState.playState = 'playing_corner';
             }
             break;
         case 'playing_corner':
             if (gameState.matchState.stateTimer <= 0 && ball.speed === 0) {
                 const winner = getClosestPlayer(ball).player;
-                if (Math.random() < 0.25) { // Chance de finalização de cabeça
-                    resolveShot(winner);
+                if (Math.random() < 0.25) { 
+                    resolveShot(winner, true);
                 } else {
                     setPlayState('playing', getPlayerTeam(winner) === 'home' ? 'away' : 'home');
                     showNotification("Defesa afasta!");
@@ -260,37 +237,34 @@ function findBestPassTarget(passer) {
     }
     return bestTarget || teammates[Math.floor(Math.random() * teammates.length)];
 }
-function resolveShot(shooter) { const { ball, possession } = gameState.matchState; const isHomeShot = possession === 'home'; const goalX = isHomeShot ? PITCH_DIMS.right : PITCH_DIMS.left; const defendingTeamKey = isHomeShot ? 'away' : 'home'; const keeper = gameState.matchState[defendingTeamKey].startingXI['GK']; ball.targetX = goalX; ball.targetY = 50 + (Math.random() - 0.5) * PITCH_DIMS.goalHeight; ball.speed = 2.5; showNotification(`Chute de ${shooter.name}!`); const shotPower = (shooter.attributes.shooting * 0.7) + (Math.random() * 30); const savePower = (keeper.attributes.defending * 0.7) + (Math.random() * 30); if (shotPower > savePower) { const hitPostChance = 0.15; if (Math.random() < hitPostChance) { showNotification("NA TRAVE!"); setPlayState('goalKick', defendingTeamKey); } else { gameState.matchState.score[possession]++; showNotification(`GOL! ${shooter.name} marca para o ${gameState.matchState[possession].team.name}!`); setPlayState('goal'); } } else { showNotification(`Defesa do goleiro ${keeper.name}!`); setPlayState('corner', possession); } }
+function resolveShot(shooter, isFromCorner = false) { const { ball, possession } = gameState.matchState; const isHomeShot = possession === 'home'; const goalX = isHomeShot ? PITCH_DIMS.right : PITCH_DIMS.left; const defendingTeamKey = isHomeShot ? 'away' : 'home'; const keeper = gameState.matchState[defendingTeamKey].startingXI['GK']; ball.targetX = goalX; ball.targetY = 50 + (Math.random() - 0.5) * PITCH_DIMS.goalHeight; ball.speed = 2.5; showNotification(`Chute de ${shooter.name}!`); const shotPower = (shooter.attributes.shooting * 0.7) + (Math.random() * 30); const savePower = (keeper.attributes.defending * 0.7) + (Math.random() * 30); if (shotPower > savePower) { const hitPostChance = 0.15; if (Math.random() < hitPostChance) { showNotification("NA TRAVE!"); setPlayState('goalKick', defendingTeamKey); } else { gameState.matchState.score[possession]++; showNotification(`GOL! ${shooter.name} marca para o ${gameState.matchState[possession].team.name}!`); setPlayState('goal'); } } else { showNotification(`Defesa do goleiro ${keeper.name}!`); if (isFromCorner) { setPlayState('playing', defendingTeamKey); } else { setPlayState('corner', possession); } } }
 function getClosestPlayer(target, teamKey = null) { let closestPlayer = null; let minDistance = Infinity; const teamsToScan = teamKey ? [teamKey] : ['home', 'away']; teamsToScan.forEach(key => { const team = gameState.matchState[key]; for(const player of Object.values(team.startingXI)) { if(!player) continue; const playerPos = gameState.matchState.playerPositions.get(player.name); const distance = Math.hypot(playerPos.y - target.y, playerPos.x - target.x); if (distance < minDistance) { minDistance = distance; closestPlayer = player; } } }); return { player: closestPlayer, distance: minDistance }; }
 function getPlayerTeam(player) { if(!player) return null; return Object.values(gameState.matchState.home.startingXI).some(p => p && p.name === player.name) ? 'home' : 'away'; }
 function moveBall() { const { ball } = gameState.matchState; if (ball.speed === 0) return; const distY = ball.targetY - ball.y; const distX = ball.targetX - ball.x; const distance = Math.hypot(distY, distX); if (distance < 1) { ball.y = ball.targetY; ball.x = ball.targetX; ball.speed = 0; if(gameState.matchState.playState === 'playing') { const closest = getClosestPlayer(ball); if(closest.player) { ball.owner = closest.player; gameState.matchState.possession = getPlayerTeam(ball.owner); } } } else { const moveSpeed = Math.min(ball.speed, distance); ball.y += (distY / distance) * moveSpeed; ball.x += (distX / distance) * moveSpeed; } if (gameState.matchState.playState === 'playing' || gameState.matchState.playState === 'playing_corner') { if (ball.y < PITCH_DIMS.top || ball.y > PITCH_DIMS.bottom) { setPlayState('throwIn', gameState.matchState.possession === 'home' ? 'away' : 'home'); ball.y = Math.max(PITCH_DIMS.top, Math.min(PITCH_DIMS.bottom, ball.y)); } else if (ball.x < PITCH_DIMS.left) { setPlayState('goalKick', 'home'); } else if (ball.x > PITCH_DIMS.right) { setPlayState('goalKick', 'away'); } } }
 function getPlayerHomePosition(player, playerPosId, teamKey) {
     const team = gameState.matchState[teamKey];
-    const [baseY, baseX] = team.formation[playerPosId]; // Original layout: [depth, width]
-    
-    // Convert to horizontal pitch: x is depth, y is width
-    let tacticalX = 100 - baseY;
-    let tacticalY = baseX;
+    const [baseX, baseY] = team.formation[playerPosId]; 
 
+    let tacticalX = baseX;
     let xShift = 0;
     switch (team.tactics.mentality) {
-        case 'very_attacking': xShift = 10; break;
-        case 'attacking':      xShift = 5;  break;
-        case 'defensive':      xShift = -5; break;
-        case 'very_defensive': xShift = -10; break;
+        case 'very_attacking': xShift = 5; break;
+        case 'attacking':      xShift = 2.5;  break;
+        case 'defensive':      xShift = -2.5; break;
+        case 'very_defensive': xShift = -5;  break;
     }
 
     const isDefender = ['CB', 'RB', 'LB'].some(p => playerPosId.includes(p));
     if (isDefender) {
         switch (team.tactics.defensiveLine) {
-            case 'higher': xShift += 7; break;
-            case 'deeper': xShift -= 7; break;
+            case 'higher': xShift += 4; break;
+            case 'deeper': xShift -= 4; break;
         }
     }
     
     tacticalX += xShift;
 
-    return teamKey === 'home' ? [tacticalX, tacticalY] : [100 - tacticalX, 100 - tacticalY];
+    return teamKey === 'home' ? [tacticalX, baseY] : [100 - tacticalX, 100 - baseY];
 }
 function movePlayers() {
     if (gameState.matchState.stateTimer > 0 && gameState.matchState.playState !== 'playing') return;
@@ -317,7 +291,7 @@ function movePlayers() {
                 targetY = ownerPos.y;
             }
 
-            const playerMoveSpeed = 0.002 * player.attributes.pace; // VELOCIDADE REDUZIDA
+            const playerMoveSpeed = 0.002 * player.attributes.pace; 
             playerPos.y += (targetY - playerPos.y) * playerMoveSpeed;
             playerPos.x += (targetX - playerPos.x) * playerMoveSpeed;
         }
@@ -325,7 +299,7 @@ function movePlayers() {
 }
 function setPlayState(newState, teamToAct = null) {
     gameState.matchState.playState = newState;
-    gameState.matchState.stateTimer = 2500; // PAUSA AUMENTADA
+    gameState.matchState.stateTimer = 2500; 
     const { ball } = gameState.matchState;
 
     switch(newState) {
@@ -358,7 +332,30 @@ function setPlayState(newState, teamToAct = null) {
     }
 }
 
-function resizeCanvas() { const canvas = document.getElementById('match-pitch-canvas'); const container = document.getElementById('match-pitch-container'); if (!canvas || !container) return; const containerWidth = container.clientWidth; const containerHeight = container.clientHeight; const canvasAspectRatio = 7 / 5; let canvasWidth = containerWidth; let canvasHeight = containerWidth / canvasAspectRatio; if (canvasHeight > containerHeight) { canvasHeight = containerHeight; canvasWidth = canvasHeight * canvasAspectRatio; } canvas.width = canvasWidth; canvas.height = canvasHeight; if(gameState.isMatchLive) drawMatch(); }
+function resizeCanvas() {
+    const canvas = document.getElementById('match-pitch-canvas');
+    const container = document.getElementById('match-pitch-container');
+    if (!canvas || !container) return;
+    
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    const canvasAspectRatio = 7 / 5;
+
+    let canvasWidth = containerWidth;
+    let canvasHeight = containerWidth / canvasAspectRatio;
+
+    if (canvasHeight > containerHeight) {
+        canvasHeight = containerHeight;
+        canvasWidth = canvasHeight * canvasAspectRatio;
+    }
+
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    canvas.style.width = `${canvasWidth}px`;
+    canvas.style.height = `${canvasHeight}px`;
+
+    if(gameState.isMatchLive) drawMatch();
+}
 function drawMatch() {
     const canvas = document.getElementById('match-pitch-canvas');
     if (!canvas.getContext) return;
@@ -368,11 +365,10 @@ function drawMatch() {
     ctx.clearRect(0, 0, width, height);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
     ctx.lineWidth = 2;
-    ctx.strokeRect(0, 0, width, height); // Linhas do campo
-    ctx.beginPath(); ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height); ctx.stroke(); // Meio-campo
-    ctx.beginPath(); ctx.arc(width / 2, height / 2, height * 0.1, 0, 2 * Math.PI); ctx.stroke(); // Círculo central
+    ctx.strokeRect(0, 0, width, height); 
+    ctx.beginPath(); ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height); ctx.stroke(); 
+    ctx.beginPath(); ctx.arc(width / 2, height / 2, height * 0.1, 0, 2 * Math.PI); ctx.stroke(); 
 
-    // Desenhar as traves
     const goalY = (100 - PITCH_DIMS.goalHeight) / 2 / 100 * height;
     const goalH = PITCH_DIMS.goalHeight / 100 * height;
     const goalW = 2 / 100 * width;
@@ -381,7 +377,6 @@ function drawMatch() {
     ctx.strokeRect(0, goalY, goalW, goalH);
     ctx.strokeRect(width - goalW, goalY, goalW, goalH);
 
-    // Desenhar jogadores e bola
     const playerRadius = height / 50;
     const drawPlayer = (pos, color, hasBall) => { const x = (pos.x / 100) * width; const y = (pos.y / 100) * height; ctx.beginPath(); ctx.arc(x, y, playerRadius, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill(); if (hasBall) { ctx.strokeStyle = '#3DDC97'; ctx.lineWidth = 3; } else { ctx.strokeStyle = 'black'; ctx.lineWidth = 1; } ctx.stroke(); };
     for (const player of Object.values(gameState.matchState.home.startingXI)) { if (!player) continue; const pos = gameState.matchState.playerPositions.get(player.name); if(pos) drawPlayer(pos, '#c0392b', gameState.matchState.ball.owner === player); }
