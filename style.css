@@ -518,3 +518,94 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     flex-direction: column;
     gap: 15px;
 }
+
+/* ... (todo o seu CSS anterior) ... */
+
+/* --- NOVO: Estilos para Abas (Tabs) --- */
+.tabs-container {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+.tab-btn {
+    padding: 10px 20px;
+    cursor: pointer;
+    background-color: var(--bg-light);
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-secondary);
+    font-size: 16px;
+    margin: 0;
+    border-radius: 4px 4px 0 0;
+}
+.tab-btn:hover {
+    background-color: var(--bg-medium);
+}
+.tab-btn.active {
+    color: var(--text-primary);
+    font-weight: bold;
+    border-bottom: 3px solid var(--accent-color);
+    background-color: var(--bg-medium);
+}
+.tab-content {
+    display: none;
+    height: calc(100% - 60px); /* Ajuste conforme a altura das abas */
+    flex-direction: column;
+}
+.tab-content.active {
+    display: flex;
+}
+
+/* NOVO: Estilos para a Aba de Finanças do Clube */
+#club-finances-tab {
+    gap: 20px;
+}
+.finance-overview {
+    display: flex;
+    justify-content: space-around;
+    background-color: var(--bg-dark);
+    padding: 20px;
+    border-radius: 8px;
+}
+.finance-box {
+    text-align: center;
+}
+.finance-box h4 {
+    color: var(--text-secondary);
+    font-size: 14px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+.finance-box p {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+.finance-box p.positive {
+    color: var(--accent-color);
+}
+.finance-box p.negative {
+    color: var(--danger-color);
+}
+.finance-chart-container, .finance-history-container {
+    background-color: var(--bg-dark);
+    padding: 20px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 0; /* Essencial para o scroll funcionar */
+}
+.finance-history-container {
+    max-height: 400px; /* Limita a altura para o scroll */
+}
+.finance-history-container .table-container {
+    max-height: 100%;
+}
+#finance-chart {
+    max-height: 300px;
+}
+
+
+/* ... (resto do seu CSS) ... */
