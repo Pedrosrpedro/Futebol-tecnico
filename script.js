@@ -25,11 +25,19 @@ const gameState = {
     leagueStates: {},
     matchesView: { leagueId: null, round: 1 },
     tableView: { leagueId: null },
-    isOffSeason: false, // NOVO: Controle da pré-temporada
+    isOffSeason: false, 
+    currency: 'BRL', // NOVO: Controle da moeda
 };
 let holidayInterval = null;
 let selectedPlayerInfo = null;
 const MAX_SUBSTITUTES = 7;
+
+// NOVO: Taxas de câmbio
+const currencyRates = {
+    BRL: 1,
+    USD: 5.55,
+    EUR: 6.42
+};
 
 const positionMatrix = { 'GK': { 'GK': 0, 'CB': 4, 'LB': 4, 'RB': 4, 'CDM': 4, 'CM': 4, 'CAM': 4, 'LW': 4, 'RW': 4, 'ST': 4 }, 'CB': { 'GK': 4, 'CB': 0, 'LB': 1, 'RB': 1, 'CDM': 1, 'CM': 2, 'CAM': 3, 'LW': 3, 'RW': 3, 'ST': 3 }, 'LB': { 'GK': 4, 'CB': 1, 'LB': 0, 'RB': 2, 'CDM': 2, 'CM': 2, 'CAM': 3, 'LW': 1, 'RW': 3, 'ST': 3 }, 'RB': { 'GK': 4, 'CB': 1, 'LB': 2, 'RB': 0, 'CDM': 2, 'CM': 2, 'CAM': 3, 'LW': 3, 'RW': 1, 'ST': 3 }, 'CDM': { 'GK': 4, 'CB': 1, 'LB': 2, 'RB': 2, 'CDM': 0, 'CM': 1, 'CAM': 2, 'LW': 3, 'RW': 3, 'ST': 3 }, 'CM': { 'GK': 4, 'CB': 2, 'LB': 2, 'RB': 2, 'CDM': 1, 'CM': 0, 'CAM': 1, 'LW': 2, 'RW': 2, 'ST': 2 }, 'CAM': { 'GK': 4, 'CB': 3, 'LB': 3, 'RB': 3, 'CDM': 2, 'CM': 1, 'CAM': 0, 'LW': 1, 'RW': 1, 'ST': 1 }, 'LW': { 'GK': 4, 'CB': 3, 'LB': 1, 'RB': 3, 'CDM': 3, 'CM': 2, 'CAM': 1, 'LW': 0, 'RW': 2, 'ST': 2 }, 'RW': { 'GK': 4, 'CB': 3, 'LB': 3, 'RB': 1, 'CDM': 3, 'CM': 2, 'CAM': 1, 'LW': 2, 'RW': 0, 'ST': 2 }, 'ST': { 'GK': 4, 'CB': 3, 'LB': 3, 'RB': 3, 'CDM': 3, 'CM': 2, 'CAM': 1, 'LW': 2, 'RW': 2, 'ST': 0 }, };
 
@@ -137,6 +145,7 @@ function showMainContent(contentId) {
         updateLeagueTable(gameState.tableView.leagueId);
     }
     if (contentId === 'news-content') displayNewsFeed();
+    if (contentId === 'finances-content') displayFinances(); // NOVO
 }
 
 // --- Funções de Inicialização do Jogo ---
@@ -186,12 +195,16 @@ function startGame(team) {
 function initializeSeason() {
     const year = 2024 + gameState.season;
     gameState.isOffSeason = false;
-    gameState.newsFeed = []; // CORREÇÃO: Reseta as notícias
+    gameState.newsFeed = [];
     
     // Inicializa o estado para todas as ligas
     for(const leagueId in leaguesData) {
         const leagueInfo = leaguesData[leagueId];
-        const leagueStartDate = new Date(`${year}-${leagueInfo.startDate.substring(5)}T12:00:00Z`);
+
+        // CORREÇÃO DO ERRO: Adiciona uma verificação para a data de início.
+        // Se `leagueInfo.startDate` for indefinido, usa 'XXXX-04-15' como padrão.
+        const seasonStartDate = leagueInfo.startDate ? `${year}-${leagueInfo.startDate.substring(5)}` : `${year}-04-15`;
+        const leagueStartDate = new Date(`${seasonStartDate}T12:00:00Z`);
         
         gameState.leagueStates[leagueId] = {
             table: initializeLeagueTable(leagueInfo.teams),
@@ -200,7 +213,6 @@ function initializeSeason() {
         };
     }
     
-    // Define a data atual para o início da pré-temporada
     gameState.currentDate = new Date(`${year}-01-01T12:00:00Z`);
 
     setupInitialSquad();
@@ -1092,6 +1104,70 @@ function findCurrentRound(leagueId) {
     return lastPlayedMatch ? lastPlayedMatch.round + 1 : 1;
 }
 
+// --- NOVO: Funções de Finanças ---
+function formatCurrency(valueInBRL) {
+    const rate = currencyRates[gameState.currency];
+    const convertedValue = valueInBRL / rate;
+
+    // Formata o valor para a moeda selecionada (BRL, USD, EUR)
+    return new Intl.NumberFormat('default', {
+        style: 'currency',
+        currency: gameState.currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(convertedValue);
+}
+
+function displayFinances() {
+    const container = document.getElementById('finances-content');
+    if (!container || typeof estimativaVerbaMedia2025 === 'undefined') {
+        container.innerHTML = '<h3>Erro</h3><p>Os dados financeiros (verba_times.js) não foram encontrados.</p>';
+        return;
+    }
+    
+    container.innerHTML = '<h3>Finanças dos Clubes</h3>';
+
+    const tableContainer = document.createElement('div');
+    tableContainer.className = 'table-container';
+    
+    const financesByDivision = estimativaVerbaMedia2025.reduce((acc, team) => {
+        const { divisao } = team;
+        if (!acc[divisao]) acc[divisao] = [];
+        acc[divisao].push(team);
+        return acc;
+    }, {});
+
+    let fullHtml = '';
+    const divisionsOrder = ['Série A', 'Série B', 'Série C'];
+
+    for (const division of divisionsOrder) {
+        if (!financesByDivision[division]) continue;
+
+        fullHtml += `<h4 style="margin-top: 20px; margin-bottom: 10px;">${division}</h4>`;
+        fullHtml += `<table><thead><tr><th>Time</th><th>Verba Média Estimada</th><th>Análise</th></tr></thead><tbody>`;
+
+        const sortedTeams = financesByDivision[division].sort((a, b) => b.verba_media_estimada_milhoes_reais - a.verba_media_estimada_milhoes_reais);
+        
+        for (const team of sortedTeams) {
+            // Converte o valor de milhões para o valor total antes de formatar
+            const formattedVerba = formatCurrency(team.verba_media_estimada_milhoes_reais * 1000000);
+            // Remove citações como [1], [4], etc. da análise
+            const cleanAnalysis = team.analise.replace(/\[.*?\]/g, '').trim();
+
+            fullHtml += `<tr>
+                <td>${team.time}</td>
+                <td>${formattedVerba}</td>
+                <td>${cleanAnalysis}</td>
+            </tr>`;
+        }
+        fullHtml += '</tbody></table>';
+    }
+    
+    tableContainer.innerHTML = fullHtml;
+    container.appendChild(tableContainer);
+}
+
+
 // --- Event Listeners ---
 function initializeEventListeners() {
     document.getElementById('confirm-manager-name-btn').addEventListener('click', createManager);
@@ -1112,12 +1188,23 @@ function initializeEventListeners() {
     document.getElementById('close-user-news-modal-btn').addEventListener('click', () => document.getElementById('user-news-modal').classList.remove('active'));
     document.getElementById('confirm-user-news-btn').addEventListener('click', () => document.getElementById('user-news-modal').classList.remove('active'));
     
-    // CORREÇÃO: Mover a adição destes listeners para depois que a tela principal é criada
     document.getElementById('settings-btn').addEventListener('click', openSettingsModal);
     document.getElementById('close-modal-btn').addEventListener('click', closeSettingsModal);
     document.getElementById('fullscreen-btn').addEventListener('click', toggleFullScreen);
     document.getElementById('settings-modal').addEventListener('click', (e) => { if (e.target.id === 'settings-modal') { closeSettingsModal(); } });
     
+    // NOVO: Listener para o seletor de moeda
+    const currencySelector = document.getElementById('currency-selector');
+    if (currencySelector) {
+        currencySelector.addEventListener('change', (e) => {
+            gameState.currency = e.target.value;
+            // Se a tela de finanças estiver aberta, atualiza a exibição
+            if (gameState.currentMainContent === 'finances-content') {
+                displayFinances();
+            }
+        });
+    }
+
     const tacticsContent = document.getElementById('tactics-content');
     if (tacticsContent) { tacticsContent.addEventListener('click', handleTacticsInteraction); }
     
@@ -1158,13 +1245,11 @@ function initializeEventListeners() {
         updateContinueButton();
     });
 
-    // Adiciona listeners aos seletores APENAS quando a tela do jogo estiver ativa
     if(document.getElementById('main-game-screen').classList.contains('active')){
         addMainScreenEventListeners();
     }
 }
 
-// NOVO: Função para adicionar listeners específicos da tela principal
 function addMainScreenEventListeners() {
     document.getElementById('league-table-selector')?.addEventListener('change', (e) => {
         gameState.tableView.leagueId = e.target.value;
@@ -1193,7 +1278,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadLeagues();
     window.addEventListener('resize', resizeCanvas);
     
-    // CORREÇÃO: Adiciona os listeners da tela principal depois que ela é criada
     const observer = new MutationObserver((mutations) => {
         for(let mutation of mutations) {
             if (mutation.attributeName === 'class') {
