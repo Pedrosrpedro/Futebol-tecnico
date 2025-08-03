@@ -550,3 +550,11 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
 #finance-chart {
     max-height: 300px;
 }
+
+.main-content-panel.active, #match-simulation-screen.active {
+    height: 100%;
+}
+
+#match-pitch-container {
+    min-height: 0; /* Essencial para o flexbox funcionar corretamente em altura */
+}
