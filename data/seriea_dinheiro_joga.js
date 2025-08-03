@@ -1537,9 +1537,3 @@ Object.assign(leaguesData, {
         ]
     }
 });
-```
-
---- END OF FILE brasileirao_c (3).js ---
-Google Search Suggestions
-Display of Search Suggestions is required when using Grounding with Google Search. Learn more
-Google logo
