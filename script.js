@@ -110,6 +110,16 @@ function calculatePlayerOverall(player) {
     return Math.min(99, Math.round(weightedSum / Object.keys(overallWeights).length * 10));
 }
 
+// CORRIGIDO: Função para converter o valor de texto para número em BRL
+function parseMarketValue(valueString) {
+    if (!valueString || typeof valueString !== 'string') return 50000; // Valor padrão
+    const value = parseFloat(valueString.replace(/[^0-9.,]/g, '').replace(',', '.'));
+    const multiplier = valueString.toUpperCase().includes('M') ? 1000000 : (valueString.toUpperCase().includes('K') ? 1000 : 1);
+    const valueInEUR = value * multiplier;
+    return valueInEUR * currencyRates.EUR; // Converte para BRL como base
+}
+
+
 // NOVO: Função para atualizar o valor de mercado de um jogador.
 function updateMarketValue(player) {
     const baseValue = (player.overall / 100) ** 4 * 30000000; // Exponencial para valorizar mais os overalls altos
@@ -123,12 +133,7 @@ function updateMarketValue(player) {
     
     let finalValue = baseValue * ageMultiplier * positionMultiplier;
     finalValue = Math.max(10000, Math.round(finalValue / 10000) * 10000); // Arredonda para 10k mais próximo
-
-    if (finalValue >= 1000000) {
-        player.marketValue = `€${(finalValue / 1000000).toFixed(1)}M`.replace('.0', '');
-    } else {
-        player.marketValue = `€${Math.round(finalValue / 1000)}k`;
-    }
+    player.marketValueBRL = finalValue; // Armazena o valor base em BRL
 }
 
 // NOVO: Função que gera um novo jogador para substituir os aposentados.
@@ -198,12 +203,12 @@ function updatePlayerDevelopment() {
     }
 }
 
-// NOVO: Inicializa os dados de todos os jogadores no começo do jogo.
+// CORRIGIDO: Inicializa os dados de todos os jogadores no começo do jogo.
 function initializeAllPlayerData() {
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
             for (const player of team.players) {
-                // Se os atributos não existirem, gera-os com base no overall
+                 // Se os atributos não existirem, gera-os com base no overall
                 if (!player.attributes) {
                     player.attributes = {};
                     const baseStat = (player.overall || 60) - 5;
@@ -211,12 +216,16 @@ function initializeAllPlayerData() {
                         player.attributes[attr] = Math.max(30, Math.min(99, baseStat + Math.floor(Math.random() * 11)));
                     }
                 }
-                player.overall = calculatePlayerOverall(player);
-                updateMarketValue(player);
+                if(!player.overall) {
+                   player.overall = calculatePlayerOverall(player);
+                }
+                // Converte o valor de mercado inicial (string) para um número em BRL
+                player.marketValueBRL = parseMarketValue(player.marketValue);
             }
         }
     }
 }
+
 
 // --- Funções Financeiras e de Táticas ---
 function initializeClubFinances() { const clubFinancialData = typeof estimativaVerbaMedia2025 !== 'undefined' ? estimativaVerbaMedia2025.find(c => c.time === gameState.userClub.name) : null; let initialBudget = 5 * 1000000; if (clubFinancialData) { initialBudget = clubFinancialData.verba_media_estimada_milhoes_reais * 1000000; } gameState.clubFinances.balance = 0; gameState.clubFinances.history = []; addTransaction(initialBudget, "Verba inicial da temporada"); }
@@ -283,7 +292,7 @@ function createPlayerChip(player, currentPosition) { const chip = document.creat
 function createSquadListPlayer(player) { const item = document.createElement('div'); item.className = 'squad-list-player'; item.dataset.playerId = player.name; item.innerHTML = ` <div class="player-info"> <div class="player-name">${player.name}</div> <div class="player-pos">${player.position}</div> </div> <div class="player-overall">${player.overall}</div> `; return item; }
 
 // --- Funções de Jogo, Tabela e Calendário ---
-// ALTERADO: Adicionada a coluna "Valor de Mercado" na tabela de elenco.
+// ALTERADO: Adicionada a coluna "Valor de Mercado" na tabela de elenco e formatação de moeda.
 function loadSquadTable() {
     const playerListDiv = document.getElementById('player-list-table');
     if (!playerListDiv) return;
@@ -293,11 +302,12 @@ function loadSquadTable() {
     });
     let tableHTML = `<table><thead><tr><th>Nome</th><th>Idade</th><th>Pos.</th><th>Veloc.</th><th>Finaliz.</th><th>Passe</th><th>Drible</th><th>Defesa</th><th>Físico</th><th>GERAL</th><th>Valor</th></tr></thead><tbody>`;
     for (const player of sortedPlayers) {
-        tableHTML += `<tr><td>${player.name}</td><td>${player.age}</td><td>${player.position}</td><td>${player.attributes.pace}</td><td>${player.attributes.shooting}</td><td>${player.attributes.passing}</td><td>${player.attributes.dribbling}</td><td>${player.attributes.defending}</td><td>${player.attributes.physical}</td><td><b>${player.overall}</b></td><td>${player.marketValue || 'N/A'}</td></tr>`;
+        tableHTML += `<tr><td>${player.name}</td><td>${player.age || 'N/A'}</td><td>${player.position}</td><td>${player.attributes.pace}</td><td>${player.attributes.shooting}</td><td>${player.attributes.passing}</td><td>${player.attributes.dribbling}</td><td>${player.attributes.defending}</td><td>${player.attributes.physical}</td><td><b>${player.overall}</b></td><td>${player.marketValueBRL ? formatCurrency(player.marketValueBRL) : 'N/A'}</td></tr>`;
     }
     tableHTML += `</tbody></table>`;
     playerListDiv.innerHTML = tableHTML;
 }
+
 function updateTableWithResult(leagueId, match) { if (!leagueId || !gameState.leagueStates[leagueId] || match.round === 'Amistoso') return; const leagueState = gameState.leagueStates[leagueId]; let tableToUpdate; if (leagueId === 'brasileirao_c' && leagueState.serieCState.phase > 1) { tableToUpdate = leagueState.table.filter(t => leagueState.serieCState.groups.A.includes(t.name) || leagueState.serieCState.groups.B.includes(t.name)); } else { tableToUpdate = leagueState.table; } const homeTeam = tableToUpdate.find(t => t.name === match.home.name); const awayTeam = tableToUpdate.find(t => t.name === match.away.name); if (!homeTeam || !awayTeam) return; homeTeam.played++; awayTeam.played++; homeTeam.goalsFor += match.homeScore; homeTeam.goalsAgainst += match.awayScore; awayTeam.goalsFor += match.awayScore; awayTeam.goalsAgainst += match.homeScore; homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst; awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst; if (match.homeScore > match.awayScore) { homeTeam.wins++; homeTeam.points += 3; awayTeam.losses++; } else if (match.awayScore > match.homeScore) { awayTeam.wins++; awayTeam.points += 3; homeTeam.losses++; } else { homeTeam.draws++; awayTeam.draws++; homeTeam.points += 1; awayTeam.points += 1; } }
 function updateLeagueTable(leagueId) { const container = document.getElementById('league-table-container'); if (!container) return; const leagueState = gameState.leagueStates[leagueId]; if (!leagueState) return; const leagueInfo = leaguesData[leagueId]; const tiebreakers = leagueInfo.leagueInfo.tiebreakers; let tableHTML = ''; if (leagueId === 'brasileirao_c' && leagueState.serieCState.phase === 2) { const groupA = leagueState.table.filter(t => leagueState.serieCState.groups.A.includes(t.name)); const groupB = leagueState.table.filter(t => leagueState.serieCState.groups.B.includes(t.name)); groupA.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); groupB.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); tableHTML += '<h4>Grupo A (Segunda Fase)</h4>'; tableHTML += renderTable(groupA, 1); tableHTML += '<h4 style="margin-top: 20px;">Grupo B (Segunda Fase)</h4>'; tableHTML += renderTable(groupB, 1); } else { const table = [...leagueState.table]; table.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); tableHTML = renderTable(table); } container.innerHTML = tableHTML; }
 function renderTable(tableData, startPos = 1) { let html = `<table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>`; tableData.forEach((team, index) => { const isUserTeam = team.name === gameState.userClub.name; html += `<tr class="${isUserTeam ? 'user-team-row' : ''}"><td>${index + startPos}</td><td>${team.name}</td><td>${team.points}</td><td>${team.played}</td><td>${team.wins}</td><td>${team.draws}</td><td>${team.losses}</td><td>${team.goalsFor}</td><td>${team.goalsAgainst}</td><td>${team.goalDifference}</td></tr>`; }); html += `</tbody></table>`; return html; }
@@ -1008,7 +1018,7 @@ function initializeEventListeners() {
     document.getElementById('close-modal-btn').addEventListener('click', closeSettingsModal);
     document.getElementById('fullscreen-btn').addEventListener('click', toggleFullScreen);
     document.getElementById('settings-modal').addEventListener('click', (e) => { if (e.target.id === 'settings-modal') { closeSettingsModal(); } });
-    document.getElementById('currency-selector')?.addEventListener('change', (e) => { gameState.currency = e.target.value; if (gameState.currentMainContent === 'finances-content') { displayFinances(); } });
+    document.getElementById('currency-selector')?.addEventListener('change', (e) => { gameState.currency = e.target.value; if (gameState.currentMainContent === 'finances-content') { displayFinances(); } if (gameState.currentMainContent === 'squad-content') { loadSquadTable(); } });
     document.querySelectorAll('.tab-btn').forEach(btn => { btn.addEventListener('click', () => { const tabId = btn.dataset.tab; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); btn.classList.add('active'); document.getElementById(`${tabId}-tab`).classList.add('active'); if(tabId === 'club-finances') renderFinanceChart(); }); });
     document.getElementById('open-friendly-modal-btn').addEventListener('click', openFriendlyModal);
     document.getElementById('close-friendly-modal-btn').addEventListener('click', () => document.getElementById('schedule-friendly-modal').classList.remove('active'));
