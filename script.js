@@ -50,6 +50,8 @@ const formationLayouts = {
     '4-2-3-1':  { 'GK': [7, 50],  'RB': [35, 85], 'CB1': [25, 65], 'CB2': [25, 35], 'LB': [35, 15], 'CDM1': [45, 65], 'CDM2': [45, 35], 'RW': [70, 85], 'CAM': [65, 50], 'LW': [70, 15], 'ST': [88, 50] }
 };
 const PITCH_DIMS = { top: 0, bottom: 100, left: 0, right: 100, goalHeight: 30 };
+// NOVO: Adicionado para dar mais realismo ao desenvolvimento dos jogadores
+const overallWeights = { pace: 0.15, shooting: 0.2, passing: 0.2, dribbling: 0.15, defending: 0.15, physical: 0.15 };
 
 // --- Funções de Notícias e UI ---
 function addNews(headline, body, isUserRelated = false, imageHint = null) { const newsItem = { date: new Date(gameState.currentDate), headline, body, imageHint }; gameState.newsFeed.unshift(newsItem); if (isUserRelated) showUserNewsModal(headline, body); }
@@ -61,18 +63,162 @@ function showInfoModal(headline, body) { document.getElementById('info-modal-hea
 function showFriendlyResultModal(match) { document.getElementById('friendly-result-headline').innerText = "Resultado do Amistoso"; document.getElementById('friendly-result-body').innerText = `${match.home.name} ${match.homeScore} x ${match.awayScore} ${match.away.name}`; document.getElementById('friendly-result-modal').classList.add('active'); }
 function toggleFullScreen() { const doc = window.document; const docEl = doc.documentElement; const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen; const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen; if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) { requestFullScreen.call(docEl); } else { cancelFullScreen.call(doc); } }
 function showScreen(screenId) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); const next = document.getElementById(screenId); if (next) next.classList.add('active'); gameState.currentScreen = screenId; }
-function showMainContent(contentId) { clearSelection(); const currentPanel = document.getElementById(gameState.currentMainContent); if(currentPanel) currentPanel.classList.remove('active'); const oldMenuItem = document.querySelector(`#sidebar li[data-content='${gameState.currentMainContent}']`); if (oldMenuItem) oldMenuItem.classList.remove('active'); const newPanel = document.getElementById(contentId); if(newPanel) newPanel.classList.add('active'); const newMenuItem = document.querySelector(`#sidebar li[data-content='${contentId}']`); if (newMenuItem) newMenuItem.classList.add('active'); gameState.currentMainContent = contentId; if (contentId === 'tactics-content') loadTacticsScreen(); if (contentId === 'calendar-content') { gameState.calendarDisplayDate = new Date(gameState.currentDate); updateCalendar(); } if (contentId === 'matches-content') { gameState.matchesView.leagueId = gameState.matchesView.leagueId || gameState.currentLeagueId; gameState.matchesView.round = findCurrentRound(gameState.matchesView.leagueId); displayRound(gameState.matchesView.leagueId, gameState.matchesView.round); } if (contentId === 'league-content') { gameState.tableView.leagueId = gameState.tableView.leagueId || gameState.currentLeagueId; updateLeagueTable(gameState.tableView.leagueId); } if (contentId === 'news-content') displayNewsFeed(); if (contentId === 'finances-content') displayFinances(); }
+function showMainContent(contentId) { clearSelection(); const currentPanel = document.getElementById(gameState.currentMainContent); if(currentPanel) currentPanel.classList.remove('active'); const oldMenuItem = document.querySelector(`#sidebar li[data-content='${gameState.currentMainContent}']`); if (oldMenuItem) oldMenuItem.classList.remove('active'); const newPanel = document.getElementById(contentId); if(newPanel) newPanel.classList.add('active'); const newMenuItem = document.querySelector(`#sidebar li[data-content='${contentId}']`); if (newMenuItem) newMenuItem.classList.add('active'); gameState.currentMainContent = contentId; if (contentId === 'squad-content') loadSquadTable(); if (contentId === 'tactics-content') loadTacticsScreen(); if (contentId === 'calendar-content') { gameState.calendarDisplayDate = new Date(gameState.currentDate); updateCalendar(); } if (contentId === 'matches-content') { gameState.matchesView.leagueId = gameState.matchesView.leagueId || gameState.currentLeagueId; gameState.matchesView.round = findCurrentRound(gameState.matchesView.leagueId); displayRound(gameState.matchesView.leagueId, gameState.matchesView.round); } if (contentId === 'league-content') { gameState.tableView.leagueId = gameState.tableView.leagueId || gameState.currentLeagueId; updateLeagueTable(gameState.tableView.leagueId); } if (contentId === 'news-content') displayNewsFeed(); if (contentId === 'finances-content') displayFinances(); }
 
 // --- Funções de Inicialização e Setup do Jogo ---
 function createManager() { const nameInput = document.getElementById('manager-name-input'); if (nameInput.value.trim() === '') { showInfoModal('Atenção', 'Por favor, digite seu nome.'); return; } gameState.managerName = nameInput.value.trim(); showScreen('start-screen'); }
 function loadLeagues() { const leagueSelectionDiv = document.getElementById('league-selection'); leagueSelectionDiv.innerHTML = ''; for (const leagueId in leaguesData) { const league = leaguesData[leagueId]; const leagueCard = document.createElement('div'); leagueCard.className = 'league-card'; leagueCard.innerHTML = `<img src="images/${league.logo}" alt="${league.name}"><span>${league.name}</span>`; leagueCard.addEventListener('click', () => loadTeams(leagueId)); leagueSelectionDiv.appendChild(leagueCard); } }
 function loadTeams(leagueId) { gameState.currentLeagueId = leagueId; const teamSelectionDiv = document.getElementById('team-selection'); teamSelectionDiv.innerHTML = ''; const teams = leaguesData[leagueId].teams; for (const team of teams) { const teamCard = document.createElement('div'); teamCard.className = 'team-card'; teamCard.innerHTML = `<img src="images/${team.logo}" alt="${team.name}"><span>${team.name}</span>`; teamCard.addEventListener('click', () => startGame(team)); teamSelectionDiv.appendChild(teamCard); } showScreen('select-team-screen'); }
-function createClub() { const clubName = document.getElementById('club-name-input').value; if (!clubName) { showInfoModal("Atenção", "Por favor, preencha o nome do clube."); return; } gameState.currentLeagueId = Object.keys(leaguesData)[0]; const generatedPlayers = []; for (let i = 0; i < 22; i++) { generatedPlayers.push({ name: `*Jogador Gerado ${i + 1}`, position: "CM", attributes: { pace: 55, shooting: 55, passing: 55, dribbling: 55, defending: 55, physical: 55 }, overall: 55 }); } const newClub = { name: clubName, logo: 'logo_default.png', players: generatedPlayers }; startGame(newClub); }
+function createClub() { const clubName = document.getElementById('club-name-input').value; if (!clubName) { showInfoModal("Atenção", "Por favor, preencha o nome do clube."); return; } gameState.currentLeagueId = Object.keys(leaguesData)[0]; const generatedPlayers = []; for (let i = 0; i < 22; i++) { generatedPlayers.push({ name: `*Jogador Gerado ${i + 1}`, position: "CM", attributes: { pace: 55, shooting: 55, passing: 55, dribbling: 55, defending: 55, physical: 55 }, overall: 55, age: 23 }); } const newClub = { name: clubName, logo: 'logo_default.png', players: generatedPlayers }; startGame(newClub); }
 function setupInitialSquad() { gameState.squadManagement.startingXI = {}; gameState.squadManagement.substitutes = []; gameState.squadManagement.reserves = []; const todosJogadores = [...gameState.userClub.players].sort((a, b) => b.overall - a.overall); const formacao = gameState.tactics.formation; const posicoesDaFormacao = Object.keys(formationLayouts[formacao]); let jogadoresDisponiveis = [...todosJogadores]; for (const posicaoDoEsquema of posicoesDaFormacao) { const posicaoBase = posicaoDoEsquema.replace(/\d/g, ''); const indiceMelhorJogador = jogadoresDisponiveis.findIndex(p => p.position === posicaoBase); if (indiceMelhorJogador !== -1) { const jogadorEscolhido = jogadoresDisponiveis[indiceMelhorJogador]; gameState.squadManagement.startingXI[posicaoDoEsquema] = jogadorEscolhido; jogadoresDisponiveis.splice(indiceMelhorJogador, 1); } } for (const posicaoDoEsquema of posicoesDaFormacao) { if (!gameState.squadManagement.startingXI[posicaoDoEsquema] && jogadoresDisponiveis.length > 0) { gameState.squadManagement.startingXI[posicaoDoEsquema] = jogadoresDisponiveis.shift(); } } gameState.squadManagement.substitutes = jogadoresDisponiveis.splice(0, MAX_SUBSTITUTES); gameState.squadManagement.reserves = jogadoresDisponiveis; }
-function startGame(team) { gameState.userClub = team; initializeClubFinances(); initializeSeason(); document.getElementById('header-manager-name').innerText = gameState.managerName; document.getElementById('header-club-name').innerText = gameState.userClub.name; document.getElementById('header-club-logo').src = `images/${gameState.userClub.logo}`; populateLeagueSelectors(); showScreen('main-game-screen'); showMainContent('home-content'); }
+function startGame(team) {
+    gameState.userClub = team;
+    initializeAllPlayerData(); // Garante que todos os jogadores tenham 'overall' e 'marketValue'
+    initializeClubFinances();
+    initializeSeason();
+
+    // ALTERAÇÃO: Define as ligas de visualização padrão para a liga atual do usuário
+    gameState.matchesView.leagueId = gameState.currentLeagueId;
+    gameState.tableView.leagueId = gameState.currentLeagueId;
+
+    document.getElementById('header-manager-name').innerText = gameState.managerName;
+    document.getElementById('header-club-name').innerText = gameState.userClub.name;
+    document.getElementById('header-club-logo').src = `images/${gameState.userClub.logo}`;
+
+    populateLeagueSelectors();
+    showScreen('main-game-screen');
+    showMainContent('home-content');
+}
 function initializeSeason() { const year = 2024 + gameState.season - 1; gameState.isOffSeason = false; gameState.newsFeed = []; for(const leagueId in leaguesData) { const leagueInfo = leaguesData[leagueId]; const seasonStartDate = leagueInfo.leagueInfo.startDate ? `${year}-${leagueInfo.leagueInfo.startDate.substring(5)}` : `${year}-04-15`; const leagueStartDate = new Date(`${seasonStartDate}T12:00:00Z`); const isSerieC = leagueId === 'brasileirao_c'; const schedule = generateSchedule(leagueInfo.teams, leagueInfo.leagueInfo, leagueStartDate, 0, isSerieC ? 1 : undefined); gameState.leagueStates[leagueId] = { table: initializeLeagueTable(leagueInfo.teams), schedule: schedule, serieCState: { phase: 1, groups: { A: [], B: [] }, finalists: [] } }; } gameState.allMatches = []; for(const leagueId in gameState.leagueStates) { gameState.allMatches.push(...gameState.leagueStates[leagueId].schedule); } gameState.allMatches.sort((a, b) => new Date(a.date) - new Date(b.date)); gameState.currentDate = new Date(`${year}-01-01T12:00:00Z`); setupInitialSquad(); findNextUserMatch(); loadSquadTable(); updateLeagueTable(gameState.currentLeagueId); updateContinueButton(); addNews(`Começa a Temporada ${year}!`, `A bola vai rolar para a ${leaguesData[gameState.currentLeagueId].name}. Boa sorte, ${gameState.managerName}!`, true, gameState.userClub.name); }
 
-// --- Funções Financeiras e de Táticas (sem alterações) ---
+// --- Funções de Progressão, Aposentadoria e Valor ---
+// NOVO: Função para calcular o overall baseado nos atributos ponderados.
+function calculatePlayerOverall(player) {
+    if (!player.attributes) { // Fallback para jogadores gerados sem atributos
+        return player.overall || 50;
+    }
+    let weightedSum = 0;
+    for (const attr in player.attributes) {
+        weightedSum += player.attributes[attr] * (overallWeights[attr] || 0.1);
+    }
+    // Adiciona um pequeno bônus para posições primárias para diferenciar especialistas
+    const primaryAttrBonus = { 'ST': 'shooting', 'CAM': 'passing', 'LW': 'dribbling', 'RW': 'dribbling', 'CB': 'defending', 'GK': 'defending' };
+    const primaryAttr = primaryAttrBonus[player.position];
+    if (primaryAttr && player.attributes[primaryAttr]) {
+        weightedSum += player.attributes[primaryAttr] * 0.1; // Bônus extra
+    }
+    return Math.min(99, Math.round(weightedSum / Object.keys(overallWeights).length * 10));
+}
+
+// NOVO: Função para atualizar o valor de mercado de um jogador.
+function updateMarketValue(player) {
+    const baseValue = (player.overall / 100) ** 4 * 30000000; // Exponencial para valorizar mais os overalls altos
+    let ageMultiplier = 1.0;
+    if (player.age < 21) ageMultiplier = 1.2;
+    else if (player.age >= 21 && player.age <= 28) ageMultiplier = 1.5 - ((player.age - 21) * 0.05); // Pico em 21, decai lentamente
+    else if (player.age > 28 && player.age < 33) ageMultiplier = 1.1 - ((player.age - 28) * 0.1); // Queda mais acentuada
+    else ageMultiplier = Math.max(0.1, 0.5 - ((player.age - 33) * 0.03)); // Queda forte para veteranos
+
+    const positionMultiplier = (['ST', 'LW', 'RW', 'CAM'].includes(player.position)) ? 1.2 : 1.0;
+    
+    let finalValue = baseValue * ageMultiplier * positionMultiplier;
+    finalValue = Math.max(10000, Math.round(finalValue / 10000) * 10000); // Arredonda para 10k mais próximo
+
+    if (finalValue >= 1000000) {
+        player.marketValue = `€${(finalValue / 1000000).toFixed(1)}M`.replace('.0', '');
+    } else {
+        player.marketValue = `€${Math.round(finalValue / 1000)}k`;
+    }
+}
+
+// NOVO: Função que gera um novo jogador para substituir os aposentados.
+function generateNewPlayer(team) {
+    const positions = ['GK', 'CB', 'RB', 'LB', 'CDM', 'CM', 'CAM', 'RW', 'LW', 'ST'];
+    const newPlayer = {
+        name: `*Novo Talento ${Math.floor(Math.random() * 1000)}`,
+        position: positions[Math.floor(Math.random() * positions.length)],
+        age: 17 + Math.floor(Math.random() * 4), // Entre 17 e 20 anos
+        attributes: {
+            pace: 40 + Math.floor(Math.random() * 25),
+            shooting: 40 + Math.floor(Math.random() * 25),
+            passing: 40 + Math.floor(Math.random() * 25),
+            dribbling: 40 + Math.floor(Math.random() * 25),
+            defending: 40 + Math.floor(Math.random() * 25),
+            physical: 40 + Math.floor(Math.random() * 25),
+        }
+    };
+    newPlayer.overall = calculatePlayerOverall(newPlayer);
+    updateMarketValue(newPlayer);
+    return newPlayer;
+}
+
+// NOVO: Função principal para desenvolvimento, envelhecimento e aposentadoria dos jogadores.
+function updatePlayerDevelopment() {
+    console.log("Processando desenvolvimento de jogadores para a nova temporada...");
+    for (const leagueId in leaguesData) {
+        const league = leaguesData[leagueId];
+        for (const team of league.teams) {
+            const playersToRemove = [];
+            const playersToAdd = [];
+
+            for (let i = 0; i < team.players.length; i++) {
+                const player = team.players[i];
+                player.age++; // Envelhece o jogador
+
+                // Lógica de aposentadoria
+                if (player.age >= 35) {
+                    const retirementChance = (player.age - 34) / (46 - 34);
+                    if (Math.random() < retirementChance || player.age > 46) {
+                        playersToRemove.push(player.name);
+                        playersToAdd.push(generateNewPlayer(team));
+                        addNews("Fim de uma Era", `${player.name} (${player.age} anos) do ${team.name} anunciou sua aposentadoria.`, team.name === gameState.userClub.name, team.name);
+                        continue;
+                    }
+                }
+
+                // Lógica de Progressão/Regressão
+                const progressionMultiplier = player.age < 24 ? 2 : 1;
+                if (player.age < 30) {
+                    for (const attr in player.attributes) {
+                        const gain = Math.floor(Math.random() * (2 + progressionMultiplier));
+                        player.attributes[attr] = Math.min(99, player.attributes[attr] + gain);
+                    }
+                } else {
+                    for (const attr in player.attributes) {
+                        const loss = Math.floor(Math.random() * 2);
+                        player.attributes[attr] = Math.max(20, player.attributes[attr] - loss);
+                    }
+                }
+                player.overall = calculatePlayerOverall(player);
+                updateMarketValue(player);
+            }
+            team.players = team.players.filter(p => !playersToRemove.includes(p.name));
+            team.players.push(...playersToAdd);
+        }
+    }
+}
+
+// NOVO: Inicializa os dados de todos os jogadores no começo do jogo.
+function initializeAllPlayerData() {
+    for (const leagueId in leaguesData) {
+        for (const team of leaguesData[leagueId].teams) {
+            for (const player of team.players) {
+                // Se os atributos não existirem, gera-os com base no overall
+                if (!player.attributes) {
+                    player.attributes = {};
+                    const baseStat = (player.overall || 60) - 5;
+                    for (const attr of ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical']) {
+                        player.attributes[attr] = Math.max(30, Math.min(99, baseStat + Math.floor(Math.random() * 11)));
+                    }
+                }
+                player.overall = calculatePlayerOverall(player);
+                updateMarketValue(player);
+            }
+        }
+    }
+}
+
+// --- Funções Financeiras e de Táticas ---
 function initializeClubFinances() { const clubFinancialData = typeof estimativaVerbaMedia2025 !== 'undefined' ? estimativaVerbaMedia2025.find(c => c.time === gameState.userClub.name) : null; let initialBudget = 5 * 1000000; if (clubFinancialData) { initialBudget = clubFinancialData.verba_media_estimada_milhoes_reais * 1000000; } gameState.clubFinances.balance = 0; gameState.clubFinances.history = []; addTransaction(initialBudget, "Verba inicial da temporada"); }
 function addTransaction(amount, description) { gameState.clubFinances.history.unshift({ date: new Date(gameState.currentDate), description, amount }); gameState.clubFinances.balance += amount; }
 function displayFinances() { const container = document.getElementById('finances-content'); if (!container) return; displayClubFinances(); displayOpponentFinances(); }
@@ -113,8 +259,9 @@ function loadTacticsScreen() {
         const slot = document.createElement('div');
         slot.className = 'player-slot';
         slot.dataset.position = pos;
-        slot.style.left = `${positions[pos][0]}%`;
-        slot.style.top = `${positions[pos][1]}%`;
+        // CORREÇÃO APLICADA: Y (top) usa a primeira coordenada, X (left) a segunda
+        slot.style.top = `${positions[pos][0]}%`;
+        slot.style.left = `${positions[pos][1]}%`;
         const player = gameState.squadManagement.startingXI[pos];
         if (player) {
             slot.appendChild(createPlayerChip(player, pos));
@@ -135,8 +282,22 @@ function loadTacticsScreen() {
 function createPlayerChip(player, currentPosition) { const chip = document.createElement('div'); chip.className = 'player-chip'; chip.dataset.playerId = player.name; const modifiedOverall = calculateModifiedOverall(player, currentPosition); let overallClass = 'player-overall'; if (modifiedOverall < player.overall) { overallClass += ' penalty'; } chip.innerHTML = ` <span class="player-name">${player.name.split(' ').slice(-1).join(' ')}</span> <span class="${overallClass}">${modifiedOverall}</span> <span class="player-pos">${player.position}</span> `; return chip; }
 function createSquadListPlayer(player) { const item = document.createElement('div'); item.className = 'squad-list-player'; item.dataset.playerId = player.name; item.innerHTML = ` <div class="player-info"> <div class="player-name">${player.name}</div> <div class="player-pos">${player.position}</div> </div> <div class="player-overall">${player.overall}</div> `; return item; }
 
-// --- Funções de Jogo, Tabela e Calendário (sem alterações) ---
-function loadSquadTable() { const playerListDiv = document.getElementById('player-list-table'); if (!playerListDiv) return; const positionOrder = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST']; const sortedPlayers = [...gameState.userClub.players].sort((a, b) => { return positionOrder.indexOf(a.position) - positionOrder.indexOf(b.position); }); let tableHTML = `<table><thead><tr><th>Nome</th><th>Pos.</th><th>Veloc.</th><th>Finaliz.</th><th>Passe</th><th>Drible</th><th>Defesa</th><th>Físico</th><th>GERAL</th></tr></thead><tbody>`; for (const player of sortedPlayers) { tableHTML += `<tr><td>${player.name}</td><td>${player.position}</td><td>${player.attributes.pace}</td><td>${player.attributes.shooting}</td><td>${player.attributes.passing}</td><td>${player.attributes.dribbling}</td><td>${player.attributes.defending}</td><td>${player.attributes.physical}</td><td><b>${player.overall}</b></td></tr>`; } tableHTML += `</tbody></table>`; playerListDiv.innerHTML = tableHTML; }
+// --- Funções de Jogo, Tabela e Calendário ---
+// ALTERADO: Adicionada a coluna "Valor de Mercado" na tabela de elenco.
+function loadSquadTable() {
+    const playerListDiv = document.getElementById('player-list-table');
+    if (!playerListDiv) return;
+    const positionOrder = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST'];
+    const sortedPlayers = [...gameState.userClub.players].sort((a, b) => {
+        return positionOrder.indexOf(a.position) - positionOrder.indexOf(b.position);
+    });
+    let tableHTML = `<table><thead><tr><th>Nome</th><th>Idade</th><th>Pos.</th><th>Veloc.</th><th>Finaliz.</th><th>Passe</th><th>Drible</th><th>Defesa</th><th>Físico</th><th>GERAL</th><th>Valor</th></tr></thead><tbody>`;
+    for (const player of sortedPlayers) {
+        tableHTML += `<tr><td>${player.name}</td><td>${player.age}</td><td>${player.position}</td><td>${player.attributes.pace}</td><td>${player.attributes.shooting}</td><td>${player.attributes.passing}</td><td>${player.attributes.dribbling}</td><td>${player.attributes.defending}</td><td>${player.attributes.physical}</td><td><b>${player.overall}</b></td><td>${player.marketValue || 'N/A'}</td></tr>`;
+    }
+    tableHTML += `</tbody></table>`;
+    playerListDiv.innerHTML = tableHTML;
+}
 function updateTableWithResult(leagueId, match) { if (!leagueId || !gameState.leagueStates[leagueId] || match.round === 'Amistoso') return; const leagueState = gameState.leagueStates[leagueId]; let tableToUpdate; if (leagueId === 'brasileirao_c' && leagueState.serieCState.phase > 1) { tableToUpdate = leagueState.table.filter(t => leagueState.serieCState.groups.A.includes(t.name) || leagueState.serieCState.groups.B.includes(t.name)); } else { tableToUpdate = leagueState.table; } const homeTeam = tableToUpdate.find(t => t.name === match.home.name); const awayTeam = tableToUpdate.find(t => t.name === match.away.name); if (!homeTeam || !awayTeam) return; homeTeam.played++; awayTeam.played++; homeTeam.goalsFor += match.homeScore; homeTeam.goalsAgainst += match.awayScore; awayTeam.goalsFor += match.awayScore; awayTeam.goalsAgainst += match.homeScore; homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst; awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst; if (match.homeScore > match.awayScore) { homeTeam.wins++; homeTeam.points += 3; awayTeam.losses++; } else if (match.awayScore > match.homeScore) { awayTeam.wins++; awayTeam.points += 3; homeTeam.losses++; } else { homeTeam.draws++; awayTeam.draws++; homeTeam.points += 1; awayTeam.points += 1; } }
 function updateLeagueTable(leagueId) { const container = document.getElementById('league-table-container'); if (!container) return; const leagueState = gameState.leagueStates[leagueId]; if (!leagueState) return; const leagueInfo = leaguesData[leagueId]; const tiebreakers = leagueInfo.leagueInfo.tiebreakers; let tableHTML = ''; if (leagueId === 'brasileirao_c' && leagueState.serieCState.phase === 2) { const groupA = leagueState.table.filter(t => leagueState.serieCState.groups.A.includes(t.name)); const groupB = leagueState.table.filter(t => leagueState.serieCState.groups.B.includes(t.name)); groupA.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); groupB.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); tableHTML += '<h4>Grupo A (Segunda Fase)</h4>'; tableHTML += renderTable(groupA, 1); tableHTML += '<h4 style="margin-top: 20px;">Grupo B (Segunda Fase)</h4>'; tableHTML += renderTable(groupB, 1); } else { const table = [...leagueState.table]; table.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); tableHTML = renderTable(table); } container.innerHTML = tableHTML; }
 function renderTable(tableData, startPos = 1) { let html = `<table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>`; tableData.forEach((team, index) => { const isUserTeam = team.name === gameState.userClub.name; html += `<tr class="${isUserTeam ? 'user-team-row' : ''}"><td>${index + startPos}</td><td>${team.name}</td><td>${team.points}</td><td>${team.played}</td><td>${team.wins}</td><td>${team.draws}</td><td>${team.losses}</td><td>${team.goalsFor}</td><td>${team.goalsAgainst}</td><td>${team.goalDifference}</td></tr>`; }); html += `</tbody></table>`; return html; }
@@ -196,7 +357,7 @@ function startMatchSimulation() {
             playerRatings: new Map(),
             playerIntents: new Map(),
             aiDecisionTimer: 0,
-            lastPasser: null, // CORREÇÃO: "Memória" para evitar o loop de passes
+            lastPasser: null,
             possession: 'home',
             playState: 'kickoff',
             stateTimer: 0,
@@ -333,7 +494,6 @@ function updateAIIntents() {
                 playerIntents.set(player.name, { action: bestOption.action, target: bestOption.target || null });
             }
         } else {
-            // CORREÇÃO: IA defensiva agora pressiona ativamente
             const isDefending = teamKey !== gameState.matchState.possession && gameState.matchState.possession !== null;
             if (isDefending) {
                 const closestToBall = getClosestPlayer(ball, teamKey).player;
@@ -373,7 +533,7 @@ function executePlayerActions() {
             ball.targetX += (Math.random() - 0.5) * passError;
             ball.targetY += (Math.random() - 0.5) * passError;
             
-            gameState.matchState.lastPasser = owner; // CORREÇÃO: Registra quem fez o passe
+            gameState.matchState.lastPasser = owner;
             ball.owner = null;
             gameState.matchState.possession = null;
             playerIntents.set(owner.name, { action: 'hold_position', target: null });
@@ -398,7 +558,6 @@ function findBestPassTarget(passer) {
     let maxScore = -Infinity;
 
     for (const teammate of teammates) {
-        // CORREÇÃO: Impede o passe de volta imediato
         if (gameState.matchState.lastPasser && teammate.name === gameState.matchState.lastPasser.name) continue;
 
         const targetPos = gameState.matchState.playerPositions.get(teammate.name);
@@ -547,7 +706,6 @@ function movePlayers() {
         let targetX = homeX, targetY = homeY;
         const intent = playerIntents.get(playerName);
 
-        // CORREÇÃO: Lógica de movimento baseada em intenções (pressionar, apoiar, etc.)
         switch(intent.action) {
             case 'press_ball_carrier':
                 if (ball.owner) {
@@ -775,7 +933,10 @@ function handleEndOfSeason() {
     updateContinueButton();
 }
 function awardPrizeMoney() { const userClubName = gameState.userClub.name; const userLeagueId = gameState.currentLeagueId; const leagueState = gameState.leagueStates[userLeagueId]; if (!leagueState) return; if (userLeagueId === 'brasileirao_a') { const table = getFullSeasonTable('brasileirao_a'); const userTeamRow = table.find(t => t.name === userClubName); const position = table.indexOf(userTeamRow) + 1; if (prizeMoney.brasileirao_a[position]) { const amount = prizeMoney.brasileirao_a[position] * 1000000; addTransaction(amount, `Premiação (${position}º lugar) - Série A`); } } else if (userLeagueId === 'brasileirao_b') { const table = getFullSeasonTable('brasileirao_b'); const userTeamRow = table.find(t => t.name === userClubName); const position = table.indexOf(userTeamRow) + 1; if (position <= 4 && prizeMoney.brasileirao_b[position]) { const amount = prizeMoney.brasileirao_b[position] * 1000000; addTransaction(amount, `Premiação (Acesso) - Série B`); } } else if (userLeagueId === 'brasileirao_c') { addTransaction(prizeMoney.brasileirao_c.participation_fee * 1000000, `Cota de participação - Série C`); const qualifiedForPhase2 = [...leagueState.serieCState.groups.A, ...leagueState.serieCState.groups.B]; if (qualifiedForPhase2.includes(userClubName)) { addTransaction(prizeMoney.brasileirao_c.advancement_bonus * 1000000, `Bônus por avanço de fase - Série C`); } } }
+// ALTERADO: Adicionada a chamada para a nova função de desenvolvimento de jogadores.
 function processPromotionRelegation() {
+    updatePlayerDevelopment(); // Processa envelhecimento, aposentadorias e desenvolvimento
+
     const tableA = getFullSeasonTable('brasileirao_a');
     const relegatedFromA = tableA.slice(-4).map(t => findTeamInLeagues(t.name)).filter(Boolean);
     const tableB = getFullSeasonTable('brasileirao_b');
@@ -786,17 +947,20 @@ function processPromotionRelegation() {
     const groupA = leagueStateC.table.filter(t => leagueStateC.serieCState.groups.A.includes(t.name)).sort((a,b)=>{ for(const k of tiebreakers) { if(a[k]>b[k]) return -1; if(a[k]<b[k]) return 1; } return 0;});
     const groupB = leagueStateC.table.filter(t => leagueStateC.serieCState.groups.B.includes(t.name)).sort((a,b)=>{ for(const k of tiebreakers) { if(a[k]>b[k]) return -1; if(a[k]<b[k]) return 1; } return 0;});
     const promotedFromC = [...groupA.slice(0,2), ...groupB.slice(0,2)].map(t => findTeamInLeagues(t.name)).filter(Boolean);
+    
     leaguesData.brasileirao_a.teams = leaguesData.brasileirao_a.teams.filter(t => !relegatedFromA.some(r => r.name === t.name)).concat(promotedFromB);
     leaguesData.brasileirao_b.teams = leaguesData.brasileirao_b.teams.filter(t => !promotedFromB.some(p => p.name === t.name) && !relegatedFromB.some(r => r.name === t.name)).concat(relegatedFromA).concat(promotedFromC);
     leaguesData.brasileirao_c.teams = leaguesData.brasileirao_c.teams.filter(t => !promotedFromC.some(p => p.name === t.name)).concat(relegatedFromB);
+    
     if(promotedFromB.some(t => t.name === gameState.userClub.name)) gameState.currentLeagueId = 'brasileirao_a';
     if(relegatedFromA.some(t => t.name === gameState.userClub.name)) gameState.currentLeagueId = 'brasileirao_b';
     if(promotedFromC.some(t => t.name === gameState.userClub.name)) gameState.currentLeagueId = 'brasileirao_b';
     if(relegatedFromB.some(t => t.name === gameState.userClub.name)) gameState.currentLeagueId = 'brasileirao_c';
+    
+    loadSquadTable(); // Recarrega a tabela do elenco com os dados atualizados
 }
 function findTeamInLeagues(teamName, isPlayerLookup = false) { 
     if (!teamName) return null; 
-    // Otimização: Primeiro busca o jogador dentro de um time, se for o caso
     if (isPlayerLookup) {
          for (const leagueId in leaguesData) {
             for (const team of leaguesData[leagueId].teams) {
@@ -805,7 +969,6 @@ function findTeamInLeagues(teamName, isPlayerLookup = false) {
             }
         }
     }
-    // Depois busca por nome de time
     for (const leagueId in leaguesData) { 
         const team = leaguesData[leagueId].teams.find(t => t.name === teamName); 
         if (team) return team; 
