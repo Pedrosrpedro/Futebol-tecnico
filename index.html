@@ -9,13 +9,18 @@
     <!-- Adicionado biblioteca de gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <script src="data/seriec_dinheiro_joga.js" defer></script> 
-    <script src="data/serieb_dinheiro_joga.js" defer></script>
-    <script src="data/seriea_dinheiro_joga.js" defer></script>
+    <!-- CORREÇÃO: Inicializa a variável leaguesData ANTES de todos os outros scripts -->
+    <script>
+        var leaguesData = {};
+    </script>
+
     <script src="data/verba_times.js" defer></script> 
-    <script src="data/brasileirao_a.js" defer></script>
-    <script src="data/brasileirao_b.js" defer></script>
-    <script src="data/brasileirao_c.js" defer></script>
+    <!-- CORREÇÃO: Todos os arquivos de dados agora adicionam ao 'leaguesData' global -->
+    <script src="data/seriea_dinheiro_joga.js" defer></script>
+    <script src="data/serieb_dinheiro_joga.js" defer></script>
+    <script src="data/seriec_dinheiro_joga.js" defer></script>
+    
+    <!-- O script principal é carregado por último -->
     <script src="script.js" defer></script>
 </head>
 <body>
@@ -234,5 +239,3 @@
     <div id="settings-modal" class="modal-overlay"><div class="modal-content"><button id="close-modal-btn" class="icon-btn modal-close-btn">×</button><h2>Configurações</h2><div class="settings-option"><span>Tela Cheia</span><button id="fullscreen-btn">Ativar</button></div><div class="settings-option"><span>Moeda</span><select id="currency-selector"><option value="BRL">Real (R$)</option><option value="USD">Dólar (US$)</option><option value="EUR">Euro (€)</option></select></div></div></div>
 </body>
 </html>
-
-    
