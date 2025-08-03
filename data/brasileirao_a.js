@@ -1,4 +1,4 @@
-const leaguesData = {
+Object.assign(leaguesData, {
     "brasileirao_a": {
         "name": "Brasileirão Série A",
         "logo": "logo_brasileirao_a.png",
@@ -553,4 +553,4 @@ const leaguesData = {
         }
     ]
 }
-};
+});
