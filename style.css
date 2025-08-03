@@ -243,6 +243,7 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     justify-content: center;
     padding: 20px;
     position: relative;
+    min-height: 0;
 }
 
 #match-pitch-canvas {
