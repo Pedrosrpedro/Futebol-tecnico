@@ -91,28 +91,35 @@ function startGame(team) {
 function initializeSeason() { const year = 2024 + gameState.season - 1; gameState.isOffSeason = false; gameState.newsFeed = []; for(const leagueId in leaguesData) { const leagueInfo = leaguesData[leagueId]; const seasonStartDate = leagueInfo.leagueInfo.startDate ? `${year}-${leagueInfo.leagueInfo.startDate.substring(5)}` : `${year}-04-15`; const leagueStartDate = new Date(`${seasonStartDate}T12:00:00Z`); const isSerieC = leagueId === 'brasileirao_c'; const schedule = generateSchedule(leagueInfo.teams, leagueInfo.leagueInfo, leagueStartDate, 0, isSerieC ? 1 : undefined); gameState.leagueStates[leagueId] = { table: initializeLeagueTable(leagueInfo.teams), schedule: schedule, serieCState: { phase: 1, groups: { A: [], B: [] }, finalists: [] } }; } gameState.allMatches = []; for(const leagueId in gameState.leagueStates) { gameState.allMatches.push(...gameState.leagueStates[leagueId].schedule); } gameState.allMatches.sort((a, b) => new Date(a.date) - new Date(b.date)); gameState.currentDate = new Date(`${year}-01-01T12:00:00Z`); setupInitialSquad(); findNextUserMatch(); loadSquadTable(); updateLeagueTable(gameState.currentLeagueId); updateContinueButton(); addNews(`Começa a Temporada ${year}!`, `A bola vai rolar para a ${leaguesData[gameState.currentLeagueId].name}. Boa sorte, ${gameState.managerName}!`, true, gameState.userClub.name); }
 
 // --- Funções de Progressão, Aposentadoria e Valor ---
+
+/**
+ * CORRIGIDO: A fórmula para calcular o overall do jogador foi ajustada
+ * para evitar que todos os jogadores fiquem com 99.
+ */
 function calculatePlayerOverall(player) {
     if (!player.attributes) {
         return player.overall || 50;
     }
     let weightedSum = 0;
+    // Soma dos pesos é 1.0, então isso calcula a média ponderada diretamente.
     for (const attr in player.attributes) {
-        weightedSum += player.attributes[attr] * (overallWeights[attr] || 0.1);
+        weightedSum += player.attributes[attr] * (overallWeights[attr] || 0);
     }
+
+    // Adiciona um bônus menor e mais razoável para o atributo principal do jogador.
     const primaryAttrBonus = { 'ST': 'shooting', 'CAM': 'passing', 'LW': 'dribbling', 'RW': 'dribbling', 'CB': 'defending', 'GK': 'defending' };
     const primaryAttr = primaryAttrBonus[player.position];
     if (primaryAttr && player.attributes[primaryAttr]) {
-        weightedSum += player.attributes[primaryAttr] * 0.1;
+        // Adiciona até um bônus de +5 para um atributo 99, o que é mais equilibrado.
+        weightedSum += player.attributes[primaryAttr] * 0.05;
     }
-    return Math.min(99, Math.round(weightedSum / Object.keys(overallWeights).length * 10));
+
+    // O overall final é a soma ponderada arredondada, com um teto de 99.
+    return Math.min(99, Math.round(weightedSum));
 }
 
-/**
- * ATUALIZADO: Calcula o valor de mercado de um jogador em BRL (Reais).
- * O valor é armazenado como um número bruto para facilitar conversões.
- */
+
 function updateMarketValue(player) {
-    // A base do cálculo é em Euros e depois convertida para BRL
     const baseValueEUR = (player.overall / 100) ** 4 * 30000000;
     let ageMultiplier = 1.0;
 
@@ -126,10 +133,8 @@ function updateMarketValue(player) {
     let finalValueEUR = baseValueEUR * ageMultiplier * positionMultiplier;
     finalValueEUR = Math.max(10000, Math.round(finalValueEUR / 10000) * 10000);
 
-    // Armazena o valor final em BRL (Real)
     player.marketValue = finalValueEUR * currencyRates.EUR;
 }
-
 
 function generateNewPlayer(team) {
     const positions = ['GK', 'CB', 'RB', 'LB', 'CDM', 'CM', 'CAM', 'RW', 'LW', 'ST'];
@@ -194,20 +199,14 @@ function updatePlayerDevelopment() {
     }
 }
 
-/**
- * ATUALIZADO: Garante que todos os jogadores tenham dados essenciais (idade, atributos, overall, valor).
- * Isso corrige os problemas de 'undefined' e 'NaNk'.
- */
 function initializeAllPlayerData() {
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
             for (const player of team.players) {
-                // CORREÇÃO: Garante que todo jogador tenha uma idade.
                 if (!player.age) {
-                    player.age = 18 + Math.floor(Math.random() * 17); // Idade aleatória entre 18 e 34
+                    player.age = 18 + Math.floor(Math.random() * 17);
                 }
 
-                // Garante que os atributos existam, baseando-se no overall se necessário.
                 if (!player.attributes) {
                     player.attributes = {};
                     const baseStat = (player.overall || 60) - 5;
@@ -215,14 +214,12 @@ function initializeAllPlayerData() {
                         player.attributes[attr] = Math.max(30, Math.min(99, baseStat + Math.floor(Math.random() * 11)));
                     }
                 }
-                // Recalcula overall e valor de mercado para garantir consistência.
                 player.overall = calculatePlayerOverall(player);
                 updateMarketValue(player);
             }
         }
     }
 }
-
 
 // --- Funções Financeiras e de Táticas ---
 function initializeClubFinances() { const clubFinancialData = typeof estimativaVerbaMedia2025 !== 'undefined' ? estimativaVerbaMedia2025.find(c => c.time === gameState.userClub.name) : null; let initialBudget = 5 * 1000000; if (clubFinancialData) { initialBudget = clubFinancialData.verba_media_estimada_milhoes_reais * 1000000; } gameState.clubFinances.balance = 0; gameState.clubFinances.history = []; addTransaction(initialBudget, "Verba inicial da temporada"); }
@@ -232,16 +229,12 @@ function displayClubFinances() { const tabContent = document.getElementById('clu
 function renderFinanceChart() { const ctx = document.getElementById('finance-chart')?.getContext('2d'); if (!ctx) return; const history = [...gameState.clubFinances.history].reverse(); const labels = history.map(item => item.date.toLocaleDateString('pt-BR')); let cumulativeBalance = 0; const data = history.map(item => { cumulativeBalance += item.amount; return cumulativeBalance; }); if (window.financeChartInstance) { window.financeChartInstance.destroy(); } window.financeChartInstance = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label: 'Balanço do Clube', data: data, borderColor: 'rgb(61, 220, 151)', backgroundColor: 'rgba(61, 220, 151, 0.2)', tension: 0.1, fill: true }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { callback: function(value, index, values) { return formatCurrency(value); } } } } } }); }
 function displayOpponentFinances() { const container = document.getElementById('opponent-finances-tab'); if (typeof estimativaVerbaMedia2025 === 'undefined') { container.innerHTML = '<h3>Erro</h3><p>Os dados financeiros (verba_times.js) não foram encontrados.</p>'; return; } container.innerHTML = `<h3>Verba Estimada dos Clubes (Início da Temporada)</h3>`; const tableContainer = document.createElement('div'); tableContainer.className = 'table-container'; let fullHtml = ''; const divisionsOrder = ['Série A', 'Série B', 'Série C']; const financesByDivision = estimativaVerbaMedia2025.reduce((acc, team) => { const { divisao } = team; if (!acc[divisao]) acc[divisao] = []; acc[divisao].push(team); return acc; }, {}); for (const division of divisionsOrder) { if (!financesByDivision[division]) continue; fullHtml += `<h4 style="margin-top: 20px; margin-bottom: 10px;">${division}</h4>`; fullHtml += `<table><thead><tr><th>Time</th><th>Verba Média Estimada</th><th>Análise</th></tr></thead><tbody>`; const sortedTeams = financesByDivision[division].sort((a, b) => b.verba_media_estimada_milhoes_reais - a.verba_media_estimada_milhoes_reais); for (const team of sortedTeams) { const formattedVerba = formatCurrency(team.verba_media_estimada_milhoes_reais * 1000000); const cleanAnalysis = team.analise.replace(/\[.*?\]/g, '').trim(); fullHtml += `<tr> <td>${team.time}</td> <td>${formattedVerba}</td> <td>${cleanAnalysis}</td> </tr>`; } fullHtml += '</tbody></table>'; } tableContainer.innerHTML = fullHtml; container.appendChild(tableContainer); }
 
-/**
- * ATUALIZADO: Formata um valor numérico (em BRL) para a moeda selecionada no gameState.
- */
 function formatCurrency(valueInBRL) {
     if (typeof valueInBRL !== 'number') return 'N/A';
 
     const rate = currencyRates[gameState.currency];
     const convertedValue = valueInBRL / rate;
     
-    // Simplifica a exibição para milhões (M) ou milhares (k)
     if (convertedValue >= 1000000) {
         const valueInMillions = (convertedValue / 1000000).toFixed(1).replace('.0', '');
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: gameState.currency }).format(0).replace('0,00', '') + valueInMillions + 'M';
@@ -309,10 +302,6 @@ function createPlayerChip(player, currentPosition) { const chip = document.creat
 function createSquadListPlayer(player) { const item = document.createElement('div'); item.className = 'squad-list-player'; item.dataset.playerId = player.name; item.innerHTML = ` <div class="player-info"> <div class="player-name">${player.name}</div> <div class="player-pos">${player.position}</div> </div> <div class="player-overall">${player.overall}</div> `; return item; }
 
 // --- Funções de Jogo, Tabela e Calendário ---
-/**
- * ATUALIZADO: Carrega a tabela do elenco, agora usando a função formatCurrency
- * para exibir o valor de mercado na moeda correta.
- */
 function loadSquadTable() {
     const playerListDiv = document.getElementById('player-list-table');
     if (!playerListDiv) return;
@@ -1037,7 +1026,6 @@ function initializeEventListeners() {
     document.getElementById('fullscreen-btn').addEventListener('click', toggleFullScreen);
     document.getElementById('settings-modal').addEventListener('click', (e) => { if (e.target.id === 'settings-modal') { closeSettingsModal(); } });
     
-    // ATUALIZADO: Event listener da moeda agora atualiza a tabela do elenco se estiver visível.
     document.getElementById('currency-selector')?.addEventListener('change', (e) => {
         gameState.currency = e.target.value;
         if (gameState.currentMainContent === 'finances-content') {
