@@ -176,6 +176,7 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     flex-direction: column;
     background-color: var(--bg-dark);
     justify-content: flex-start;
+    height: 100%; /* CORREÇÃO */
 }
 
 #match-header {
@@ -243,7 +244,7 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     justify-content: center;
     padding: 20px;
     position: relative;
-    min-height: 0;
+    min-height: 0; /* CORREÇÃO: Essencial para o flexbox funcionar corretamente */
 }
 
 #match-pitch-canvas {
@@ -353,7 +354,7 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     margin: 0 auto 15px auto;
     display: block;
     width: 100%;
-    max-width: 580px; /* Alinha com a largura do calendário */
+    max-width: 580px;
     border: 1px solid var(--border-color);
 }
 
@@ -372,7 +373,7 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     height: 100%;
     overflow-y: auto;
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* Grid de 3 colunas */
+    grid-template-columns: repeat(3, 1fr);
     grid-template-rows: auto auto 1fr;
     gap: 20px;
     padding: 10px;
@@ -418,10 +419,9 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     flex-grow: 1;
 }
 
-/* Artigo Principal (Hero) */
 .news-article-main {
-    grid-column: 1 / 3; /* Ocupa 2 das 3 colunas */
-    grid-row: 1 / 3; /* Ocupa 2 linhas de altura */
+    grid-column: 1 / 3;
+    grid-row: 1 / 3;
     position: relative;
     color: white;
 }
@@ -444,7 +444,6 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
 }
 
-/* Artigos Secundários */
 .news-article-secondary {
     flex-direction: row;
     align-items: center;
@@ -456,9 +455,8 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     aspect-ratio: 1 / 1;
 }
 
-/* Outros artigos no grid */
 #news-list-secondary {
-    grid-column: 3 / 4; /* Ocupa a última coluna */
+    grid-column: 3 / 4;
     grid-row: 1 / 4;
     display: flex;
     flex-direction: column;
@@ -494,7 +492,7 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
 }
 .tab-content {
     display: none;
-    height: calc(100% - 60px); /* Ajuste conforme a altura das abas */
+    height: calc(100% - 60px);
     flex-direction: column;
 }
 .tab-content.active {
@@ -551,10 +549,7 @@ select { background: var(--bg-dark); color: var(--text-primary); border: 1px sol
     max-height: 300px;
 }
 
+/* CORREÇÃO DEFINITIVA PARA O TAMANHO DO CAMPO */
 .main-content-panel.active, #match-simulation-screen.active {
     height: 100%;
-}
-
-#match-pitch-container {
-    min-height: 0; /* Essencial para o flexbox funcionar corretamente em altura */
 }
