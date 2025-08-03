@@ -180,7 +180,7 @@ let matchInterval;
 const SIMULATION_DURATION_MS = 4 * 60 * 1000; // 4 minutos de simulação
 
 function promptMatchConfirmation() { if (!gameState.nextUserMatch) return; document.getElementById('match-confirmation-modal').classList.add('active'); }
-function startMatchSimulation() { document.getElementById('match-confirmation-modal').classList.remove('active'); const startingXIKeys = Object.keys(gameState.squadManagement.startingXI); if (startingXIKeys.length !== 11 || startingXIKeys.some(key => !gameState.squadManagement.startingXI[key])) { showInfoModal("Escalação Incompleta", "Você precisa de 11 jogadores na escalação titular para começar a partida!"); showMainContent('tactics-content'); return; } gameState.isMatchLive = true; gameState.isPaused = false; const userTeam = gameState.userClub; const opponentTeam = gameState.nextUserMatch.home.name === userTeam.name ? gameState.nextUserMatch.away : gameState.nextUserMatch.home; const opponentSquad = setupOpponentSquad(opponentTeam); gameState.matchState = { home: gameState.nextUserMatch.home.name === userTeam.name ? { team: userTeam, ...gameState.squadManagement, formation: formationLayouts[gameState.tactics.formation], tactics: gameState.tactics } : { team: opponentTeam, ...opponentSquad }, away: gameState.nextUserMatch.away.name === userTeam.name ? { team: userTeam, ...gameState.squadManagement, formation: formationLayouts[gameState.tactics.formation], tactics: gameState.tactics } : { team: opponentTeam, ...opponentSquad }, score: { home: 0, away: 0 }, gameTime: 0, elapsedRealTime: 0, half: 1, playerPositions: new Map(), playerRatings: new Map(), possession: 'home', playState: 'kickoff', stateTimer: 0, ball: { y: 50, x: 50, targetY: 50, targetX: 50, speed: 0, owner: null } }; initializeMatchPlayers(); document.getElementById('match-home-team-name').innerText = gameState.matchState.home.team.name; document.getElementById('match-home-team-logo').src = `images/${gameState.matchState.home.team.logo}`; document.getElementById('match-away-team-name').innerText = gameState.matchState.away.team.name; document.getElementById('match-away-team-logo').src = `images/${gameState.matchState.away.team.logo}`; updateScoreboard(); showScreen('match-simulation-screen'); resizeCanvas(); matchInterval = setInterval(gameLoop, 50); setInterval(() => { if (gameState.isMatchLive && !gameState.isPaused) { updatePlayerRatings(); } }, 30000); }
+function startMatchSimulation() { document.getElementById('match-confirmation-modal').classList.remove('active'); const startingXIKeys = Object.keys(gameState.squadManagement.startingXI); if (startingXIKeys.length !== 11 || startingXIKeys.some(key => !gameState.squadManagement.startingXI[key])) { showInfoModal("Escalação Incompleta", "Você precisa de 11 jogadores na escalação titular para começar a partida!"); showMainContent('tactics-content'); return; } showScreen('match-simulation-screen'); showNotification("Apito Inicial!"); setTimeout(() => { gameState.isMatchLive = true; gameState.isPaused = false; const userTeam = gameState.userClub; const opponentTeam = gameState.nextUserMatch.home.name === userTeam.name ? gameState.nextUserMatch.away : gameState.nextUserMatch.home; const opponentSquad = setupOpponentSquad(opponentTeam); gameState.matchState = { home: gameState.nextUserMatch.home.name === userTeam.name ? { team: userTeam, ...gameState.squadManagement, formation: formationLayouts[gameState.tactics.formation], tactics: gameState.tactics } : { team: opponentTeam, ...opponentSquad }, away: gameState.nextUserMatch.away.name === userTeam.name ? { team: userTeam, ...gameState.squadManagement, formation: formationLayouts[gameState.tactics.formation], tactics: gameState.tactics } : { team: opponentTeam, ...opponentSquad }, score: { home: 0, away: 0 }, gameTime: 0, elapsedRealTime: 0, half: 1, playerPositions: new Map(), playerRatings: new Map(), possession: 'home', playState: 'kickoff', stateTimer: 0, ball: { y: 50, x: 50, targetY: 50, targetX: 50, speed: 0, owner: null } }; initializeMatchPlayers(); document.getElementById('match-home-team-name').innerText = gameState.matchState.home.team.name; document.getElementById('match-home-team-logo').src = `images/${gameState.matchState.home.team.logo}`; document.getElementById('match-away-team-name').innerText = gameState.matchState.away.team.name; document.getElementById('match-away-team-logo').src = `images/${gameState.matchState.away.team.logo}`; updateScoreboard(); resizeCanvas(); matchInterval = setInterval(gameLoop, 50); setInterval(() => { if (gameState.isMatchLive && !gameState.isPaused) { updatePlayerRatings(); } }, 30000); }, 3000); }
 function setupOpponentSquad(team) { const todosJogadores = [...team.players].sort((a, b) => b.overall - a.overall); const startingXI = {}; const formationKey = Object.keys(formationLayouts)[Math.floor(Math.random() * 4)]; const formation = formationLayouts[formationKey]; const posicoesDaFormacao = Object.keys(formation); let jogadoresDisponiveis = [...todosJogadores]; for (const posicao of posicoesDaFormacao) { if (jogadoresDisponiveis.length > 0) { startingXI[posicao] = jogadoresDisponiveis.shift(); } } const substitutes = jogadoresDisponiveis.splice(0, 7); const reserves = jogadoresDisponiveis; const tactics = { mentality: 'balanced', defensiveLine: 'standard', onPossessionLoss: 'regroup' }; return { startingXI, substitutes, reserves, formation, tactics }; }
 function initializeMatchPlayers() {
     const { home, away } = gameState.matchState;
@@ -198,7 +198,7 @@ function initializeMatchPlayers() {
 
 function gameLoop() {
     if (gameState.isPaused || !gameState.isMatchLive) return;
-    const { ball } = gameState.matchState;
+    const { ball } = gameState.matchState; 
     const interval = 50; 
     
     if (gameState.matchState.stateTimer <= 0) {
@@ -226,6 +226,7 @@ function gameLoop() {
         switch (gameState.matchState.playState) {
             case 'kickoff': setPlayState('playing'); break;
             case 'playing': updatePlayLogic(); break;
+            case 'goal': setPlayState('kickoff', gameState.matchState.possession === 'home' ? 'away' : 'home'); break;
             case 'goalKick':
                 const teamGK = gameState.matchState[gameState.matchState.possession];
                 const target = Object.values(teamGK.startingXI).find(p => p && (p.position === 'CB' || p.position === 'LB' || p.position === 'RB'));
@@ -261,7 +262,7 @@ function gameLoop() {
     movePlayers();
     drawMatch();
 }
-function updatePlayLogic() { const { ball, possession } = gameState.matchState; if (!ball.owner) { const closest = getClosestPlayer(ball); if (closest.player) { ball.owner = closest.player; gameState.matchState.possession = getPlayerTeam(ball.owner); } return; } const ownerPlayer = ball.owner; const ownerTeamKey = possession; const opponentTeamKey = ownerTeamKey === 'home' ? 'away' : 'home'; const opponent = getClosestPlayer(ball, opponentTeamKey); if (opponent.distance < 3) { const tacklePower = (opponent.player.attributes.defending * 0.5) + (Math.random() * 50); const dribblePower = (ownerPlayer.attributes.dribbling * 0.5) + (Math.random() * 50); if (tacklePower > dribblePower) { ball.owner = opponent.player; gameState.matchState.possession = opponentTeamKey; showNotification(`Desarme de ${opponent.player.name}!`); return; } } const playerPos = gameState.matchState.playerPositions.get(ownerPlayer.name); const isHomeTeam = ownerTeamKey === 'home'; const goalX = isHomeTeam ? PITCH_DIMS.right : PITCH_DIMS.left; const distToGoal = Math.abs(playerPos.x - goalX); const shootScore = distToGoal < 40 ? (ownerPlayer.attributes.shooting + (1 - distToGoal / 40) * 20) : 0; const targetPlayer = findBestPassTarget(ownerPlayer); let passScore = 0; if (targetPlayer) { passScore = ownerPlayer.attributes.passing + 20; } const dribbleScore = ownerPlayer.attributes.dribbling - (opponent.distance < 5 ? 20 : 0); const maxScore = Math.max(shootScore, passScore, dribbleScore); if (maxScore > 0 && maxScore === shootScore) { resolveShot(ownerPlayer); } else if (maxScore > 0 && maxScore === passScore) { const targetPos = gameState.matchState.playerPositions.get(targetPlayer.name); ball.targetY = targetPos.y; ball.targetX = targetPos.x; ball.speed = 1.0 + (ownerPlayer.attributes.passing / 150); ball.owner = targetPlayer; } else { ball.targetX += (isHomeTeam ? 5 : -5) * (ownerPlayer.attributes.pace / 100); ball.targetY += (Math.random() - 0.5) * 5; ball.speed = 0.3; } }
+function updatePlayLogic() { const { ball, possession } = gameState.matchState; if (!ball.owner) { const closest = getClosestPlayer(ball); if (closest.player) { ball.owner = closest.player; gameState.matchState.possession = getPlayerTeam(ball.owner); } return; } const ownerPlayer = ball.owner; const ownerTeamKey = possession; const opponentTeamKey = ownerTeamKey === 'home' ? 'away' : 'home'; const opponent = getClosestPlayer(ball, opponentTeamKey); if (opponent.distance < 3) { const tacklePower = (opponent.player.attributes.defending * 0.5) + (Math.random() * 50); const dribblePower = (ownerPlayer.attributes.dribbling * 0.5) + (Math.random() * 50); if (tacklePower > dribblePower) { ball.owner = opponent.player; gameState.matchState.possession = opponentTeamKey; showNotification(`Desarme de ${opponent.player.name}!`); return; } } const playerPos = gameState.matchState.playerPositions.get(ownerPlayer.name); const isHomeTeam = ownerTeamKey === 'home'; const goalX = isHomeTeam ? PITCH_DIMS.right : PITCH_DIMS.left; const distToGoal = Math.abs(playerPos.x - goalX); const shootScore = (distToGoal < 35 && (isHomeTeam ? playerPos.x > 60 : playerPos.x < 40)) ? (ownerPlayer.attributes.shooting + (1 - distToGoal / 35) * 20) : 0; const targetPlayer = findBestPassTarget(ownerPlayer); let passScore = 0; if (targetPlayer) { passScore = ownerPlayer.attributes.passing + 20; } const dribbleScore = ownerPlayer.attributes.dribbling - (opponent.distance < 5 ? 20 : 0); const maxScore = Math.max(shootScore, passScore, dribbleScore); if (maxScore > 0 && maxScore === shootScore) { resolveShot(ownerPlayer); } else if (maxScore > 0 && maxScore === passScore) { const targetPos = gameState.matchState.playerPositions.get(targetPlayer.name); ball.targetY = targetPos.y; ball.targetX = targetPos.x; ball.speed = 1.0 + (ownerPlayer.attributes.passing / 150); ball.owner = targetPlayer; } else { ball.targetX += (isHomeTeam ? 5 : -5) * (ownerPlayer.attributes.pace / 100); ball.targetY += (Math.random() - 0.5) * 5; ball.speed = 0.3; } }
 function findBestPassTarget(passer) {
     const passerPos = gameState.matchState.playerPositions.get(passer.name);
     const teamKey = getPlayerTeam(passer);
@@ -289,7 +290,7 @@ function findBestPassTarget(passer) {
             }
         }
     }
-    return bestTarget || teammates[Math.floor(Math.random() * teammates.length)];
+    return bestTarget; // Return null if no good pass is found
 }
 function resolveShot(shooter, isFromCorner = false) { const { ball, possession } = gameState.matchState; const isHomeShot = possession === 'home'; const goalX = isHomeShot ? PITCH_DIMS.right : PITCH_DIMS.left; const defendingTeamKey = isHomeShot ? 'away' : 'home'; const keeper = gameState.matchState[defendingTeamKey].startingXI['GK']; ball.targetX = goalX; ball.targetY = 50 + (Math.random() - 0.5) * PITCH_DIMS.goalHeight; ball.speed = 2.0; showNotification(`Chute de ${shooter.name}!`); const shotPower = (shooter.attributes.shooting * 0.7) + (Math.random() * 30); const savePower = (keeper.attributes.defending * 0.7) + (Math.random() * 30); if (shotPower > savePower) { const hitPostChance = 0.15; if (Math.random() < hitPostChance) { showNotification("NA TRAVE!"); setPlayState('goalKick', defendingTeamKey); } else { gameState.matchState.score[possession]++; showNotification(`GOL! ${shooter.name} marca para o ${gameState.matchState[possession].team.name}!`); setPlayState('goal'); } } else { showNotification(`Defesa do goleiro ${keeper.name}!`); if (isFromCorner) { setPlayState('playing', defendingTeamKey); } else { setPlayState('corner', possession); } } }
 function getClosestPlayer(target, teamKey = null) { let closestPlayer = null; let minDistance = Infinity; const teamsToScan = teamKey ? [teamKey] : ['home', 'away']; teamsToScan.forEach(key => { const team = gameState.matchState[key]; for(const player of Object.values(team.startingXI)) { if(!player) continue; const playerPos = gameState.matchState.playerPositions.get(player.name); const distance = Math.hypot(playerPos.y - target.y, playerPos.x - target.x); if (distance < minDistance) { minDistance = distance; closestPlayer = player; } } }); return { player: closestPlayer, distance: minDistance }; }
@@ -392,7 +393,7 @@ function setPlayState(newState, teamToAct = null) {
              gameState.matchState.stateTimer = 0;
             break;
         case 'goal':
-            gameState.matchState.stateTimer = 5000;
+            gameState.matchState.stateTimer = 5000; // Longer pause for goal celebration
             break;
         case 'goalKick':
             gameState.matchState.possession = teamToAct;
@@ -418,7 +419,7 @@ function resizeCanvas() {
     const canvas = document.getElementById('match-pitch-canvas');
     const container = document.getElementById('match-pitch-container');
     if (!canvas || !container) return;
-
+    
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
     const canvasAspectRatio = 7 / 5; 
@@ -475,20 +476,20 @@ function updateScoreboard() {
     const { score, gameTime } = gameState.matchState;
     document.getElementById('match-score-display').innerText = `${score.home} - ${score.away}`;
     
-    const totalSeconds = Math.floor(gameTime);
-    const minutes = Math.floor(totalSeconds);
+    const minutes = Math.floor(gameTime);
     const seconds = Math.floor((gameTime * 60) % 60);
     document.getElementById('match-clock').innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     
     const statusEl = document.getElementById('match-time-status');
     if (statusEl.innerText === 'FIM DE JOGO') return;
-    if (gameState.isPaused && statusEl.innerText !== 'INTERVALO') {
-        statusEl.innerText = "PAUSA";
-    } else if (!gameState.isPaused) {
+    if (gameState.isPaused) {
+       if (gameState.matchState.half === 1 && gameTime >= 45) statusEl.innerText = 'INTERVALO';
+       else statusEl.innerText = "PAUSA";
+    } else {
         statusEl.innerText = gameState.matchState.half === 1 ? 'PRIMEIRO TEMPO' : 'SEGUNDO TEMPO';
     }
 }
-function togglePause(forcePause = null) { if (gameState.isMatchLive === false) return; gameState.isPaused = forcePause !== null ? forcePause : !gameState.isPaused; document.getElementById('pause-overlay').classList.toggle('active', gameState.isPaused); document.getElementById('pause-match-btn').innerText = gameState.isPaused ? '▶' : '❚❚'; const statusEl = document.getElementById('match-time-status'); if (gameState.isPaused && statusEl.innerText !== 'INTERVALO') { statusEl.innerText = "PAUSA"; } else if (!gameState.isPaused) { updateScoreboard(); } }
+function togglePause(forcePause = null) { if (gameState.isMatchLive === false) return; gameState.isPaused = forcePause !== null ? forcePause : !gameState.isPaused; document.getElementById('pause-overlay').classList.toggle('active', gameState.isPaused); document.getElementById('pause-match-btn').innerText = gameState.isPaused ? '▶' : '❚❚'; updateScoreboard(); }
 function showNotification(message) { const area = document.getElementById('match-notification-area'); area.innerHTML = ''; const notification = document.createElement('div'); notification.className = 'match-notification'; notification.innerText = message; area.appendChild(notification); setTimeout(() => { if(notification) notification.remove(); }, 4000); }
 function updatePlayerRatings() { if(!gameState.matchState) return; for (const [playerName, currentRating] of gameState.matchState.playerRatings.entries()) { const performanceChange = (Math.random() - 0.47) * 0.2; let newRating = Math.max(0, Math.min(10, currentRating + performanceChange)); gameState.matchState.playerRatings.set(playerName, newRating); } }
 function endMatch() { clearInterval(matchInterval); gameState.isMatchLive = false; document.getElementById('match-time-status').innerText = 'FIM DE JOGO'; const match = gameState.allMatches.find(m => isSameDay(new Date(m.date), new Date(gameState.nextUserMatch.date))); if (match) { match.status = 'played'; match.homeScore = gameState.matchState.score.home; match.awayScore = gameState.matchState.score.away; if (match.round !== 'Amistoso') { const leagueId = Object.keys(leaguesData).find(id => leaguesData[id].teams.some(t => t.name === match.home.name)); updateTableWithResult(leagueId, match); } } showPostMatchReport(); findNextUserMatch(); }
