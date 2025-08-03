@@ -26,7 +26,7 @@ const gameState = {
     matchesView: { leagueId: null, round: 1 },
     tableView: { leagueId: null },
     isOffSeason: false,
-    currency: 'BRL',
+    currency: 'BRL', // Moeda padrão é Real
     clubFinances: { balance: 0, history: [] },
     allMatches: [],
 };
@@ -34,6 +34,7 @@ let holidayInterval = null;
 let selectedPlayerInfo = null;
 const MAX_SUBSTITUTES = 7;
 
+// Taxas de conversão: 1 unidade da moeda estrangeira = X em BRL
 const currencyRates = { BRL: 1, USD: 5.55, EUR: 6.42 };
 
 const prizeMoney = {
@@ -50,7 +51,6 @@ const formationLayouts = {
     '4-2-3-1':  { 'GK': [7, 50],  'RB': [35, 85], 'CB1': [25, 65], 'CB2': [25, 35], 'LB': [35, 15], 'CDM1': [45, 65], 'CDM2': [45, 35], 'RW': [70, 85], 'CAM': [65, 50], 'LW': [70, 15], 'ST': [88, 50] }
 };
 const PITCH_DIMS = { top: 0, bottom: 100, left: 0, right: 100, goalHeight: 30 };
-// NOVO: Adicionado para dar mais realismo ao desenvolvimento dos jogadores
 const overallWeights = { pace: 0.15, shooting: 0.2, passing: 0.2, dribbling: 0.15, defending: 0.15, physical: 0.15 };
 
 // --- Funções de Notícias e UI ---
@@ -73,11 +73,10 @@ function createClub() { const clubName = document.getElementById('club-name-inpu
 function setupInitialSquad() { gameState.squadManagement.startingXI = {}; gameState.squadManagement.substitutes = []; gameState.squadManagement.reserves = []; const todosJogadores = [...gameState.userClub.players].sort((a, b) => b.overall - a.overall); const formacao = gameState.tactics.formation; const posicoesDaFormacao = Object.keys(formationLayouts[formacao]); let jogadoresDisponiveis = [...todosJogadores]; for (const posicaoDoEsquema of posicoesDaFormacao) { const posicaoBase = posicaoDoEsquema.replace(/\d/g, ''); const indiceMelhorJogador = jogadoresDisponiveis.findIndex(p => p.position === posicaoBase); if (indiceMelhorJogador !== -1) { const jogadorEscolhido = jogadoresDisponiveis[indiceMelhorJogador]; gameState.squadManagement.startingXI[posicaoDoEsquema] = jogadorEscolhido; jogadoresDisponiveis.splice(indiceMelhorJogador, 1); } } for (const posicaoDoEsquema of posicoesDaFormacao) { if (!gameState.squadManagement.startingXI[posicaoDoEsquema] && jogadoresDisponiveis.length > 0) { gameState.squadManagement.startingXI[posicaoDoEsquema] = jogadoresDisponiveis.shift(); } } gameState.squadManagement.substitutes = jogadoresDisponiveis.splice(0, MAX_SUBSTITUTES); gameState.squadManagement.reserves = jogadoresDisponiveis; }
 function startGame(team) {
     gameState.userClub = team;
-    initializeAllPlayerData(); // Garante que todos os jogadores tenham 'overall' e 'marketValue'
+    initializeAllPlayerData(); // Garante que todos os jogadores tenham dados completos
     initializeClubFinances();
     initializeSeason();
 
-    // ALTERAÇÃO: Define as ligas de visualização padrão para a liga atual do usuário
     gameState.matchesView.leagueId = gameState.currentLeagueId;
     gameState.tableView.leagueId = gameState.currentLeagueId;
 
@@ -92,57 +91,52 @@ function startGame(team) {
 function initializeSeason() { const year = 2024 + gameState.season - 1; gameState.isOffSeason = false; gameState.newsFeed = []; for(const leagueId in leaguesData) { const leagueInfo = leaguesData[leagueId]; const seasonStartDate = leagueInfo.leagueInfo.startDate ? `${year}-${leagueInfo.leagueInfo.startDate.substring(5)}` : `${year}-04-15`; const leagueStartDate = new Date(`${seasonStartDate}T12:00:00Z`); const isSerieC = leagueId === 'brasileirao_c'; const schedule = generateSchedule(leagueInfo.teams, leagueInfo.leagueInfo, leagueStartDate, 0, isSerieC ? 1 : undefined); gameState.leagueStates[leagueId] = { table: initializeLeagueTable(leagueInfo.teams), schedule: schedule, serieCState: { phase: 1, groups: { A: [], B: [] }, finalists: [] } }; } gameState.allMatches = []; for(const leagueId in gameState.leagueStates) { gameState.allMatches.push(...gameState.leagueStates[leagueId].schedule); } gameState.allMatches.sort((a, b) => new Date(a.date) - new Date(b.date)); gameState.currentDate = new Date(`${year}-01-01T12:00:00Z`); setupInitialSquad(); findNextUserMatch(); loadSquadTable(); updateLeagueTable(gameState.currentLeagueId); updateContinueButton(); addNews(`Começa a Temporada ${year}!`, `A bola vai rolar para a ${leaguesData[gameState.currentLeagueId].name}. Boa sorte, ${gameState.managerName}!`, true, gameState.userClub.name); }
 
 // --- Funções de Progressão, Aposentadoria e Valor ---
-// NOVO: Função para calcular o overall baseado nos atributos ponderados.
 function calculatePlayerOverall(player) {
-    if (!player.attributes) { // Fallback para jogadores gerados sem atributos
+    if (!player.attributes) {
         return player.overall || 50;
     }
     let weightedSum = 0;
     for (const attr in player.attributes) {
         weightedSum += player.attributes[attr] * (overallWeights[attr] || 0.1);
     }
-    // Adiciona um pequeno bônus para posições primárias para diferenciar especialistas
     const primaryAttrBonus = { 'ST': 'shooting', 'CAM': 'passing', 'LW': 'dribbling', 'RW': 'dribbling', 'CB': 'defending', 'GK': 'defending' };
     const primaryAttr = primaryAttrBonus[player.position];
     if (primaryAttr && player.attributes[primaryAttr]) {
-        weightedSum += player.attributes[primaryAttr] * 0.1; // Bônus extra
+        weightedSum += player.attributes[primaryAttr] * 0.1;
     }
     return Math.min(99, Math.round(weightedSum / Object.keys(overallWeights).length * 10));
 }
 
-// CORRIGIDO: Função para converter o valor de texto para número em BRL
-function parseMarketValue(valueString) {
-    if (!valueString || typeof valueString !== 'string') return 50000; // Valor padrão
-    const value = parseFloat(valueString.replace(/[^0-9.,]/g, '').replace(',', '.'));
-    const multiplier = valueString.toUpperCase().includes('M') ? 1000000 : (valueString.toUpperCase().includes('K') ? 1000 : 1);
-    const valueInEUR = value * multiplier;
-    return valueInEUR * currencyRates.EUR; // Converte para BRL como base
-}
-
-
-// NOVO: Função para atualizar o valor de mercado de um jogador.
+/**
+ * ATUALIZADO: Calcula o valor de mercado de um jogador em BRL (Reais).
+ * O valor é armazenado como um número bruto para facilitar conversões.
+ */
 function updateMarketValue(player) {
-    const baseValue = (player.overall / 100) ** 4 * 30000000; // Exponencial para valorizar mais os overalls altos
+    // A base do cálculo é em Euros e depois convertida para BRL
+    const baseValueEUR = (player.overall / 100) ** 4 * 30000000;
     let ageMultiplier = 1.0;
+
     if (player.age < 21) ageMultiplier = 1.2;
-    else if (player.age >= 21 && player.age <= 28) ageMultiplier = 1.5 - ((player.age - 21) * 0.05); // Pico em 21, decai lentamente
-    else if (player.age > 28 && player.age < 33) ageMultiplier = 1.1 - ((player.age - 28) * 0.1); // Queda mais acentuada
-    else ageMultiplier = Math.max(0.1, 0.5 - ((player.age - 33) * 0.03)); // Queda forte para veteranos
+    else if (player.age >= 21 && player.age <= 28) ageMultiplier = 1.5 - ((player.age - 21) * 0.05);
+    else if (player.age > 28 && player.age < 33) ageMultiplier = 1.1 - ((player.age - 28) * 0.1);
+    else ageMultiplier = Math.max(0.1, 0.5 - ((player.age - 33) * 0.03));
 
     const positionMultiplier = (['ST', 'LW', 'RW', 'CAM'].includes(player.position)) ? 1.2 : 1.0;
     
-    let finalValue = baseValue * ageMultiplier * positionMultiplier;
-    finalValue = Math.max(10000, Math.round(finalValue / 10000) * 10000); // Arredonda para 10k mais próximo
-    player.marketValueBRL = finalValue; // Armazena o valor base em BRL
+    let finalValueEUR = baseValueEUR * ageMultiplier * positionMultiplier;
+    finalValueEUR = Math.max(10000, Math.round(finalValueEUR / 10000) * 10000);
+
+    // Armazena o valor final em BRL (Real)
+    player.marketValue = finalValueEUR * currencyRates.EUR;
 }
 
-// NOVO: Função que gera um novo jogador para substituir os aposentados.
+
 function generateNewPlayer(team) {
     const positions = ['GK', 'CB', 'RB', 'LB', 'CDM', 'CM', 'CAM', 'RW', 'LW', 'ST'];
     const newPlayer = {
         name: `*Novo Talento ${Math.floor(Math.random() * 1000)}`,
         position: positions[Math.floor(Math.random() * positions.length)],
-        age: 17 + Math.floor(Math.random() * 4), // Entre 17 e 20 anos
+        age: 17 + Math.floor(Math.random() * 4),
         attributes: {
             pace: 40 + Math.floor(Math.random() * 25),
             shooting: 40 + Math.floor(Math.random() * 25),
@@ -157,7 +151,6 @@ function generateNewPlayer(team) {
     return newPlayer;
 }
 
-// NOVO: Função principal para desenvolvimento, envelhecimento e aposentadoria dos jogadores.
 function updatePlayerDevelopment() {
     console.log("Processando desenvolvimento de jogadores para a nova temporada...");
     for (const leagueId in leaguesData) {
@@ -168,9 +161,8 @@ function updatePlayerDevelopment() {
 
             for (let i = 0; i < team.players.length; i++) {
                 const player = team.players[i];
-                player.age++; // Envelhece o jogador
+                player.age++;
 
-                // Lógica de aposentadoria
                 if (player.age >= 35) {
                     const retirementChance = (player.age - 34) / (46 - 34);
                     if (Math.random() < retirementChance || player.age > 46) {
@@ -181,7 +173,6 @@ function updatePlayerDevelopment() {
                     }
                 }
 
-                // Lógica de Progressão/Regressão
                 const progressionMultiplier = player.age < 24 ? 2 : 1;
                 if (player.age < 30) {
                     for (const attr in player.attributes) {
@@ -203,12 +194,20 @@ function updatePlayerDevelopment() {
     }
 }
 
-// CORRIGIDO: Inicializa os dados de todos os jogadores no começo do jogo.
+/**
+ * ATUALIZADO: Garante que todos os jogadores tenham dados essenciais (idade, atributos, overall, valor).
+ * Isso corrige os problemas de 'undefined' e 'NaNk'.
+ */
 function initializeAllPlayerData() {
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
             for (const player of team.players) {
-                 // Se os atributos não existirem, gera-os com base no overall
+                // CORREÇÃO: Garante que todo jogador tenha uma idade.
+                if (!player.age) {
+                    player.age = 18 + Math.floor(Math.random() * 17); // Idade aleatória entre 18 e 34
+                }
+
+                // Garante que os atributos existam, baseando-se no overall se necessário.
                 if (!player.attributes) {
                     player.attributes = {};
                     const baseStat = (player.overall || 60) - 5;
@@ -216,11 +215,9 @@ function initializeAllPlayerData() {
                         player.attributes[attr] = Math.max(30, Math.min(99, baseStat + Math.floor(Math.random() * 11)));
                     }
                 }
-                if(!player.overall) {
-                   player.overall = calculatePlayerOverall(player);
-                }
-                // Converte o valor de mercado inicial (string) para um número em BRL
-                player.marketValueBRL = parseMarketValue(player.marketValue);
+                // Recalcula overall e valor de mercado para garantir consistência.
+                player.overall = calculatePlayerOverall(player);
+                updateMarketValue(player);
             }
         }
     }
@@ -234,7 +231,28 @@ function displayFinances() { const container = document.getElementById('finances
 function displayClubFinances() { const tabContent = document.getElementById('club-finances-tab'); const { balance, history } = gameState.clubFinances; tabContent.innerHTML = ` <div class="finance-overview"> <div class="finance-box"> <h4>Balanço Atual</h4> <p class="${balance >= 0 ? 'positive' : 'negative'}">${formatCurrency(balance)}</p> </div> </div> <div class="finance-chart-container"> <h4>Evolução Financeira</h4> <canvas id="finance-chart"></canvas> </div> <div class="finance-history-container"> <h4>Histórico de Transações</h4> <div class="table-container" id="finance-history-table"></div> </div> `; const historyTableContainer = document.getElementById('finance-history-table'); let tableHTML = `<table><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th></tr></thead><tbody>`; for (const item of history) { tableHTML += ` <tr> <td>${item.date.toLocaleDateString('pt-BR')}</td> <td>${item.description}</td> <td class="${item.amount >= 0 ? 'positive' : 'negative'}">${formatCurrency(item.amount)}</td> </tr> `; } tableHTML += `</tbody></table>`; historyTableContainer.innerHTML = tableHTML; renderFinanceChart(); }
 function renderFinanceChart() { const ctx = document.getElementById('finance-chart')?.getContext('2d'); if (!ctx) return; const history = [...gameState.clubFinances.history].reverse(); const labels = history.map(item => item.date.toLocaleDateString('pt-BR')); let cumulativeBalance = 0; const data = history.map(item => { cumulativeBalance += item.amount; return cumulativeBalance; }); if (window.financeChartInstance) { window.financeChartInstance.destroy(); } window.financeChartInstance = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label: 'Balanço do Clube', data: data, borderColor: 'rgb(61, 220, 151)', backgroundColor: 'rgba(61, 220, 151, 0.2)', tension: 0.1, fill: true }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { callback: function(value, index, values) { return formatCurrency(value); } } } } } }); }
 function displayOpponentFinances() { const container = document.getElementById('opponent-finances-tab'); if (typeof estimativaVerbaMedia2025 === 'undefined') { container.innerHTML = '<h3>Erro</h3><p>Os dados financeiros (verba_times.js) não foram encontrados.</p>'; return; } container.innerHTML = `<h3>Verba Estimada dos Clubes (Início da Temporada)</h3>`; const tableContainer = document.createElement('div'); tableContainer.className = 'table-container'; let fullHtml = ''; const divisionsOrder = ['Série A', 'Série B', 'Série C']; const financesByDivision = estimativaVerbaMedia2025.reduce((acc, team) => { const { divisao } = team; if (!acc[divisao]) acc[divisao] = []; acc[divisao].push(team); return acc; }, {}); for (const division of divisionsOrder) { if (!financesByDivision[division]) continue; fullHtml += `<h4 style="margin-top: 20px; margin-bottom: 10px;">${division}</h4>`; fullHtml += `<table><thead><tr><th>Time</th><th>Verba Média Estimada</th><th>Análise</th></tr></thead><tbody>`; const sortedTeams = financesByDivision[division].sort((a, b) => b.verba_media_estimada_milhoes_reais - a.verba_media_estimada_milhoes_reais); for (const team of sortedTeams) { const formattedVerba = formatCurrency(team.verba_media_estimada_milhoes_reais * 1000000); const cleanAnalysis = team.analise.replace(/\[.*?\]/g, '').trim(); fullHtml += `<tr> <td>${team.time}</td> <td>${formattedVerba}</td> <td>${cleanAnalysis}</td> </tr>`; } fullHtml += '</tbody></table>'; } tableContainer.innerHTML = fullHtml; container.appendChild(tableContainer); }
-function formatCurrency(valueInBRL) { const rate = currencyRates[gameState.currency]; const convertedValue = valueInBRL / rate; return new Intl.NumberFormat('default', { style: 'currency', currency: gameState.currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(convertedValue); }
+
+/**
+ * ATUALIZADO: Formata um valor numérico (em BRL) para a moeda selecionada no gameState.
+ */
+function formatCurrency(valueInBRL) {
+    if (typeof valueInBRL !== 'number') return 'N/A';
+
+    const rate = currencyRates[gameState.currency];
+    const convertedValue = valueInBRL / rate;
+    
+    // Simplifica a exibição para milhões (M) ou milhares (k)
+    if (convertedValue >= 1000000) {
+        const valueInMillions = (convertedValue / 1000000).toFixed(1).replace('.0', '');
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: gameState.currency }).format(0).replace('0,00', '') + valueInMillions + 'M';
+    } else if (convertedValue >= 1000) {
+        const valueInThousands = Math.round(convertedValue / 1000);
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: gameState.currency }).format(0).replace('0,00', '') + valueInThousands + 'k';
+    }
+    
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: gameState.currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(convertedValue);
+}
+
 function handleTacticsInteraction(e) { const clickedElement = e.target.closest('[data-player-id], .player-slot, #substitutes-list, #reserves-list'); if (!clickedElement) { clearSelection(); return; } const clickedPlayerId = clickedElement.dataset.playerId; if (clickedPlayerId) { const player = gameState.userClub.players.find(p => p.name === clickedPlayerId); const sourceInfo = getPlayerLocation(player); if (selectedPlayerInfo) { if (selectedPlayerInfo.player.name === player.name) { clearSelection(); } else { const destPlayerInfo = { player, ...sourceInfo }; swapPlayers(selectedPlayerInfo, destPlayerInfo); clearSelection(); } } else { selectPlayer(player, sourceInfo.type, sourceInfo.id); } } else if (selectedPlayerInfo) { let destInfo; if (clickedElement.classList.contains('player-slot')) { destInfo = { type: 'field', id: clickedElement.dataset.position }; } else if (clickedElement.id === 'substitutes-list') { destInfo = { type: 'subs', id: 'substitutes-list' }; } else if (clickedElement.id === 'reserves-list') { destInfo = { type: 'reserves', id: 'reserves-list' }; } if (destInfo) { movePlayer(selectedPlayerInfo, destInfo); clearSelection(); } } }
 function selectPlayer(player, sourceType, sourceId) { clearSelection(); selectedPlayerInfo = { player, sourceType, sourceId }; const element = document.querySelector(`[data-player-id="${player.name}"]`); if(element) element.classList.add('selected'); }
 function clearSelection() { if (selectedPlayerInfo) { const element = document.querySelector(`[data-player-id="${selectedPlayerInfo.player.name}"]`); if(element) element.classList.remove('selected'); } selectedPlayerInfo = null; }
@@ -268,7 +286,6 @@ function loadTacticsScreen() {
         const slot = document.createElement('div');
         slot.className = 'player-slot';
         slot.dataset.position = pos;
-        // CORREÇÃO APLICADA: Y (top) usa a primeira coordenada, X (left) a segunda
         slot.style.top = `${positions[pos][0]}%`;
         slot.style.left = `${positions[pos][1]}%`;
         const player = gameState.squadManagement.startingXI[pos];
@@ -292,7 +309,10 @@ function createPlayerChip(player, currentPosition) { const chip = document.creat
 function createSquadListPlayer(player) { const item = document.createElement('div'); item.className = 'squad-list-player'; item.dataset.playerId = player.name; item.innerHTML = ` <div class="player-info"> <div class="player-name">${player.name}</div> <div class="player-pos">${player.position}</div> </div> <div class="player-overall">${player.overall}</div> `; return item; }
 
 // --- Funções de Jogo, Tabela e Calendário ---
-// ALTERADO: Adicionada a coluna "Valor de Mercado" na tabela de elenco e formatação de moeda.
+/**
+ * ATUALIZADO: Carrega a tabela do elenco, agora usando a função formatCurrency
+ * para exibir o valor de mercado na moeda correta.
+ */
 function loadSquadTable() {
     const playerListDiv = document.getElementById('player-list-table');
     if (!playerListDiv) return;
@@ -302,12 +322,11 @@ function loadSquadTable() {
     });
     let tableHTML = `<table><thead><tr><th>Nome</th><th>Idade</th><th>Pos.</th><th>Veloc.</th><th>Finaliz.</th><th>Passe</th><th>Drible</th><th>Defesa</th><th>Físico</th><th>GERAL</th><th>Valor</th></tr></thead><tbody>`;
     for (const player of sortedPlayers) {
-        tableHTML += `<tr><td>${player.name}</td><td>${player.age || 'N/A'}</td><td>${player.position}</td><td>${player.attributes.pace}</td><td>${player.attributes.shooting}</td><td>${player.attributes.passing}</td><td>${player.attributes.dribbling}</td><td>${player.attributes.defending}</td><td>${player.attributes.physical}</td><td><b>${player.overall}</b></td><td>${player.marketValueBRL ? formatCurrency(player.marketValueBRL) : 'N/A'}</td></tr>`;
+        tableHTML += `<tr><td>${player.name}</td><td>${player.age}</td><td>${player.position}</td><td>${player.attributes.pace}</td><td>${player.attributes.shooting}</td><td>${player.attributes.passing}</td><td>${player.attributes.dribbling}</td><td>${player.attributes.defending}</td><td>${player.attributes.physical}</td><td><b>${player.overall}</b></td><td>${player.marketValue ? formatCurrency(player.marketValue) : 'N/A'}</td></tr>`;
     }
     tableHTML += `</tbody></table>`;
     playerListDiv.innerHTML = tableHTML;
 }
-
 function updateTableWithResult(leagueId, match) { if (!leagueId || !gameState.leagueStates[leagueId] || match.round === 'Amistoso') return; const leagueState = gameState.leagueStates[leagueId]; let tableToUpdate; if (leagueId === 'brasileirao_c' && leagueState.serieCState.phase > 1) { tableToUpdate = leagueState.table.filter(t => leagueState.serieCState.groups.A.includes(t.name) || leagueState.serieCState.groups.B.includes(t.name)); } else { tableToUpdate = leagueState.table; } const homeTeam = tableToUpdate.find(t => t.name === match.home.name); const awayTeam = tableToUpdate.find(t => t.name === match.away.name); if (!homeTeam || !awayTeam) return; homeTeam.played++; awayTeam.played++; homeTeam.goalsFor += match.homeScore; homeTeam.goalsAgainst += match.awayScore; awayTeam.goalsFor += match.awayScore; awayTeam.goalsAgainst += match.homeScore; homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst; awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst; if (match.homeScore > match.awayScore) { homeTeam.wins++; homeTeam.points += 3; awayTeam.losses++; } else if (match.awayScore > match.homeScore) { awayTeam.wins++; awayTeam.points += 3; homeTeam.losses++; } else { homeTeam.draws++; awayTeam.draws++; homeTeam.points += 1; awayTeam.points += 1; } }
 function updateLeagueTable(leagueId) { const container = document.getElementById('league-table-container'); if (!container) return; const leagueState = gameState.leagueStates[leagueId]; if (!leagueState) return; const leagueInfo = leaguesData[leagueId]; const tiebreakers = leagueInfo.leagueInfo.tiebreakers; let tableHTML = ''; if (leagueId === 'brasileirao_c' && leagueState.serieCState.phase === 2) { const groupA = leagueState.table.filter(t => leagueState.serieCState.groups.A.includes(t.name)); const groupB = leagueState.table.filter(t => leagueState.serieCState.groups.B.includes(t.name)); groupA.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); groupB.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); tableHTML += '<h4>Grupo A (Segunda Fase)</h4>'; tableHTML += renderTable(groupA, 1); tableHTML += '<h4 style="margin-top: 20px;">Grupo B (Segunda Fase)</h4>'; tableHTML += renderTable(groupB, 1); } else { const table = [...leagueState.table]; table.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); tableHTML = renderTable(table); } container.innerHTML = tableHTML; }
 function renderTable(tableData, startPos = 1) { let html = `<table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>`; tableData.forEach((team, index) => { const isUserTeam = team.name === gameState.userClub.name; html += `<tr class="${isUserTeam ? 'user-team-row' : ''}"><td>${index + startPos}</td><td>${team.name}</td><td>${team.points}</td><td>${team.played}</td><td>${team.wins}</td><td>${team.draws}</td><td>${team.losses}</td><td>${team.goalsFor}</td><td>${team.goalsAgainst}</td><td>${team.goalDifference}</td></tr>`; }); html += `</tbody></table>`; return html; }
@@ -943,9 +962,8 @@ function handleEndOfSeason() {
     updateContinueButton();
 }
 function awardPrizeMoney() { const userClubName = gameState.userClub.name; const userLeagueId = gameState.currentLeagueId; const leagueState = gameState.leagueStates[userLeagueId]; if (!leagueState) return; if (userLeagueId === 'brasileirao_a') { const table = getFullSeasonTable('brasileirao_a'); const userTeamRow = table.find(t => t.name === userClubName); const position = table.indexOf(userTeamRow) + 1; if (prizeMoney.brasileirao_a[position]) { const amount = prizeMoney.brasileirao_a[position] * 1000000; addTransaction(amount, `Premiação (${position}º lugar) - Série A`); } } else if (userLeagueId === 'brasileirao_b') { const table = getFullSeasonTable('brasileirao_b'); const userTeamRow = table.find(t => t.name === userClubName); const position = table.indexOf(userTeamRow) + 1; if (position <= 4 && prizeMoney.brasileirao_b[position]) { const amount = prizeMoney.brasileirao_b[position] * 1000000; addTransaction(amount, `Premiação (Acesso) - Série B`); } } else if (userLeagueId === 'brasileirao_c') { addTransaction(prizeMoney.brasileirao_c.participation_fee * 1000000, `Cota de participação - Série C`); const qualifiedForPhase2 = [...leagueState.serieCState.groups.A, ...leagueState.serieCState.groups.B]; if (qualifiedForPhase2.includes(userClubName)) { addTransaction(prizeMoney.brasileirao_c.advancement_bonus * 1000000, `Bônus por avanço de fase - Série C`); } } }
-// ALTERADO: Adicionada a chamada para a nova função de desenvolvimento de jogadores.
 function processPromotionRelegation() {
-    updatePlayerDevelopment(); // Processa envelhecimento, aposentadorias e desenvolvimento
+    updatePlayerDevelopment();
 
     const tableA = getFullSeasonTable('brasileirao_a');
     const relegatedFromA = tableA.slice(-4).map(t => findTeamInLeagues(t.name)).filter(Boolean);
@@ -967,7 +985,7 @@ function processPromotionRelegation() {
     if(promotedFromC.some(t => t.name === gameState.userClub.name)) gameState.currentLeagueId = 'brasileirao_b';
     if(relegatedFromB.some(t => t.name === gameState.userClub.name)) gameState.currentLeagueId = 'brasileirao_c';
     
-    loadSquadTable(); // Recarrega a tabela do elenco com os dados atualizados
+    loadSquadTable();
 }
 function findTeamInLeagues(teamName, isPlayerLookup = false) { 
     if (!teamName) return null; 
@@ -1018,7 +1036,18 @@ function initializeEventListeners() {
     document.getElementById('close-modal-btn').addEventListener('click', closeSettingsModal);
     document.getElementById('fullscreen-btn').addEventListener('click', toggleFullScreen);
     document.getElementById('settings-modal').addEventListener('click', (e) => { if (e.target.id === 'settings-modal') { closeSettingsModal(); } });
-    document.getElementById('currency-selector')?.addEventListener('change', (e) => { gameState.currency = e.target.value; if (gameState.currentMainContent === 'finances-content') { displayFinances(); } if (gameState.currentMainContent === 'squad-content') { loadSquadTable(); } });
+    
+    // ATUALIZADO: Event listener da moeda agora atualiza a tabela do elenco se estiver visível.
+    document.getElementById('currency-selector')?.addEventListener('change', (e) => {
+        gameState.currency = e.target.value;
+        if (gameState.currentMainContent === 'finances-content') {
+            displayFinances();
+        }
+        if (gameState.currentMainContent === 'squad-content') {
+            loadSquadTable();
+        }
+    });
+
     document.querySelectorAll('.tab-btn').forEach(btn => { btn.addEventListener('click', () => { const tabId = btn.dataset.tab; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); btn.classList.add('active'); document.getElementById(`${tabId}-tab`).classList.add('active'); if(tabId === 'club-finances') renderFinanceChart(); }); });
     document.getElementById('open-friendly-modal-btn').addEventListener('click', openFriendlyModal);
     document.getElementById('close-friendly-modal-btn').addEventListener('click', () => document.getElementById('schedule-friendly-modal').classList.remove('active'));
