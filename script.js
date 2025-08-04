@@ -1146,6 +1146,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeEventListeners();
     loadLeagues();
     window.addEventListener('resize', resizeCanvas);
+    
     const observer = new MutationObserver((mutations) => {
         for(let mutation of mutations) {
             if (mutation.attributeName === 'class' && mutation.target.id === 'main-game-screen' && mutation.target.classList.contains('active')) {
@@ -1154,5 +1155,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
     observer.observe(document.getElementById('main-game-screen'), { attributes: true });
 });
