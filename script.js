@@ -219,27 +219,20 @@ function updatePlayerDevelopment() {
     }
 }
 
-// CORREÇÃO APLICADA NESTA FUNÇÃO
+// CÓDIGO NOVO E CORRIGIDO (PARA USAR)
 function initializeAllPlayerData() {
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
             for (const player of team.players) {
-                // SÓ gera idade se NÃO existir
-                if (!player.age) {
-                    player.age = 18 + Math.floor(Math.random() * 17);
+                // Adicionamos esta condição: só calcula se 'overall' não existir no arquivo
+                if (player.overall === undefined) {
+                    player.overall = calculatePlayerOverall(player);
                 }
-                // SÓ gera atributos se NÃO existirem
-                if (!player.attributes) {
-                    player.attributes = {};
-                    const baseStat = (player.overall || 60) - 5; // Usa um overall base se nem isso tiver
-                    for (const attr of ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical']) {
-                        player.attributes[attr] = Math.max(30, Math.min(99, baseStat + Math.floor(Math.random() * 11)));
-                    }
+                
+                // Adicionamos esta condição: só calcula se 'marketValue' não existir no arquivo
+                if (player.marketValue === undefined) {
+                    updateMarketValue(player);
                 }
-                // SEMPRE calcula o overall e valor de mercado para manter a consistência
-                player.overall = calculatePlayerOverall(player);
-                updateMarketValue(player);
-            }
         }
     }
 }
