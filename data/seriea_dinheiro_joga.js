@@ -1,4 +1,4 @@
-Object.assign(leaguesData, {
+Object.assign(playerBioData, {
     "brasileirao_a": {
         "name": "Brasileirão Série A",
         "logo": "logo_brasileirao_a.png",
