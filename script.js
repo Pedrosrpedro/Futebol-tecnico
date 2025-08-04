@@ -1154,7 +1154,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             }
         }
-    });
-
+    
     observer.observe(document.getElementById('main-game-screen'), { attributes: true });
 });
