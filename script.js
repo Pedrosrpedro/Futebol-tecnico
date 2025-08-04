@@ -238,6 +238,51 @@ function initializeAllPlayerData() {
     }
 }
 
+// --- Funções de Progressão, Aposentadoria e Valor ---
+
+// NOVA FUNÇÃO para converter valores como "€15M" ou "€800k" para número
+function parseMarketValue(valueStr) {
+    if (typeof valueStr !== 'string') return 0;
+    const value = valueStr.replace('€', '').trim();
+    const multiplier = value.slice(-1).toLowerCase();
+    const numberPart = parseFloat(value.slice(0, -1));
+
+    if (multiplier === 'm') {
+        return numberPart * 1000000;
+    } else if (multiplier === 'k') {
+        return numberPart * 1000;
+    }
+    return parseFloat(value);
+}
+
+// NOVA FUNÇÃO para juntar os dados dos jogadores
+function mergePlayerData() {
+    for (const leagueId in leaguesData) {
+        if (!playerBioData[leagueId]) continue;
+
+        const leagueTeams = leaguesData[leagueId].teams;
+        const bioTeams = playerBioData[leagueId].teams;
+
+        for (const team of leagueTeams) {
+            const bioTeam = bioTeams.find(t => t.name === team.name);
+            if (!bioTeam) continue;
+
+            for (const player of team.players) {
+                const bioPlayer = bioTeam.players.find(p => p.name === player.name);
+                if (bioPlayer) {
+                    player.age = bioPlayer.age;
+                    // Converte o valor de mercado do formato string para número
+                    // e multiplica pela cotação do Euro para ter o valor base em BRL.
+                    player.marketValue = parseMarketValue(bioPlayer.marketValue) * currencyRates.EUR;
+                }
+            }
+        }
+    }
+}
+
+
+function calculatePlayerOverall(player) {
+
 // --- Funções Financeiras e de Táticas ---
 function initializeClubFinances() { const clubFinancialData = typeof estimativaVerbaMedia2025 !== 'undefined' ? estimativaVerbaMedia2025.find(c => c.time === gameState.userClub.name) : null; let initialBudget = 5 * 1000000; if (clubFinancialData) { initialBudget = clubFinancialData.verba_media_estimada_milhoes_reais * 1000000; } gameState.clubFinances.balance = 0; gameState.clubFinances.history = []; addTransaction(initialBudget, "Verba inicial da temporada"); }
 function addTransaction(amount, description) { gameState.clubFinances.history.unshift({ date: new Date(gameState.currentDate), description, amount }); gameState.clubFinances.balance += amount; }
