@@ -219,20 +219,21 @@ function updatePlayerDevelopment() {
     }
 }
 
-// CÓDIGO NOVO E CORRIGIDO (PARA USAR)
+// ESTA É A VERSÃO CORRETA DA FUNÇÃO
 function initializeAllPlayerData() {
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
             for (const player of team.players) {
-                // Adicionamos esta condição: só calcula se 'overall' não existir no arquivo
+                // Só calcula se o 'overall' não existir no arquivo
                 if (player.overall === undefined) {
                     player.overall = calculatePlayerOverall(player);
                 }
                 
-                // Adicionamos esta condição: só calcula se 'marketValue' não existir no arquivo
+                // Só calcula se o 'marketValue' não existir no arquivo
                 if (player.marketValue === undefined) {
                     updateMarketValue(player);
                 }
+            }
         }
     }
 }
