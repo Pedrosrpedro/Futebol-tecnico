@@ -76,8 +76,9 @@ function showMainContent(contentId) {
     gameState.currentMainContent = contentId;
 
     if (contentId === 'squad-content') loadSquadTable();
+    if (contentId === 'contracts-content') displayContractsScreen();
     if (contentId === 'tactics-content') loadTacticsScreen();
-    if (contentId === 'development-content') displayDevelopmentScreen(); // NOVA SEÇÃO
+    if (contentId === 'development-content') displayDevelopmentScreen();
     if (contentId === 'calendar-content') {
         gameState.calendarDisplayDate = new Date(gameState.currentDate);
         updateCalendar();
@@ -107,7 +108,7 @@ function startGame(team) {
     gameState.userClub = team;
 
     mergePlayerData();
-    mergePlayerContractData(); // NOVA FUNÇÃO PARA CONTRATOS
+    mergePlayerContractData();
 
     initializeAllPlayerData();
     initializeClubFinances();
@@ -155,7 +156,6 @@ function initializeSeason() {
 
     gameState.currentDate = new Date(`${year}-01-01T12:00:00Z`);
 
-    // CORREÇÃO: Atualiza as views para a liga atual do time
     gameState.matchesView.leagueId = gameState.currentLeagueId;
     gameState.tableView.leagueId = gameState.currentLeagueId;
 
@@ -215,14 +215,13 @@ function generateNewPlayer(team) {
             defending: 40 + Math.floor(Math.random() * 25),
             physical: 40 + Math.floor(Math.random() * 25),
         },
-        contractUntil: 36 + Math.floor(Math.random() * 25), // Contrato inicial
+        contractUntil: 36 + Math.floor(Math.random() * 25),
     };
     newPlayer.overall = calculatePlayerOverall(newPlayer);
     updateMarketValue(newPlayer);
     return newPlayer;
 }
 
-// CORREÇÃO APLICADA: Lógica de desenvolvimento refinada
 function updatePlayerDevelopment() {
     console.log("Processando desenvolvimento de jogadores para a nova temporada...");
     for (const leagueId in leaguesData) {
@@ -234,34 +233,32 @@ function updatePlayerDevelopment() {
             for (let i = 0; i < team.players.length; i++) {
                 const player = team.players[i];
                 player.age++;
-                if(player.contractUntil) player.contractUntil -= 12; // Deduz 12 meses do contrato
+                if(player.contractUntil) player.contractUntil -= 12;
 
-                // Aposentadoria
                 if (player.age >= 35) {
-                    const retirementChance = (player.age - 34) / (46 - 34); // Aumenta a chance a cada ano
+                    const retirementChance = (player.age - 34) / (46 - 34);
                     if (Math.random() < retirementChance || player.age > 46) {
                         playersToRemove.push(player.name);
                         playersToAdd.push(generateNewPlayer(team));
                         addNews("Fim de uma Era", `${player.name} (${player.age} anos) do ${team.name} anunciou sua aposentadoria.`, team.name === gameState.userClub.name, team.name);
-                        continue; // Pula para o próximo jogador
+                        continue;
                     }
                 }
 
-                // Lógica de Progressão/Regressão
-                if (player.age < 24) { // Grande potencial
+                if (player.age < 24) {
                     for (const attr in player.attributes) {
-                        const gain = Math.floor(Math.random() * 4); // 0 a 3
+                        const gain = Math.floor(Math.random() * 4);
                         player.attributes[attr] = Math.min(99, player.attributes[attr] + gain);
                     }
-                } else if (player.age < 31) { // Auge e manutenção
+                } else if (player.age < 31) {
                     for (const attr in player.attributes) {
-                        const gain = Math.floor(Math.random() * 2); // 0 a 1
+                        const gain = Math.floor(Math.random() * 2);
                         player.attributes[attr] = Math.min(99, player.attributes[attr] + gain);
                     }
-                } else { // Declínio
+                } else {
                     for (const attr in player.attributes) {
-                        const baseLoss = player.age > 34 ? 2 : 1; // Perde mais depois dos 34
-                        const loss = Math.floor(Math.random() * (baseLoss + 1)); // 0-1 ou 0-2
+                        const baseLoss = player.age > 34 ? 2 : 1;
+                        const loss = Math.floor(Math.random() * (baseLoss + 1));
                         player.attributes[attr] = Math.max(20, player.attributes[attr] - loss);
                     }
                 }
@@ -327,10 +324,8 @@ function mergePlayerData() {
     }
 }
 
-// NOVA FUNÇÃO: Juntar dados de contrato
 function mergePlayerContractData() {
     for (const leagueId in leaguesData) {
-        // Verifica se há dados de contrato para esta liga
         if (!playerBioData[leagueId] || !playerBioData[leagueId].teams.some(t => t.players.some(p => p.contractUntil))) {
             continue;
         }
@@ -345,7 +340,7 @@ function mergePlayerContractData() {
             for (const player of team.players) {
                 const bioPlayer = bioTeam.players.find(p => p.name === player.name && p.contractUntil);
                 if (bioPlayer) {
-                    player.contractUntil = bioPlayer.contractUntil; // Adiciona a propriedade em meses
+                    player.contractUntil = bioPlayer.contractUntil;
                 }
             }
         }
@@ -447,7 +442,7 @@ function formatContract(months) {
         if (years > 0) result += ' e ';
         result += `${remainingMonths} mes${remainingMonths > 1 ? 'es' : ''}`;
     }
-    return result;
+    return result || "Expirando";
 }
 
 function loadSquadTable() {
@@ -457,7 +452,7 @@ function loadSquadTable() {
     const sortedPlayers = [...gameState.userClub.players].sort((a, b) => {
         return positionOrder.indexOf(a.position) - positionOrder.indexOf(b.position);
     });
-    // NOVA COLUNA DE CONTRATO
+    
     let tableHTML = `<table><thead><tr><th>Nome</th><th>Idade</th><th>Pos.</th><th>GERAL</th><th>Valor</th><th>Contrato</th></tr></thead><tbody>`;
     for (const player of sortedPlayers) {
         tableHTML += `
@@ -479,28 +474,24 @@ function updateLeagueTable(leagueId) { const container = document.getElementById
 function renderTable(tableData, startPos = 1) { let html = `<table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>`; tableData.forEach((team, index) => { const isUserTeam = team.name === gameState.userClub.name; html += `<tr class="${isUserTeam ? 'user-team-row' : ''}"><td>${index + startPos}</td><td>${team.name}</td><td>${team.points}</td><td>${team.played}</td><td>${team.wins}</td><td>${team.draws}</td><td>${team.losses}</td><td>${team.goalsFor}</td><td>${team.goalsAgainst}</td><td>${team.goalDifference}</td></tr>`; }); html += `</tbody></table>`; return html; }
 function updateCalendar() { const container = document.getElementById('calendar-container'); if (!container || !gameState.calendarDisplayDate) return; const date = gameState.calendarDisplayDate; const month = date.getMonth(); const year = date.getFullYear(); const firstDay = new Date(year, month, 1); const lastDay = new Date(year, month + 1, 0); let html = `<div class="calendar-header"><button id="prev-month-btn">◀</button><h3>${date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3><button id="next-month-btn">▶</button></div><div class="calendar-grid"><div class="calendar-weekday">Dom</div><div class="calendar-weekday">Seg</div><div class="calendar-weekday">Ter</div><div class="calendar-weekday">Qua</div><div class="calendar-weekday">Qui</div><div class="calendar-weekday">Sex</div><div class="calendar-weekday">Sáb</div>`; for (let i = 0; i < firstDay.getDay(); i++) { html += `<div class="calendar-day other-month"></div>`; } for (let i = 1; i <= lastDay.getDate(); i++) { const loopDate = new Date(year, month, i); const isCurrent = isSameDay(loopDate, gameState.currentDate); const matchOnThisDay = gameState.allMatches.find(m => isSameDay(new Date(m.date), loopDate) && (m.home.name === gameState.userClub.name || m.away.name === gameState.userClub.name)); let dayClasses = 'calendar-day'; let dayContent = `<span class="day-number">${i}</span>`; if (matchOnThisDay) { dayClasses += ' match-day'; const opponent = matchOnThisDay.home.name === gameState.userClub.name ? `vs ${matchOnThisDay.away.name}` : `@ ${matchOnThisDay.home.name}`; dayContent += `<div class="match-details">${opponent}</div>`; } if (isCurrent) { dayClasses += ' current-day'; } html += `<div class="${dayClasses}" data-date="${loopDate.toISOString().split('T')[0]}">${dayContent}</div>`; } html += '</div>'; container.innerHTML = html; document.getElementById('prev-month-btn').addEventListener('click', () => { if (!gameState.isOnHoliday) { gameState.calendarDisplayDate.setMonth(gameState.calendarDisplayDate.getMonth() - 1); updateCalendar(); } }); document.getElementById('next-month-btn').addEventListener('click', () => { if (!gameState.isOnHoliday) { gameState.calendarDisplayDate.setMonth(gameState.calendarDisplayDate.getMonth() + 1); updateCalendar(); } }); }
 function displayRound(leagueId, roundNumber) { const container = document.getElementById('round-matches-container'); const roundDisplay = document.getElementById('round-display'); const prevBtn = document.getElementById('prev-round-btn'); const nextBtn = document.getElementById('next-round-btn'); const leagueState = gameState.leagueStates[leagueId]; if (!leagueState) return; const roundMatches = leagueState.schedule.filter(m => m.round === roundNumber); roundDisplay.innerText = `Rodada ${roundNumber}`; container.innerHTML = ''; if (!roundMatches || roundMatches.length === 0) { container.innerHTML = "<p>Nenhuma partida encontrada para esta rodada.</p>"; return; } let roundHTML = ''; for (const match of roundMatches) { const score = match.status === 'played' ? `${match.homeScore} - ${match.awayScore}` : 'vs'; roundHTML += ` <div class="match-card"> <div class="match-card-team home"> <span>${match.home.name}</span> <img src="images/${match.home.logo}" alt="${match.home.name}"> </div> <div class="match-score">${score}</div> <div class="match-card-team away"> <img src="images/${match.away.logo}" alt="${match.away.name}"> <span>${match.away.name}</span> </div> </div> `; } container.innerHTML = roundHTML; prevBtn.disabled = roundNumber === 1; const totalRounds = leagueState.schedule.length > 0 ? Math.max(...leagueState.schedule.map(m => m.round).filter(r => typeof r === 'number')) : 0; nextBtn.disabled = roundNumber >= totalRounds; }
-
-// CORREÇÃO APLICADA: Lógica de avanço de dia mais robusta
 function advanceDay() {
     const today = new Date(gameState.currentDate);
-    
-    // Checa se hoje é 31 de Dezembro
+
     if (today.getMonth() === 11 && today.getDate() === 31) {
         const nextDay = new Date(today);
-        nextDay.setDate(nextDay.getDate() + 1); // Avança para 1 de Janeiro
+        nextDay.setDate(nextDay.getDate() + 1);
         gameState.currentDate = nextDay;
 
         gameState.season++;
         processPromotionRelegation();
-        initializeSeason(); // Inicia a nova temporada
+        initializeSeason();
         return;
     }
-    
-    // Avanço de dia normal
+
     const nextDay = new Date(today);
     nextDay.setDate(nextDay.getDate() + 1);
     gameState.currentDate = nextDay;
-    
+
     simulateDayMatches();
     Object.keys(gameState.leagueStates).forEach(id => updateLeagueTable(id));
     updateContinueButton();
@@ -1231,7 +1222,46 @@ function findTeamInLeagues(teamName, isPlayerLookup = false) {
     }
     return null; 
 }
-function getFullSeasonTable(leagueId) { const fullTable = initializeLeagueTable(leaguesData[leagueId].teams); const matches = gameState.leagueStates[leagueId].schedule.filter(m => m.status === 'played'); for (const match of matches) { const homeTeam = fullTable.find(t => t.name === match.home.name); const awayTeam = fullTable.find(t => t.name === match.away.name); if (!homeTeam || !awayTeam) continue; homeTeam.played++; awayTeam.played++; homeTeam.goalsFor += match.homeScore; homeTeam.goalsAgainst += match.awayScore; awayTeam.goalsFor += match.awayScore; awayTeam.goalsAgainst += match.homeScore; homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst; awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst; if (match.homeScore > match.awayScore) { homeTeam.wins++; homeTeam.points += 3; awayTeam.losses++; } else if (match.awayScore > match.homeScore) { awayTeam.wins++; awayTeam.points += 3; homeTeam.losses++; } else { homeTeam.draws++; awayTeam.draws++; homeTeam.points += 1; awayTeam.points += 1; } } return fullTable.sort((a, b) => { for (const key of leaguesData[leagueId].leagueInfo.tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); }
+function getFullSeasonTable(leagueId) {
+    if (!leaguesData[leagueId]) return []; // Adiciona verificação
+    const fullTable = initializeLeagueTable(leaguesData[leagueId].teams);
+    if (!gameState.leagueStates[leagueId]) return fullTable; // Adiciona verificação
+    const matches = gameState.leagueStates[leagueId].schedule.filter(m => m.status === 'played');
+    for (const match of matches) {
+        const homeTeam = fullTable.find(t => t.name === match.home.name);
+        const awayTeam = fullTable.find(t => t.name === match.away.name);
+        if (!homeTeam || !awayTeam) continue;
+        homeTeam.played++;
+        awayTeam.played++;
+        homeTeam.goalsFor += match.homeScore;
+        homeTeam.goalsAgainst += match.awayScore;
+        awayTeam.goalsFor += match.awayScore;
+        awayTeam.goalsAgainst += match.homeScore;
+        homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst;
+        awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst;
+        if (match.homeScore > match.awayScore) {
+            homeTeam.wins++;
+            homeTeam.points += 3;
+            awayTeam.losses++;
+        } else if (match.awayScore > match.homeScore) {
+            awayTeam.wins++;
+            awayTeam.points += 3;
+            homeTeam.losses++;
+        } else {
+            homeTeam.draws++;
+            awayTeam.draws++;
+            homeTeam.points += 1;
+            awayTeam.points += 1;
+        }
+    }
+    return fullTable.sort((a, b) => {
+        for (const key of leaguesData[leagueId].leagueInfo.tiebreakers) {
+            if (a[key] > b[key]) return -1;
+            if (a[key] < b[key]) return 1;
+        }
+        return 0;
+    });
+}
 function populateLeagueSelectors() { const selectors = [document.getElementById('league-table-selector'), document.getElementById('matches-league-selector')]; selectors.forEach(selector => { if (!selector) return; selector.innerHTML = ''; for (const leagueId in leaguesData) { const option = document.createElement('option'); option.value = leagueId; option.innerText = leaguesData[leagueId].name; selector.appendChild(option); } selector.value = gameState.currentLeagueId; }); }
 function findCurrentRound(leagueId) { if (!gameState.leagueStates[leagueId]) return 1; const schedule = gameState.leagueStates[leagueId].schedule; const lastPlayedMatch = [...schedule].reverse().find(m => m.status === 'played' && new Date(m.date) <= gameState.currentDate && typeof m.round === 'number'); return lastPlayedMatch ? lastPlayedMatch.round + 1 : 1; }
 function openFriendlyModal() { const selector = document.getElementById('friendly-opponent-selector'); selector.innerHTML = ''; let allTeams = []; for (const leagueId in leaguesData) { allTeams.push(...leaguesData[leagueId].teams); } allTeams.filter(team => team.name !== gameState.userClub.name).sort((a,b) => a.name.localeCompare(b.name)).forEach(team => { const option = document.createElement('option'); option.value = team.name; option.innerText = team.name; selector.appendChild(option); }); document.getElementById('schedule-friendly-modal').classList.add('active'); }
@@ -1239,7 +1269,45 @@ function scheduleFriendlyMatch() { document.getElementById('schedule-friendly-mo
 function isDateAvailableForTeam(date, teamName) { return !gameState.allMatches.some(match => (match.home.name === teamName || match.away.name === teamName) && isSameDay(new Date(match.date), date)); }
 
 
-// --- NOVO: Seção de Desenvolvimento de Jogadores ---
+// --- NOVO: Seção de Contratos e Desenvolvimento ---
+function displayContractsScreen() {
+    const container = document.getElementById('contracts-content');
+    container.innerHTML = '<h3>Situação Contratual do Elenco</h3>';
+    
+    const tableContainer = document.createElement('div');
+    tableContainer.className = 'table-container';
+
+    // Ordena os jogadores pelo tempo de contrato restante (menor primeiro)
+    const sortedPlayers = [...gameState.userClub.players].sort((a, b) => {
+        const contractA = a.contractUntil || 999;
+        const contractB = b.contractUntil || 999;
+        return contractA - contractB;
+    });
+
+    let tableHTML = `<table><thead><tr><th>Nome</th><th>Idade</th><th>Pos.</th><th>GERAL</th><th>Contrato Restante</th><th>Ações</th></tr></thead><tbody>`;
+    for (const player of sortedPlayers) {
+        let contractClass = '';
+        if (player.contractUntil <= 6) {
+            contractClass = 'negative'; // Vermelho para 6 meses ou menos
+        } else if (player.contractUntil <= 12) {
+            contractClass = 'stagnating-dot'; // Amarelo/cinza para 1 ano ou menos
+        }
+
+        tableHTML += `
+            <tr>
+                <td>${player.name}</td>
+                <td>${player.age}</td>
+                <td>${player.position}</td>
+                <td><b>${player.overall}</b></td>
+                <td class="${contractClass}">${formatContract(player.contractUntil) || 'N/A'}</td>
+                <td><button disabled>Renovar</button> <button disabled class="secondary">Rescindir</button></td>
+            </tr>`;
+    }
+    tableHTML += `</tbody></table>`;
+    tableContainer.innerHTML = tableHTML;
+    container.appendChild(tableContainer);
+}
+
 function predictPlayerDevelopment(player) {
     const originalAttributes = { ...player.attributes };
     const originalOverall = player.overall;
@@ -1247,13 +1315,13 @@ function predictPlayerDevelopment(player) {
 
     if (player.age < 24) {
         for (const attr in originalAttributes) {
-            const gain = Math.floor(1 + Math.random() * 2); // Previsão média de 1-2 pontos
+            const gain = Math.floor(1 + Math.random() * 2); 
             attributeChanges[attr] = `+${gain}`;
             originalAttributes[attr] += gain;
         }
     } else if (player.age < 31) {
         for (const attr in originalAttributes) {
-            if(Math.random() > 0.5) { // 50% de chance de evoluir
+            if(Math.random() > 0.5) { 
                 const gain = 1;
                 attributeChanges[attr] = `+${gain}`;
                 originalAttributes[attr] += gain;
@@ -1262,7 +1330,7 @@ function predictPlayerDevelopment(player) {
     } else {
         for (const attr in originalAttributes) {
             const baseLoss = player.age > 34 ? 2 : 1;
-            const loss = Math.floor(1 + Math.random() * baseLoss); // Previsão média de 1-2 pontos
+            const loss = Math.floor(1 + Math.random() * baseLoss); 
             attributeChanges[attr] = `-${loss}`;
             originalAttributes[attr] -= loss;
         }
