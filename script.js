@@ -222,6 +222,7 @@ function generateNewPlayer(team) {
     return newPlayer;
 }
 
+// CORREÇÃO: LÓGICA DE DESENVOLVIMENTO REFINADA
 function updatePlayerDevelopment() {
     console.log("Processando desenvolvimento de jogadores para a nova temporada...");
     for (const leagueId in leaguesData) {
@@ -235,40 +236,29 @@ function updatePlayerDevelopment() {
                 player.age++;
                 if(player.contractUntil) player.contractUntil -= 12;
 
-                if (player.age >= 35) {
-                    const retirementChance = (player.age - 34) / (46 - 34);
-                    if (Math.random() < retirementChance || player.age > 46) {
-                        playersToRemove.push(player.name);
-                        playersToAdd.push(generateNewPlayer(team));
-                        addNews("Fim de uma Era", `${player.name} (${player.age} anos) do ${team.name} anunciou sua aposentadoria.`, team.name === gameState.userClub.name, team.name);
-                        continue;
-                    }
+                if (player.age >= 35 && Math.random() < (player.age - 34) / 10) { // Chance de aposentadoria aumenta com a idade
+                    playersToRemove.push(player.name);
+                    playersToAdd.push(generateNewPlayer(team));
+                    addNews("Fim de uma Era", `${player.name} (${player.age} anos) do ${team.name} anunciou sua aposentadoria.`, team.name === gameState.userClub.name, team.name);
+                    continue;
                 }
 
-                // Lógica de Progressão/Regressão Refinada
+                const attrs = player.attributes;
                 if (player.age < 24) { // Potencial alto
-                    for (const attr in player.attributes) {
-                        const gain = Math.floor(Math.random() * 4); // 0-3
-                        player.attributes[attr] = Math.min(99, player.attributes[attr] + gain);
-                    }
+                    Object.keys(attrs).forEach(attr => { attrs[attr] = Math.min(99, attrs[attr] + (1 + Math.floor(Math.random() * 3))); }); // Ganho de 1-3
                 } else if (player.age < 30) { // Auge
-                    for (const attr in player.attributes) {
-                        const gain = Math.floor(Math.random() * 2); // 0-1
-                        player.attributes[attr] = Math.min(99, player.attributes[attr] + gain);
-                    }
-                } else if (player.age < 33) { // Início do declínio
-                    for (const attr in player.attributes) {
-                         if (Math.random() < 0.3) { // 30% de chance de perder 1 ponto
-                            player.attributes[attr] = Math.max(20, player.attributes[attr] - 1);
-                        }
-                    }
+                    Object.keys(attrs).forEach(attr => { attrs[attr] = Math.min(99, attrs[attr] + Math.floor(Math.random() * 2)); }); // Ganho de 0-1
+                } else if (player.age < 33) { // Estabilidade
+                    Object.keys(attrs).forEach(attr => { if (Math.random() < 0.2) attrs[attr] += (Math.random() < 0.5 ? 1 : -1); }); // Pequena chance de variar
                 } else { // Declínio
-                    for (const attr in player.attributes) {
-                        const loss = Math.floor(Math.random() * 3); // 0-2
-                        player.attributes[attr] = Math.max(20, player.attributes[attr] - loss);
-                    }
+                    Object.keys(attrs).forEach(attr => {
+                        let loss = Math.floor(Math.random() * 2); // Perda de 0-1
+                        if ((attr === 'pace' || attr === 'physical') && player.age >= 35) {
+                            loss += Math.floor(Math.random() * 2); // Perda maior em atributos físicos
+                        }
+                        attrs[attr] = Math.max(20, attrs[attr] - loss);
+                    });
                 }
-
                 player.overall = calculatePlayerOverall(player);
                 updateMarketValue(player);
             }
@@ -277,6 +267,7 @@ function updatePlayerDevelopment() {
         }
     }
 }
+
 
 function initializeAllPlayerData() {
     for (const leagueId in leaguesData) {
@@ -481,24 +472,33 @@ function updateLeagueTable(leagueId) { const container = document.getElementById
 function renderTable(tableData, startPos = 1) { let html = `<table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>`; tableData.forEach((team, index) => { const isUserTeam = team.name === gameState.userClub.name; html += `<tr class="${isUserTeam ? 'user-team-row' : ''}"><td>${index + startPos}</td><td>${team.name}</td><td>${team.points}</td><td>${team.played}</td><td>${team.wins}</td><td>${team.draws}</td><td>${team.losses}</td><td>${team.goalsFor}</td><td>${team.goalsAgainst}</td><td>${team.goalDifference}</td></tr>`; }); html += `</tbody></table>`; return html; }
 function updateCalendar() { const container = document.getElementById('calendar-container'); if (!container || !gameState.calendarDisplayDate) return; const date = gameState.calendarDisplayDate; const month = date.getMonth(); const year = date.getFullYear(); const firstDay = new Date(year, month, 1); const lastDay = new Date(year, month + 1, 0); let html = `<div class="calendar-header"><button id="prev-month-btn">◀</button><h3>${date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3><button id="next-month-btn">▶</button></div><div class="calendar-grid"><div class="calendar-weekday">Dom</div><div class="calendar-weekday">Seg</div><div class="calendar-weekday">Ter</div><div class="calendar-weekday">Qua</div><div class="calendar-weekday">Qui</div><div class="calendar-weekday">Sex</div><div class="calendar-weekday">Sáb</div>`; for (let i = 0; i < firstDay.getDay(); i++) { html += `<div class="calendar-day other-month"></div>`; } for (let i = 1; i <= lastDay.getDate(); i++) { const loopDate = new Date(year, month, i); const isCurrent = isSameDay(loopDate, gameState.currentDate); const matchOnThisDay = gameState.allMatches.find(m => isSameDay(new Date(m.date), loopDate) && (m.home.name === gameState.userClub.name || m.away.name === gameState.userClub.name)); let dayClasses = 'calendar-day'; let dayContent = `<span class="day-number">${i}</span>`; if (matchOnThisDay) { dayClasses += ' match-day'; const opponent = matchOnThisDay.home.name === gameState.userClub.name ? `vs ${matchOnThisDay.away.name}` : `@ ${matchOnThisDay.home.name}`; dayContent += `<div class="match-details">${opponent}</div>`; } if (isCurrent) { dayClasses += ' current-day'; } html += `<div class="${dayClasses}" data-date="${loopDate.toISOString().split('T')[0]}">${dayContent}</div>`; } html += '</div>'; container.innerHTML = html; document.getElementById('prev-month-btn').addEventListener('click', () => { if (!gameState.isOnHoliday) { gameState.calendarDisplayDate.setMonth(gameState.calendarDisplayDate.getMonth() - 1); updateCalendar(); } }); document.getElementById('next-month-btn').addEventListener('click', () => { if (!gameState.isOnHoliday) { gameState.calendarDisplayDate.setMonth(gameState.calendarDisplayDate.getMonth() + 1); updateCalendar(); } }); }
 function displayRound(leagueId, roundNumber) { const container = document.getElementById('round-matches-container'); const roundDisplay = document.getElementById('round-display'); const prevBtn = document.getElementById('prev-round-btn'); const nextBtn = document.getElementById('next-round-btn'); const leagueState = gameState.leagueStates[leagueId]; if (!leagueState) return; const roundMatches = leagueState.schedule.filter(m => m.round === roundNumber); roundDisplay.innerText = `Rodada ${roundNumber}`; container.innerHTML = ''; if (!roundMatches || roundMatches.length === 0) { container.innerHTML = "<p>Nenhuma partida encontrada para esta rodada.</p>"; return; } let roundHTML = ''; for (const match of roundMatches) { const score = match.status === 'played' ? `${match.homeScore} - ${match.awayScore}` : 'vs'; roundHTML += ` <div class="match-card"> <div class="match-card-team home"> <span>${match.home.name}</span> <img src="images/${match.home.logo}" alt="${match.home.name}"> </div> <div class="match-score">${score}</div> <div class="match-card-team away"> <img src="images/${match.away.logo}" alt="${match.away.name}"> <span>${match.away.name}</span> </div> </div> `; } container.innerHTML = roundHTML; prevBtn.disabled = roundNumber === 1; const totalRounds = leagueState.schedule.length > 0 ? Math.max(...leagueState.schedule.map(m => m.round).filter(r => typeof r === 'number')) : 0; nextBtn.disabled = roundNumber >= totalRounds; }
+
+function triggerNewSeason() {
+    gameState.season++;
+    processPromotionRelegation(); // Isto já chama updatePlayerDevelopment
+    initializeSeason();
+}
+
 function advanceDay() {
     const today = new Date(gameState.currentDate);
+    const nextDay = new Date(today);
+    nextDay.setDate(nextDay.getDate() + 1);
 
-    if (today.getMonth() === 11 && today.getDate() === 31) {
-        const nextDay = new Date(today);
-        nextDay.setDate(nextDay.getDate() + 1);
+    // Transição de ano
+    if (nextDay.getFullYear() > today.getFullYear()) {
         gameState.currentDate = nextDay;
-
-        gameState.season++;
-        processPromotionRelegation();
-        initializeSeason();
+        triggerNewSeason();
         return;
     }
 
-    const nextDay = new Date(today);
-    nextDay.setDate(nextDay.getDate() + 1);
+    // Avanço de dia normal
     gameState.currentDate = nextDay;
-
+    
+    // Finalização da temporada em 31 de Dezembro
+    if (today.getMonth() === 11 && today.getDate() === 31) {
+        handleEndOfSeason();
+    }
+    
     simulateDayMatches();
     Object.keys(gameState.leagueStates).forEach(id => updateLeagueTable(id));
     updateContinueButton();
@@ -1150,10 +1150,7 @@ function showPostMatchReport() {
 function checkSeasonEvents() {
     if (gameState.isOffSeason) return;
 
-    if (gameState.lastMatchDateOfYear && gameState.currentDate > gameState.lastMatchDateOfYear) {
-        handleEndOfSeason();
-        return;
-    }
+    // A verificação de fim de temporada agora é feita em `advanceDay` no dia 31/12
 
     if (gameState.currentLeagueId === 'brasileirao_c') {
         const leagueState = gameState.leagueStates['brasileirao_c'];
@@ -1173,7 +1170,7 @@ function handleEndOfSerieCFirstPhase() { const leagueState = gameState.leagueSta
 function handleEndOfSerieCSecondPhase() { const leagueState = gameState.leagueStates['brasileirao_c']; if (leagueState.serieCState.phase !== 2) return; leagueState.serieCState.phase = 3; const tiebreakers = leaguesData.brasileirao_c.leagueInfo.tiebreakers; const groupA_table = leagueState.table.filter(t => leagueState.serieCState.groups.A.includes(t.name)).sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); const groupB_table = leagueState.table.filter(t => leagueState.serieCState.groups.B.includes(t.name)).sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); const finalists = [groupA_table[0], groupB_table[0]]; leagueState.serieCState.finalists = finalists.map(t => t.name); const promoted = [groupA_table[0], groupA_table[1], groupB_table[0], groupB_table[1]]; const promotedNames = promoted.map(t => t.name).join(', '); addNews("Acesso à Série B!", `Parabéns a ${promotedNames} pelo acesso à Série B!`, promoted.some(t => t.name === gameState.userClub.name), promoted[0].name); const finalistData = finalists.map(t => findTeamInLeagues(t.name)); const lastRoundPhase2 = 25; const lastMatchDate = new Date(Math.max(...leagueState.schedule.filter(m => m.round > 19 && m.round <= lastRoundPhase2).map(m => new Date(m.date)))); const finalStartDate = new Date(lastMatchDate); finalStartDate.setDate(finalStartDate.getDate() + 7); const finalMatches = [ { home: finalistData[0], away: finalistData[1], date: new Date(finalStartDate).toISOString(), status: 'scheduled', round: 26 }, { home: finalistData[1], away: finalistData[0], date: new Date(new Date(finalStartDate).setDate(finalStartDate.getDate() + 7)).toISOString(), status: 'scheduled', round: 27 } ]; leagueState.schedule.push(...finalMatches); gameState.allMatches.push(...finalMatches); gameState.allMatches.sort((a, b) => new Date(a.date) - new Date(b.date)); findNextUserMatch(); addNews(`Final da Série C: ${finalists[0].name} x ${finalists[1].name}!`, "Os campeões de cada grupo disputam o título.", finalists.some(t => t.name === gameState.userClub.name), finalists[0].name); }
 function handleEndOfSeason() {
     if (gameState.isOnHoliday) stopHoliday();
-    if(gameState.isOffSeason) return; // Previne múltiplas execuções
+    if(gameState.isOffSeason) return;
 
     awardPrizeMoney();
     gameState.isOffSeason = true;
@@ -1192,10 +1189,8 @@ function handleEndOfSeason() {
 }
 function awardPrizeMoney() {
     const userClubName = gameState.userClub.name;
-    const userLeagueId = gameState.currentLeagueId; // Liga que o time JOGOU
+    const userLeagueId = gameState.currentLeagueId;
     const leagueState = gameState.leagueStates[userLeagueId];
-
-    console.log(`[AWARD] Tentando dar premiação. Clube: ${userClubName}, Liga: ${userLeagueId}`);
 
     if (!leagueState) {
         console.error("[AWARD] Erro: Não foi possível encontrar o estado da liga para a premiação.");
@@ -1210,7 +1205,6 @@ function awardPrizeMoney() {
         if (prizeMoney.brasileirao_a[position]) {
             const amount = prizeMoney.brasileirao_a[position] * 1000000;
             addTransaction(amount, `Premiação (${position}º lugar) - Série A`);
-            console.log(`[AWARD] Posição: ${position}, Prêmio: ${amount}`);
         }
     } else if (userLeagueId === 'brasileirao_b') {
         const table = getFullSeasonTable('brasileirao_b');
@@ -1220,7 +1214,6 @@ function awardPrizeMoney() {
         if (position <= 4 && prizeMoney.brasileirao_b[position]) {
             const amount = prizeMoney.brasileirao_b[position] * 1000000;
             addTransaction(amount, `Premiação (Acesso) - Série B`);
-            console.log(`[AWARD] Posição: ${position}, Prêmio: ${amount}`);
         }
     } else if (userLeagueId === 'brasileirao_c') {
         addTransaction(prizeMoney.brasileirao_c.participation_fee * 1000000, `Cota de participação - Série C`);
@@ -1327,8 +1320,8 @@ function displayContractsScreen() {
     tableContainer.className = 'table-container';
 
     const sortedPlayers = [...gameState.userClub.players].sort((a, b) => {
-        const contractA = a.contractUntil || 999;
-        const contractB = b.contractUntil || 999;
+        const contractA = a.contractUntil === undefined ? 999 : a.contractUntil;
+        const contractB = b.contractUntil === undefined ? 999 : b.contractUntil;
         return contractA - contractB;
     });
 
@@ -1338,7 +1331,7 @@ function displayContractsScreen() {
         if (player.contractUntil <= 6) {
             contractClass = 'negative';
         } else if (player.contractUntil <= 12) {
-            contractClass = 'text-secondary';
+            contractClass = 'text-secondary'; // Usando uma classe mais genérica
         }
 
         tableHTML += `
@@ -1361,36 +1354,40 @@ function predictPlayerDevelopment(player) {
     const originalOverall = player.overall;
     let attributeChanges = {};
 
-    if (player.age < 24) {
-        for (const attr in originalAttributes) {
-            const gain = Math.floor(1 + Math.random() * 2); 
-            attributeChanges[attr] = `+${gain}`;
-            originalAttributes[attr] += gain;
+    const devLogic = getDevelopmentLogic(player.age);
+
+    Object.keys(originalAttributes).forEach(attr => {
+        const change = devLogic(attr);
+        if (change !== 0) {
+            attributeChanges[attr] = (change > 0 ? '+' : '') + change;
+            originalAttributes[attr] += change;
         }
-    } else if (player.age < 30) {
-        for (const attr in originalAttributes) {
-            if(Math.random() > 0.5) { 
-                const gain = 1;
-                attributeChanges[attr] = `+${gain}`;
-                originalAttributes[attr] += gain;
-            }
-        }
-    } else {
-        for (const attr in originalAttributes) {
-            const baseLoss = player.age > 33 ? 2 : 1;
-            const loss = Math.floor(Math.random() * (baseLoss + 1)); 
-            if(loss > 0) {
-                attributeChanges[attr] = `-${loss}`;
-                originalAttributes[attr] -= loss;
-            }
-        }
-    }
+    });
 
     const newOverall = calculatePlayerOverall({ attributes: originalAttributes });
     const overallChange = newOverall - originalOverall;
 
     return { overallChange, attributeChanges };
 }
+
+function getDevelopmentLogic(age) {
+    if (age < 24) { // Potencial alto
+        return () => 1 + Math.floor(Math.random() * 3); // Garante ganho de 1 a 3
+    } else if (age < 30) { // Auge
+        return () => Math.floor(Math.random() * 2); // Ganho de 0 a 1
+    } else if (age < 33) { // Estabilidade
+        return () => (Math.random() < 0.2) ? (Math.random() < 0.5 ? 1 : -1) : 0; // 20% chance de variar +/- 1
+    } else { // Declínio
+        return (attr) => {
+            let loss = Math.floor(Math.random() * 2); // Perda base de 0 a 1
+            if ((attr === 'pace' || attr === 'physical') && age >= 35) {
+                loss += Math.floor(Math.random() * 2); // Perda maior em atributos físicos
+            }
+            return -loss;
+        };
+    }
+}
+
 
 function displayDevelopmentScreen() {
     const container = document.getElementById('development-content');
