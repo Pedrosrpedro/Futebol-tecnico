@@ -29,6 +29,7 @@ const gameState = {
     currency: 'BRL',
     clubFinances: { balance: 0, history: [] },
     allMatches: [],
+    lastMatchDateOfYear: null, // <-- CORREÇÃO APLICADA
 };
 let holidayInterval = null;
 let selectedPlayerInfo = null;
@@ -62,7 +63,38 @@ function showInfoModal(headline, body) { document.getElementById('info-modal-hea
 function showFriendlyResultModal(match) { document.getElementById('friendly-result-headline').innerText = "Resultado do Amistoso"; document.getElementById('friendly-result-body').innerText = `${match.home.name} ${match.homeScore} x ${match.awayScore} ${match.away.name}`; document.getElementById('friendly-result-modal').classList.add('active'); }
 function toggleFullScreen() { const doc = window.document; const docEl = doc.documentElement; const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen; const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen; if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) { requestFullScreen.call(docEl); } else { cancelFullScreen.call(doc); } }
 function showScreen(screenId) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); const next = document.getElementById(screenId); if (next) next.classList.add('active'); gameState.currentScreen = screenId; }
-function showMainContent(contentId) { clearSelection(); const currentPanel = document.getElementById(gameState.currentMainContent); if(currentPanel) currentPanel.classList.remove('active'); const oldMenuItem = document.querySelector(`#sidebar li[data-content='${gameState.currentMainContent}']`); if (oldMenuItem) oldMenuItem.classList.remove('active'); const newPanel = document.getElementById(contentId); if(newPanel) newPanel.classList.add('active'); const newMenuItem = document.querySelector(`#sidebar li[data-content='${contentId}']`); if (newMenuItem) newMenuItem.classList.add('active'); gameState.currentMainContent = contentId; if (contentId === 'squad-content') loadSquadTable(); if (contentId === 'tactics-content') loadTacticsScreen(); if (contentId === 'calendar-content') { gameState.calendarDisplayDate = new Date(gameState.currentDate); updateCalendar(); } if (contentId === 'matches-content') { gameState.matchesView.leagueId = gameState.matchesView.leagueId || gameState.currentLeagueId; gameState.matchesView.round = findCurrentRound(gameState.matchesView.leagueId); displayRound(gameState.matchesView.leagueId, gameState.matchesView.round); } if (contentId === 'league-content') { gameState.tableView.leagueId = gameState.tableView.leagueId || gameState.currentLeagueId; updateLeagueTable(gameState.tableView.leagueId); } if (contentId === 'news-content') displayNewsFeed(); if (contentId === 'finances-content') displayFinances(); }
+function showMainContent(contentId) {
+    clearSelection();
+    const currentPanel = document.getElementById(gameState.currentMainContent);
+    if (currentPanel) currentPanel.classList.remove('active');
+    const oldMenuItem = document.querySelector(`#sidebar li[data-content='${gameState.currentMainContent}']`);
+    if (oldMenuItem) oldMenuItem.classList.remove('active');
+    const newPanel = document.getElementById(contentId);
+    if (newPanel) newPanel.classList.add('active');
+    const newMenuItem = document.querySelector(`#sidebar li[data-content='${contentId}']`);
+    if (newMenuItem) newMenuItem.classList.add('active');
+    gameState.currentMainContent = contentId;
+    if (contentId === 'squad-content') loadSquadTable();
+    if (contentId === 'tactics-content') loadTacticsScreen();
+    if (contentId === 'calendar-content') {
+        gameState.calendarDisplayDate = new Date(gameState.currentDate);
+        updateCalendar();
+    }
+    // CORREÇÃO APLICADA: Atualiza o valor do seletor ao abrir as abas
+    if (contentId === 'matches-content') {
+        gameState.matchesView.leagueId = gameState.matchesView.leagueId || gameState.currentLeagueId;
+        gameState.matchesView.round = findCurrentRound(gameState.matchesView.leagueId);
+        document.getElementById('matches-league-selector').value = gameState.matchesView.leagueId;
+        displayRound(gameState.matchesView.leagueId, gameState.matchesView.round);
+    }
+    if (contentId === 'league-content') {
+        gameState.tableView.leagueId = gameState.tableView.leagueId || gameState.currentLeagueId;
+        document.getElementById('league-table-selector').value = gameState.tableView.leagueId;
+        updateLeagueTable(gameState.tableView.leagueId);
+    }
+    if (contentId === 'news-content') displayNewsFeed();
+    if (contentId === 'finances-content') displayFinances();
+}
 
 // --- Funções de Inicialização e Setup do Jogo ---
 function createManager() { const nameInput = document.getElementById('manager-name-input'); if (nameInput.value.trim() === '') { showInfoModal('Atenção', 'Por favor, digite seu nome.'); return; } gameState.managerName = nameInput.value.trim(); showScreen('start-screen'); }
@@ -91,6 +123,7 @@ function startGame(team) {
     showScreen('main-game-screen');
     showMainContent('home-content');
 }
+// CORREÇÃO APLICADA: Nova lógica de início de temporada
 function initializeSeason() {
     const year = 2025 + gameState.season - 1;
     gameState.isOffSeason = false;
@@ -114,6 +147,14 @@ function initializeSeason() {
         gameState.allMatches.push(...gameState.leagueStates[leagueId].schedule);
     }
     gameState.allMatches.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // NOVA LÓGICA PARA PEGAR A DATA DO ÚLTIMO JOGO
+    if (gameState.allMatches.length > 0) {
+        const lastMatch = gameState.allMatches[gameState.allMatches.length - 1];
+        gameState.lastMatchDateOfYear = new Date(lastMatch.date);
+    } else {
+        gameState.lastMatchDateOfYear = new Date(`${year}-12-15T12:00:00Z`); // Data de segurança
+    }
     
     gameState.currentDate = new Date(`${year}-01-01T12:00:00Z`);
     
@@ -283,7 +324,6 @@ function mergePlayerData() {
         }
     }
 }
-
 
 // --- Funções Financeiras e de Táticas ---
 function initializeClubFinances() { const clubFinancialData = typeof estimativaVerbaMedia2025 !== 'undefined' ? estimativaVerbaMedia2025.find(c => c.time === gameState.userClub.name) : null; let initialBudget = 5 * 1000000; if (clubFinancialData) { initialBudget = clubFinancialData.verba_media_estimada_milhoes_reais * 1000000; } gameState.clubFinances.balance = 0; gameState.clubFinances.history = []; addTransaction(initialBudget, "Verba inicial da temporada"); }
@@ -1010,10 +1050,63 @@ function togglePause(forcePause = null) { if (gameState.isMatchLive === false) r
 function showNotification(message) { const area = document.getElementById('match-notification-area'); area.innerHTML = ''; const notification = document.createElement('div'); notification.className = 'match-notification'; notification.innerText = message; area.appendChild(notification); setTimeout(() => { if(notification) notification.remove(); }, 3500); }
 function updatePlayerRatings() { if(!gameState.matchState) return; for (const [playerName, currentRating] of gameState.matchState.playerRatings.entries()) { const performanceChange = (Math.random() - 0.47) * 0.2; let newRating = Math.max(0, Math.min(10, currentRating + performanceChange)); gameState.matchState.playerRatings.set(playerName, newRating); } }
 function endMatch() { clearInterval(matchInterval); gameState.isMatchLive = false; document.getElementById('match-time-status').innerText = 'FIM DE JOGO'; const match = gameState.allMatches.find(m => isSameDay(new Date(m.date), new Date(gameState.nextUserMatch.date))); if (match) { match.status = 'played'; match.homeScore = gameState.matchState.score.home; match.awayScore = gameState.matchState.score.away; if (match.round !== 'Amistoso') { const leagueId = Object.keys(leaguesData).find(id => leaguesData[id].teams.some(t => t.name === match.home.name)); updateTableWithResult(leagueId, match); } } showPostMatchReport(); findNextUserMatch(); }
-function showPostMatchReport() { const { home, away, score } = gameState.matchState; const modal = document.getElementById('post-match-report-modal'); const headline = document.getElementById('post-match-headline'); const summary = document.getElementById('post-match-summary'); let winner, loser, winnerScore, loserScore; if (score.home > score.away) { winner = home.team.name; loser = away.team.name; winnerScore = score.home; loserScore = score.away; headline.innerText = `${winner} vence ${loser} por ${winnerScore} a ${loserScore}!`; } else if (score.away > score.home) { winner = away.team.name; loser = home.team.name; winnerScore = score.away; loserScore = score.home; headline.innerText = `${winner} surpreende e vence ${loser} fora de casa!`; } else { headline.innerText = `${home.team.name} e ${away.team.name} empatam em jogo disputado.`; summary.innerText = `A partida terminou com o placar de ${score.home} a ${score.away}. Ambos os times tiveram suas chances, mas a igualdade prevaleceu no placar final.`; modal.classList.add('active'); return; } const performanceFactor = Math.random(); if(performanceFactor > 0.7) { summary.innerText = `Apesar da vitória do ${winner}, foi o ${loser} que dominou a maior parte das ações, criando mais chances. No entanto, a eficiência do ${winner} na finalização fez a diferença, garantindo o resultado de ${winnerScore} a ${loserScore}.`; } else { summary.innerText = `Com uma performance sólida, o ${winner} controlou a partida e mereceu a vitória sobre o ${loser}. O placar final de ${winnerScore} a ${loserScore} refletiu a superioridade vista em campo.`; } modal.classList.add('active'); }
+function showPostMatchReport() {
+    const { home, away, score } = gameState.matchState;
+    const modal = document.getElementById('post-match-report-modal');
+    const headline = document.getElementById('post-match-headline');
+    const summary = document.getElementById('post-match-summary');
+    let winner, loser, winnerScore, loserScore;
+    if (score.home > score.away) {
+        winner = home.team.name;
+        loser = away.team.name;
+        winnerScore = score.home;
+        loserScore = score.away;
+        headline.innerText = `${winner} vence ${loser} por ${winnerScore} a ${loserScore}!`;
+    } else if (score.away > score.home) {
+        winner = away.team.name;
+        loser = home.team.name;
+        winnerScore = score.away;
+        loserScore = score.home;
+        headline.innerText = `${winner} surpreende e vence ${loser} fora de casa!`;
+    } else {
+        headline.innerText = `${home.team.name} e ${away.team.name} empatam em jogo disputado.`;
+        summary.innerText = `A partida terminou com o placar de ${score.home} a ${score.away}. Ambos os times tiveram suas chances, mas a igualdade prevaleceu no placar final.`;
+        modal.classList.add('active');
+        return;
+    }
+    const performanceFactor = Math.random();
+    if (performanceFactor > 0.7) {
+        summary.innerText = `Apesar da vitória do ${winner}, foi o ${loser} que dominou a maior parte das ações, criando mais chances. No entanto, a eficiência do ${winner} na finalização fez a diferença, garantindo o resultado de ${winnerScore} a ${loserScore}.`;
+    } else {
+        summary.innerText = `Com uma performance sólida, o ${winner} controlou a partida e mereceu a vitória sobre o ${loser}. O placar final de ${winnerScore} a ${loserScore} refletiu a superioridade vista em campo.`;
+    }
+    modal.classList.add('active');
+}
 
 // --- Lógica de Fim de Temporada, Promoção e Rebaixamento ---
-function checkSeasonEvents() { if (gameState.isOffSeason) return; const allLeaguesFinished = Object.values(gameState.leagueStates).every(ls => ls.schedule.every(m => m.status === 'played')); if (allLeaguesFinished) { handleEndOfSeason(); return; } if (gameState.currentLeagueId === 'brasileirao_c') { const leagueState = gameState.leagueStates['brasileirao_c']; const phase1Matches = leagueState.schedule.filter(m => m.round <= 19); if (phase1Matches.every(m => m.status === 'played') && leagueState.serieCState.phase === 1) { handleEndOfSerieCFirstPhase(); return; } const phase2Matches = leagueState.schedule.filter(m => m.round > 19 && m.round <= 25); if (phase2Matches.every(m => m.status === 'played') && leagueState.serieCState.phase === 2) { handleEndOfSerieCSecondPhase(); return; } } }
+// CORREÇÃO APLICADA: Nova lógica para detectar fim da temporada
+function checkSeasonEvents() {
+    if (gameState.isOffSeason) return;
+
+    if (gameState.lastMatchDateOfYear && gameState.currentDate > gameState.lastMatchDateOfYear) {
+        handleEndOfSeason();
+        return;
+    }
+
+    if (gameState.currentLeagueId === 'brasileirao_c') {
+        const leagueState = gameState.leagueStates['brasileirao_c'];
+        const phase1Matches = leagueState.schedule.filter(m => m.round <= 19);
+        if (phase1Matches.every(m => m.status === 'played') && leagueState.serieCState.phase === 1) {
+            handleEndOfSerieCFirstPhase();
+            return;
+        }
+        const phase2Matches = leagueState.schedule.filter(m => m.round > 19 && m.round <= 25);
+        if (phase2Matches.every(m => m.status === 'played') && leagueState.serieCState.phase === 2) {
+            handleEndOfSerieCSecondPhase();
+            return;
+        }
+    }
+}
 function handleEndOfSerieCFirstPhase() { const leagueState = gameState.leagueStates['brasileirao_c']; if (leagueState.serieCState.phase !== 1) return; leagueState.serieCState.phase = 2; const fullTable = getFullSeasonTable('brasileirao_c'); const qualified = fullTable.slice(0, 8); const groupA_teams = [qualified[0], qualified[3], qualified[4], qualified[7]]; const groupB_teams = [qualified[1], qualified[2], qualified[5], qualified[6]]; leagueState.serieCState.groups.A = groupA_teams.map(t => t.name); leagueState.serieCState.groups.B = groupB_teams.map(t => t.name); const groupA_data = groupA_teams.map(t => findTeamInLeagues(t.name)); const groupB_data = groupB_teams.map(t => findTeamInLeagues(t.name)); const lastRoundPhase1 = 19; const lastMatchDate = new Date(Math.max(...leagueState.schedule.filter(m => m.round <= lastRoundPhase1).map(m => new Date(m.date)))); const scheduleStartDate = new Date(lastMatchDate); scheduleStartDate.setDate(scheduleStartDate.getDate() + 7); const scheduleA = generateSchedule(groupA_data, leaguesData.brasileirao_c.leagueInfo, scheduleStartDate, lastRoundPhase1); const scheduleB = generateSchedule(groupB_data, leaguesData.brasileirao_c.leagueInfo, scheduleStartDate, lastRoundPhase1); leagueState.schedule.push(...scheduleA, ...scheduleB); gameState.allMatches.push(...scheduleA, ...scheduleB); gameState.allMatches.sort((a, b) => new Date(a.date) - new Date(b.date)); leagueState.table = initializeLeagueTable([...groupA_data, ...groupB_data]); findNextUserMatch(); updateLeagueTable('brasileirao_c'); const qualifiedNames = qualified.map(t => t.name).join(', '); const isUserTeamQualified = qualified.some(t => t.name === gameState.userClub.name); addNews("Definidos os classificados na Série C!", `Os 8 times que avançam para a segunda fase são: ${qualifiedNames}.`, isUserTeamQualified, qualified[0].name); }
 function handleEndOfSerieCSecondPhase() { const leagueState = gameState.leagueStates['brasileirao_c']; if (leagueState.serieCState.phase !== 2) return; leagueState.serieCState.phase = 3; const tiebreakers = leaguesData.brasileirao_c.leagueInfo.tiebreakers; const groupA_table = leagueState.table.filter(t => leagueState.serieCState.groups.A.includes(t.name)).sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); const groupB_table = leagueState.table.filter(t => leagueState.serieCState.groups.B.includes(t.name)).sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); const finalists = [groupA_table[0], groupB_table[0]]; leagueState.serieCState.finalists = finalists.map(t => t.name); const promoted = [groupA_table[0], groupA_table[1], groupB_table[0], groupB_table[1]]; const promotedNames = promoted.map(t => t.name).join(', '); addNews("Acesso à Série B!", `Parabéns a ${promotedNames} pelo acesso à Série B!`, promoted.some(t => t.name === gameState.userClub.name), promoted[0].name); const finalistData = finalists.map(t => findTeamInLeagues(t.name)); const lastRoundPhase2 = 25; const lastMatchDate = new Date(Math.max(...leagueState.schedule.filter(m => m.round > 19 && m.round <= lastRoundPhase2).map(m => new Date(m.date)))); const finalStartDate = new Date(lastMatchDate); finalStartDate.setDate(finalStartDate.getDate() + 7); const finalMatches = [ { home: finalistData[0], away: finalistData[1], date: new Date(finalStartDate).toISOString(), status: 'scheduled', round: 26 }, { home: finalistData[1], away: finalistData[0], date: new Date(new Date(finalStartDate).setDate(finalStartDate.getDate() + 7)).toISOString(), status: 'scheduled', round: 27 } ]; leagueState.schedule.push(...finalMatches); gameState.allMatches.push(...finalMatches); gameState.allMatches.sort((a, b) => new Date(a.date) - new Date(b.date)); findNextUserMatch(); addNews(`Final da Série C: ${finalists[0].name} x ${finalists[1].name}!`, "Os campeões de cada grupo disputam o título.", finalists.some(t => t.name === gameState.userClub.name), finalists[0].name); }
 function handleEndOfSeason() {
