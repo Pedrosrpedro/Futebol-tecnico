@@ -17,7 +17,7 @@
     <script src="data/seriea_dinheiro_joga.js" defer></script>
     <script src="data/serieb_dinheiro_joga.js" defer></script>
     <script src="data/seriec_dinheiro_joga.js" defer></script> 
-    <script src="data/contratos_seriea.js" defer></script> <!-- NOVO ARQUIVO DE CONTRATOS -->
+    <script src="data/contratos_seriea.js" defer></script>
     
     <!-- 3. Carrega os dados de atributos (que será a base) -->
     <script src="data/brasileirao_a.js" defer></script>
@@ -48,8 +48,9 @@
                  <ul>
                     <li data-content="home-content" class="active">Início</li>
                     <li data-content="squad-content">Elenco</li>
+                    <li data-content="contracts-content">Contratos</li> <!-- MUDANÇA AQUI: NOVO ITEM DE MENU -->
                     <li data-content="tactics-content">Táticas</li>
-                    <li data-content="development-content">Desenvolvimento</li> <!-- NOVO ITEM DE MENU -->
+                    <li data-content="development-content">Desenvolvimento</li>
                     <li data-content="league-content">Liga</li>
                     <li data-content="news-content">Notícias</li>
                     <li data-content="calendar-content">Calendário</li>
@@ -61,7 +62,8 @@
             <main id="main-content">
                 <div id="home-content" class="main-content-panel active"><h3>Página Inicial</h3><p>Bem-vindo ao seu clube!</p></div>
                 <div id="squad-content" class="main-content-panel"><h3>Elenco Principal</h3><div id="player-list-table" class="table-container"></div></div>
-                <div id="development-content" class="main-content-panel"></div> <!-- NOVO PAINEL DE CONTEÚDO -->
+                <div id="contracts-content" class="main-content-panel"></div> <!-- MUDANÇA AQUI: NOVO PAINEL DE CONTEÚDO -->
+                <div id="development-content" class="main-content-panel"></div>
                 <div id="tactics-content" class="main-content-panel">
                     <div class="tactics-header">
                         <div class="tactic-main-selector"><label for="tactic-formation">FORMAÇÃO</label><select id="tactic-formation"><option value="4-4-2">4-4-2</option><option value="4-3-3">4-3-3</option><option value="3-5-2">3-5-2</option><option value="4-2-3-1" selected>4-2-3-1</option></select></div>
