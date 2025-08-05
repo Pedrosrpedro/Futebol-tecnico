@@ -285,8 +285,6 @@ function mergePlayerData() {
 }
 
 
-function calculatePlayerOverall(player) {
-
 // --- Funções Financeiras e de Táticas ---
 function initializeClubFinances() { const clubFinancialData = typeof estimativaVerbaMedia2025 !== 'undefined' ? estimativaVerbaMedia2025.find(c => c.time === gameState.userClub.name) : null; let initialBudget = 5 * 1000000; if (clubFinancialData) { initialBudget = clubFinancialData.verba_media_estimada_milhoes_reais * 1000000; } gameState.clubFinances.balance = 0; gameState.clubFinances.history = []; addTransaction(initialBudget, "Verba inicial da temporada"); }
 function addTransaction(amount, description) { gameState.clubFinances.history.unshift({ date: new Date(gameState.currentDate), description, amount }); gameState.clubFinances.balance += amount; }
