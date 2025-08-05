@@ -553,4 +553,4 @@ Object.assign(leaguesData, {
         }
     ]
 }
-};
+});
