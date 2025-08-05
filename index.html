@@ -11,9 +11,9 @@
 
     <!-- 1. Inicializa os objetos de dados -->
     <script src="data/data.js" defer></script> 
-    <script src="data/player_bio_data.js" defer></script> <!-- NOVO ARQUIVO -->
+    <script src="data/player_bio_data.js" defer></script> 
     
-    <!-- 2. Carrega os dados biográficos e de valor -->
+    <!-- 2. Carrega os dados biográficos, de valor e contrato -->
     <script src="data/seriea_dinheiro_joga.js" defer></script>
     <script src="data/serieb_dinheiro_joga.js" defer></script>
     <script src="data/seriec_dinheiro_joga.js" defer></script> 
@@ -49,6 +49,7 @@
                     <li data-content="home-content" class="active">Início</li>
                     <li data-content="squad-content">Elenco</li>
                     <li data-content="tactics-content">Táticas</li>
+                    <li data-content="development-content">Desenvolvimento</li> <!-- NOVO ITEM DE MENU -->
                     <li data-content="league-content">Liga</li>
                     <li data-content="news-content">Notícias</li>
                     <li data-content="calendar-content">Calendário</li>
@@ -60,6 +61,7 @@
             <main id="main-content">
                 <div id="home-content" class="main-content-panel active"><h3>Página Inicial</h3><p>Bem-vindo ao seu clube!</p></div>
                 <div id="squad-content" class="main-content-panel"><h3>Elenco Principal</h3><div id="player-list-table" class="table-container"></div></div>
+                <div id="development-content" class="main-content-panel"></div> <!-- NOVO PAINEL DE CONTEÚDO -->
                 <div id="tactics-content" class="main-content-panel">
                     <div class="tactics-header">
                         <div class="tactic-main-selector"><label for="tactic-formation">FORMAÇÃO</label><select id="tactic-formation"><option value="4-4-2">4-4-2</option><option value="4-3-3">4-3-3</option><option value="3-5-2">3-5-2</option><option value="4-2-3-1" selected>4-2-3-1</option></select></div>
@@ -244,5 +246,3 @@
     <div id="settings-modal" class="modal-overlay"><div class="modal-content"><button id="close-modal-btn" class="icon-btn modal-close-btn">×</button><h2>Configurações</h2><div class="settings-option"><span>Tela Cheia</span><button id="fullscreen-btn">Ativar</button></div><div class="settings-option"><span>Moeda</span><select id="currency-selector"><option value="BRL">Real (R$)</option><option value="USD">Dólar (US$)</option><option value="EUR">Euro (€)</option></select></div></div></div>
 </body>
 </html>
-
-    
