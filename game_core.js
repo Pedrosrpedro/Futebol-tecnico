@@ -1,3 +1,5 @@
+// A SER SALVO COMO: game_core.js
+
 // --- Estado do Jogo ---
 const gameState = {
     managerName: null,
@@ -55,28 +57,7 @@ const formationLayouts = {
 const PITCH_DIMS = { top: 0, bottom: 100, left: 0, right: 100, goalHeight: 30 };
 const overallWeights = { pace: 0.15, shooting: 0.15, passing: 0.2, dribbling: 0.15, defending: 0.2, physical: 0.15 };
 
-// --- Funções de Inicialização e Setup do Jogo ---
-function startGame(team) {
-    gameState.userClub = team;
-
-    // Mescla todos os dados de diferentes arquivos em um só lugar
-    mergeAllData();
-    initializeFreeAgents();
-
-    // Garante que todos os jogadores (de clubes e livres) tenham dados completos
-    initializeAllPlayerData();
-    
-    initializeClubFinances();
-    initializeSeason();
-
-    document.getElementById('header-manager-name').innerText = gameState.managerName;
-    document.getElementById('header-club-name').innerText = gameState.userClub.name;
-    document.getElementById('header-club-logo').src = `images/${gameState.userClub.logo}`;
-
-    populateLeagueSelectors();
-    showScreen('main-game-screen');
-    showMainContent('home-content');
-}
+// --- Funções de Inicialização e Lógica de Jogo ---
 
 function initializeSeason() {
     const year = 2025 + gameState.season - 1;
@@ -116,9 +97,6 @@ function initializeSeason() {
 
     setupInitialSquad();
     findNextUserMatch();
-    updateLeagueTable(gameState.currentLeagueId);
-    updateContinueButton();
-    addNews(`Começa a Temporada ${year}!`, `A bola vai rolar para a ${leaguesData[gameState.currentLeagueId].name}. Boa sorte, ${gameState.managerName}!`, true, gameState.userClub.name);
 }
 
 // --- Funções de Progressão, Aposentadoria e Valor ---
@@ -278,21 +256,6 @@ function parseMarketValue(valueStr) {
 // --- Funções Financeiras e de Táticas ---
 function initializeClubFinances() { const clubFinancialData = typeof estimativaVerbaMedia2025 !== 'undefined' ? estimativaVerbaMedia2025.find(c => c.time === gameState.userClub.name) : null; let initialBudget = 5 * 1000000; if (clubFinancialData) { initialBudget = clubFinancialData.verba_media_estimada_milhoes_reais * 1000000; } gameState.clubFinances.balance = 0; gameState.clubFinances.history = []; addTransaction(initialBudget, "Verba inicial da temporada"); }
 function addTransaction(amount, description) { gameState.clubFinances.history.unshift({ date: new Date(gameState.currentDate), description, amount }); gameState.clubFinances.balance += amount; }
-function formatCurrency(valueInBRL) {
-    if (typeof valueInBRL !== 'number') return 'N/A';
-    const rate = currencyRates[gameState.currency];
-    const convertedValue = valueInBRL / rate;
-
-    if (Math.abs(convertedValue) >= 1000000) {
-        const valueInMillions = (convertedValue / 1000000).toFixed(1).replace('.0', '');
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: gameState.currency }).format(0).replace('0,00', '') + valueInMillions + 'M';
-    } else if (Math.abs(convertedValue) >= 1000) {
-        const valueInThousands = Math.round(convertedValue / 1000);
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: gameState.currency }).format(0).replace('0,00', '') + valueInThousands + 'k';
-    }
-
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: gameState.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(convertedValue);
-}
 function parseCurrencyInput(inputStr) {
     let value = 0;
     const cleanedStr = inputStr.replace(/[^0-9.,mk]/gi, '').trim();
@@ -304,8 +267,9 @@ function parseCurrencyInput(inputStr) {
         value = parseFloat(cleanedStr.replace(',', '.'));
     }
     const rate = currencyRates[gameState.currency];
-    return value * rate; // Converte de volta para BRL
+    return isNaN(value) ? 0 : value * rate; // Converte de volta para BRL
 }
+
 
 // --- Funções de Jogo, Tabela e Calendário ---
 function advanceDay() {
@@ -339,6 +303,7 @@ function advanceDay() {
     if (gameState.currentMainContent === 'calendar-content') updateCalendar();
 }
 
+
 function simulateDayMatches() { const todayMatches = gameState.allMatches.filter(match => isSameDay(new Date(match.date), gameState.currentDate)); for (const match of todayMatches) { if (match.status === 'scheduled') { const isUserMatch = match.home.name === gameState.userClub.name || match.away.name === gameState.userClub.name; if (isUserMatch && !gameState.isOnHoliday) { continue; } simulateSingleMatch(match, isUserMatch); if (match.round !== 'Amistoso') { const leagueId = Object.keys(leaguesData).find(id => leaguesData[id].teams.some(t => t.name === match.home.name)); updateTableWithResult(leagueId, match); } } } }
 function simulateSingleMatch(match, isUserMatch) { const homeTeamData = findTeamInLeagues(match.home.name); const awayTeamData = findTeamInLeagues(match.away.name); let homeStrength, awayStrength; if (isUserMatch && match.home.name === gameState.userClub.name) { homeStrength = getTeamStrength(homeTeamData, true); awayStrength = getTeamStrength(awayTeamData, false); } else if (isUserMatch && match.away.name === gameState.userClub.name) { homeStrength = getTeamStrength(homeTeamData, false); awayStrength = getTeamStrength(awayTeamData, true); } else { homeStrength = getTeamStrength(homeTeamData, false); awayStrength = getTeamStrength(awayTeamData, false); } homeStrength *= 1.1; let homeScore = 0; let awayScore = 0; for (let i = 0; i < 10; i++) { const totalStrength = homeStrength + awayStrength; const homeChance = (homeStrength / totalStrength) * (0.5 + Math.random()); const awayChance = (awayStrength / totalStrength) * (0.5 + Math.random()); if (homeChance > 0.65) homeScore++; if (awayChance > 0.60) awayScore++; } match.homeScore = homeScore; match.awayScore = awayScore; match.status = 'played'; if (isUserMatch && match.round === 'Amistoso') { showFriendlyResultModal(match); } }
 function getTeamStrength(teamData, isUser) { let strength = 0; if (isUser) { const startingXI = Object.values(gameState.squadManagement.startingXI); if (startingXI.length === 11 && startingXI.every(p => p)) { strength = startingXI.reduce((acc, player) => acc + calculateModifiedOverall(player, Object.keys(gameState.squadManagement.startingXI).find(pos => gameState.squadManagement.startingXI[pos].name === player.name)), 0) / 11; switch (gameState.tactics.mentality) { case 'very_attacking': strength *= 1.05; break; case 'attacking': strength *= 1.02; break; case 'defensive': strength *= 0.98; break; case 'very_defensive': strength *= 0.95; break; } } else { strength = teamData.players.slice(0, 11).reduce((acc, p) => acc + p.overall, 0) / 11; } } else { strength = teamData.players.sort((a,b)=>b.overall-a.overall).slice(0, 11).reduce((acc, p) => acc + p.overall, 0) / 11; } return strength; }
@@ -352,11 +317,10 @@ function advanceDayOnHoliday() {
         stopHoliday();
         return;
     }
-    // Verifica contrato ANTES de avançar o dia, para não pular o modal
     const expiringPlayer = gameState.userClub.players.find(p => p.contractUntil === 2);
     if (expiringPlayer) {
         stopHoliday();
-        checkExpiringContracts(); // Mostra o modal
+        checkExpiringContracts();
         return;
     }
     advanceDay();
