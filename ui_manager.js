@@ -1,3 +1,50 @@
+// Cole este bloco de código no seu arquivo ui_manager.js
+
+function loadLeagues() {
+    const leagueSelectionDiv = document.getElementById('league-selection');
+    leagueSelectionDiv.innerHTML = '';
+    for (const leagueId in leaguesData) {
+        const league = leaguesData[leagueId];
+        const leagueCard = document.createElement('div');
+        leagueCard.className = 'league-card';
+        leagueCard.innerHTML = `<img src="images/${league.logo}" alt="${league.name}"><span>${league.name}</span>`;
+        leagueCard.addEventListener('click', () => loadTeams(leagueId));
+        leagueSelectionDiv.appendChild(leagueCard);
+    }
+}
+
+function loadTeams(leagueId) {
+    gameState.currentLeagueId = leagueId;
+    const teamSelectionDiv = document.getElementById('team-selection');
+    teamSelectionDiv.innerHTML = '';
+    const teams = leaguesData[leagueId].teams;
+    for (const team of teams) {
+        const teamCard = document.createElement('div');
+        teamCard.className = 'team-card';
+        teamCard.innerHTML = `<img src="images/${team.logo}" alt="${team.name}"><span>${team.name}</span>`;
+        // A função startGame() já deve estar no seu game_core.js
+        teamCard.addEventListener('click', () => startGame(team));
+        teamSelectionDiv.appendChild(teamCard);
+    }
+    showScreen('select-team-screen');
+}
+
+function handleCalendarDayClick(e) {
+    if (gameState.isOnHoliday) return;
+    const dayElement = e.target.closest('.calendar-day:not(.other-month)');
+    if (!dayElement) return;
+    const dateStr = dayElement.dataset.date;
+    const clickedDate = new Date(dateStr + 'T12:00:00Z');
+    if (clickedDate <= gameState.currentDate) return;
+    
+    const modal = document.getElementById('holiday-confirmation-modal');
+    const dateDisplay = document.getElementById('holiday-target-date');
+    dateDisplay.innerText = clickedDate.toLocaleDateString('pt-BR');
+    document.getElementById('confirm-holiday-btn').dataset.endDate = clickedDate.toISOString();
+    modal.classList.add('active');
+}
+
+
 // ui_manager.js
 
 // Adicione estas funções, de preferência no topo do arquivo.
