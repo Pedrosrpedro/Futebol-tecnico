@@ -114,7 +114,7 @@ function startGame(team) {
     mergePlayerData();
     mergePlayerContractData();
 
-    // NOVO: Inicializa os agentes livres com dados completos
+    // Inicializa os agentes livres com dados completos
     if (typeof freeAgents !== 'undefined' && freeAgents.players) {
         gameState.freeAgents = freeAgents.players.map(p => {
             p.overall = calculatePlayerOverall(p);
@@ -348,7 +348,7 @@ function mergePlayerData() {
 function mergePlayerContractData() {
     for (const leagueId in leaguesData) {
         if (!playerBioData[leagueId] || !playerBioData[leagueId].teams.some(t => t.players.some(p => p.hasOwnProperty('contractUntil')))) {
-            continue; 
+            continue;
         }
 
         const leagueTeams = leaguesData[leagueId].teams;
@@ -501,6 +501,7 @@ function displayRound(leagueId, roundNumber) { const container = document.getEle
 function advanceDay() {
     const today = new Date(gameState.currentDate);
     
+    // Finalização da temporada em 31 de Dezembro
     if (today.getMonth() === 11 && today.getDate() === 31) {
         handleEndOfSeason();
         const nextDay = new Date(today);
@@ -1180,7 +1181,8 @@ function triggerNewSeason() {
 function checkSeasonEvents() {
     if (gameState.isOffSeason) return;
 
-    if (gameState.currentLeagueId === 'brasileirao_c') {
+    // Apenas a Série C tem fases intermediárias
+    if (gameState.currentLeagueId === 'brasileirao_c' || leaguesData.brasileirao_c.teams.some(t => t.name === gameState.userClub.name)) {
         const leagueState = gameState.leagueStates['brasileirao_c'];
         const phase1Matches = leagueState.schedule.filter(m => m.round <= 19);
         if (phase1Matches.every(m => m.status === 'played') && leagueState.serieCState.phase === 1) {
@@ -1194,7 +1196,7 @@ function checkSeasonEvents() {
         }
     }
 }
-function handleEndOfSerieCFirstPhase() { const leagueState = gameState.leagueStates['brasileirao_c']; if (leagueState.serieCState.phase !== 1) return; leagueState.serieCState.phase = 2; const fullTable = getFullSeasonTable('brasileirao_c'); const qualified = fullTable.slice(0, 8); const groupA_teams = [qualified[0], qualified[3], qualified[4], qualified[7]]; const groupB_teams = [qualified[1], qualified[2], qualified[5], qualified[6]]; leagueState.serieCState.groups.A = groupA_teams.map(t => t.name); leagueState.serieCState.groups.B = groupB_teams.map(t => t.name); const groupA_data = groupA_teams.map(t => findTeamInLeagues(t.name)); const groupB_data = groupB_teams.map(t => findTeamInLeagues(t.name)); const lastRoundPhase1 = 19; const lastMatchDate = new Date(Math.max(...leagueState.schedule.filter(m => m.round <= lastRoundPhase1).map(m => new Date(m.date)))); const scheduleStartDate = new Date(lastMatchDate); scheduleStartDate.setDate(scheduleStartDate.getDate() + 7); const scheduleA = generateSchedule(groupA_data, leaguesData.brasileirao_c.leagueInfo, scheduleStartDate, lastRoundPhase1); const scheduleB = generateSchedule(groupB_data, leaguesData.brasileirao_c.leagueInfo, scheduleStartDate, lastRoundPhase1); leagueState.schedule.push(...scheduleA, ...scheduleB); gameState.allMatches.push(...scheduleA, ...scheduleB); gameState.allMatches.sort((a, b) => new Date(a.date) - new Date(b.date)); leagueState.table = initializeLeagueTable([...groupA_data, ...groupB_data]); findNextUserMatch(); updateLeagueTable('brasileirao_c'); const qualifiedNames = qualified.map(t => t.name).join(', '); const isUserTeamQualified = qualified.some(t => t.name === gameState.userClub.name); addNews("Definidos os classificados na Série C!", `Os 8 times que avançam para a segunda fase são: ${qualifiedNames}.`, isUserTeamQualified, qualified[0].name); }
+function handleEndOfSerieCFirstPhase() { const leagueState = gameState.leagueStates['brasileirao_c']; if (leagueState.serieCState.phase !== 1) return; leagueState.serieCState.phase = 2; const fullTable = getFullFirstPhaseTableC(); const qualified = fullTable.slice(0, 8); const groupA_teams = [qualified[0], qualified[3], qualified[4], qualified[7]]; const groupB_teams = [qualified[1], qualified[2], qualified[5], qualified[6]]; leagueState.serieCState.groups.A = groupA_teams.map(t => t.name); leagueState.serieCState.groups.B = groupB_teams.map(t => t.name); const groupA_data = groupA_teams.map(t => findTeamInLeagues(t.name)); const groupB_data = groupB_teams.map(t => findTeamInLeagues(t.name)); const lastRoundPhase1 = 19; const lastMatchDate = new Date(Math.max(...leagueState.schedule.filter(m => m.round <= lastRoundPhase1).map(m => new Date(m.date)))); const scheduleStartDate = new Date(lastMatchDate); scheduleStartDate.setDate(scheduleStartDate.getDate() + 7); const scheduleA = generateSchedule(groupA_data, leaguesData.brasileirao_c.leagueInfo, scheduleStartDate, lastRoundPhase1); const scheduleB = generateSchedule(groupB_data, leaguesData.brasileirao_c.leagueInfo, scheduleStartDate, lastRoundPhase1); leagueState.schedule.push(...scheduleA, ...scheduleB); gameState.allMatches.push(...scheduleA, ...scheduleB); gameState.allMatches.sort((a, b) => new Date(a.date) - new Date(b.date)); leagueState.table = initializeLeagueTable([...groupA_data, ...groupB_data]); findNextUserMatch(); updateLeagueTable('brasileirao_c'); const qualifiedNames = qualified.map(t => t.name).join(', '); const isUserTeamQualified = qualified.some(t => t.name === gameState.userClub.name); addNews("Definidos os classificados na Série C!", `Os 8 times que avançam para a segunda fase são: ${qualifiedNames}.`, isUserTeamQualified, qualified[0].name); }
 function handleEndOfSerieCSecondPhase() { const leagueState = gameState.leagueStates['brasileirao_c']; if (leagueState.serieCState.phase !== 2) return; leagueState.serieCState.phase = 3; const tiebreakers = leaguesData.brasileirao_c.leagueInfo.tiebreakers; const groupA_table = leagueState.table.filter(t => leagueState.serieCState.groups.A.includes(t.name)).sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); const groupB_table = leagueState.table.filter(t => leagueState.serieCState.groups.B.includes(t.name)).sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; }); const finalists = [groupA_table[0], groupB_table[0]]; leagueState.serieCState.finalists = finalists.map(t => t.name); const promoted = [groupA_table[0], groupA_table[1], groupB_table[0], groupB_table[1]]; const promotedNames = promoted.map(t => t.name).join(', '); addNews("Acesso à Série B!", `Parabéns a ${promotedNames} pelo acesso à Série B!`, promoted.some(t => t.name === gameState.userClub.name), promoted[0].name); const finalistData = finalists.map(t => findTeamInLeagues(t.name)); const lastRoundPhase2 = 25; const lastMatchDate = new Date(Math.max(...leagueState.schedule.filter(m => m.round > 19 && m.round <= lastRoundPhase2).map(m => new Date(m.date)))); const finalStartDate = new Date(lastMatchDate); finalStartDate.setDate(finalStartDate.getDate() + 7); const finalMatches = [ { home: finalistData[0], away: finalistData[1], date: new Date(finalStartDate).toISOString(), status: 'scheduled', round: 26 }, { home: finalistData[1], away: finalistData[0], date: new Date(new Date(finalStartDate).setDate(finalStartDate.getDate() + 7)).toISOString(), status: 'scheduled', round: 27 } ]; leagueState.schedule.push(...finalMatches); gameState.allMatches.push(...finalMatches); gameState.allMatches.sort((a, b) => new Date(a.date) - new Date(b.date)); findNextUserMatch(); addNews(`Final da Série C: ${finalists[0].name} x ${finalists[1].name}!`, "Os campeões de cada grupo disputam o título.", finalists.some(t => t.name === gameState.userClub.name), finalists[0].name); }
 function handleEndOfSeason() {
     if (gameState.isOnHoliday) stopHoliday();
@@ -1260,9 +1262,9 @@ function processPromotionRelegation() {
 
     const leagueStateC = gameState.leagueStates['brasileirao_c'];
     const tiebreakers = leaguesData.brasileirao_c.leagueInfo.tiebreakers;
-    const groupA = leagueStateC.table.filter(t => leagueStateC.serieCState.groups.A.includes(t.name)).sort((a,b)=>{ for(const k of tiebreakers) { if(a[k]>b[k]) return -1; if(a[k]<b[k]) return 1; } return 0;});
-    const groupB = leagueStateC.table.filter(t => leagueStateC.serieCState.groups.B.includes(t.name)).sort((a,b)=>{ for(const k of tiebreakers) { if(a[k]>b[k]) return -1; if(a[k]<b[k]) return 1; } return 0;});
-    const promotedFromC = [...groupA.slice(0,2), ...groupB.slice(0,2)].map(t => findTeamInLeagues(t.name)).filter(Boolean);
+    const groupA = leagueStateC.table.filter(t => leagueStateC.serieCState.groups.A.includes(t.name)).sort((a, b) => { for (const k of tiebreakers) { if (a[k] > b[k]) return -1; if (a[k] < b[k]) return 1; } return 0; });
+    const groupB = leagueStateC.table.filter(t => leagueStateC.serieCState.groups.B.includes(t.name)).sort((a, b) => { for (const k of tiebreakers) { if (a[k] > b[k]) return -1; if (a[k] < b[k]) return 1; } return 0; });
+    const promotedFromC = [...groupA.slice(0, 2), ...groupB.slice(0, 2)].map(t => findTeamInLeagues(t.name)).filter(Boolean);
     
     const tableCFirstPhase = getFullFirstPhaseTableC();
     const relegatedFromC = tableCFirstPhase.slice(-4).map(t => findTeamInLeagues(t.name)).filter(Boolean);
@@ -1285,9 +1287,13 @@ function processPromotionRelegation() {
     leaguesData.brasileirao_c.teams = leaguesData.brasileirao_c.teams.filter(t => !promotedFromC.some(p => p.name === t.name) && !relegatedFromC.some(r => r.name === t.name)).concat(relegatedFromB).concat(promotedFromD);
     
     const userClubName = gameState.userClub.name;
-    if(leaguesData.brasileirao_a.teams.some(t => t.name === userClubName)) gameState.currentLeagueId = 'brasileirao_a';
-    else if(leaguesData.brasileirao_b.teams.some(t => t.name === userClubName)) gameState.currentLeagueId = 'brasileirao_b';
-    else gameState.currentLeagueId = 'brasileirao_c';
+    if (leaguesData.brasileirao_a.teams.some(t => t.name === userClubName)) {
+        gameState.currentLeagueId = 'brasileirao_a';
+    } else if (leaguesData.brasileirao_b.teams.some(t => t.name === userClubName)) {
+        gameState.currentLeagueId = 'brasileirao_b';
+    } else {
+        gameState.currentLeagueId = 'brasileirao_c';
+    }
 }
 function findTeamInLeagues(teamName, isPlayerLookup = false) { 
     if (!teamName) return null; 
@@ -1618,6 +1624,230 @@ function addPlayerListEventListeners(container) {
             }
         });
     });
+}
+
+function displayContractsScreen() {
+    const container = document.getElementById('contracts-content');
+    container.innerHTML = '<h3>Situação Contratual do Elenco</h3>';
+    
+    const tableContainer = document.createElement('div');
+    tableContainer.className = 'table-container';
+
+    const sortedPlayers = [...gameState.userClub.players].sort((a, b) => {
+        const contractA = a.contractUntil === undefined ? 999 : a.contractUntil;
+        const contractB = b.contractUntil === undefined ? 999 : b.contractUntil;
+        return contractA - contractB;
+    });
+
+    let tableHTML = `<table><thead><tr><th>Nome</th><th>Idade</th><th>Pos.</th><th>GERAL</th><th>Contrato Restante</th><th>Ações</th></tr></thead><tbody>`;
+    for (const player of sortedPlayers) {
+        let contractClass = '';
+        if (player.contractUntil <= 6) contractClass = 'negative';
+        else if (player.contractUntil <= 12) contractClass = 'text-secondary';
+
+        tableHTML += `
+            <tr data-player-name="${player.name}">
+                <td>${player.name}</td>
+                <td>${player.age}</td>
+                <td>${player.position}</td>
+                <td><b>${player.overall}</b></td>
+                <td class="${contractClass}">${formatContract(player.contractUntil) || 'N/A'}</td>
+                <td>
+                    <button class="renew-btn" data-player-name="${player.name}">Renovar</button> 
+                    <button class="terminate-btn secondary" data-player-name="${player.name}">Rescindir</button>
+                </td>
+            </tr>`;
+    }
+    tableHTML += `</tbody></table>`;
+    tableContainer.innerHTML = tableHTML;
+    container.appendChild(tableContainer);
+
+    container.querySelectorAll('.renew-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const player = gameState.userClub.players.find(p => p.name === btn.dataset.playerName);
+            openNegotiationModal(player, 'renew');
+        });
+    });
+    container.querySelectorAll('.terminate-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const player = gameState.userClub.players.find(p => p.name === btn.dataset.playerName);
+            handleContractTermination(player);
+        });
+    });
+}
+
+function handleContractTermination(player) {
+    const yearsLeft = Math.max(0, player.contractUntil / 12);
+    const terminationFee = (player.marketValue * 0.5) * yearsLeft;
+
+    if (confirm(`Rescindir o contrato de ${player.name} custará ${formatCurrency(terminationFee)}. Deseja continuar?`)) {
+        if (gameState.clubFinances.balance < terminationFee) {
+            showInfoModal("Fundos Insuficientes", "Você não tem dinheiro suficiente para pagar a cláusula de rescisão.");
+            return;
+        }
+        addTransaction(-terminationFee, `Rescisão de contrato de ${player.name}`);
+        gameState.userClub.players = gameState.userClub.players.filter(p => p.name !== player.name);
+        player.contractUntil = 0;
+        gameState.freeAgents.push(player);
+        setupInitialSquad();
+        showInfoModal("Contrato Rescindido", `${player.name} não é mais jogador do seu clube.`);
+        displayContractsScreen();
+    }
+}
+
+function openNegotiationModal(player, type) {
+    negotiationState = {
+        player,
+        type, // 'renew' or 'hire'
+        rounds: 0,
+        minAcceptableBonus: player.marketValue * 0.10 * (player.overall / 80),
+        desiredBonus: player.marketValue * 0.20 * (player.overall / 75),
+        desiredDuration: player.age < 25 ? 5 : (player.age < 32 ? 3 : 2)
+    };
+    
+    negotiationState.desiredBonus *= (0.9 + Math.random() * 0.2);
+    negotiationState.minAcceptableBonus = Math.max(10000, negotiationState.desiredBonus * 0.7);
+
+    document.getElementById('negotiation-title').innerText = type === 'renew' ? 'Renovação de Contrato' : 'Contratar Jogador';
+    document.getElementById('negotiation-player-name').innerText = player.name;
+    document.getElementById('negotiation-player-age').innerText = player.age;
+    document.getElementById('negotiation-player-pos').innerText = player.position;
+    document.getElementById('negotiation-player-ovr').innerText = player.overall;
+
+    document.getElementById('player-demand-duration').innerText = negotiationState.desiredDuration;
+    document.getElementById('player-demand-bonus').innerText = formatCurrency(negotiationState.desiredBonus);
+    document.getElementById('player-feedback').innerText = "Aguardando sua proposta...";
+
+    document.getElementById('offer-duration').value = type === 'renew' ? Math.round(player.contractUntil / 12) : negotiationState.desiredDuration;
+    document.getElementById('offer-bonus').value = '';
+    
+    document.getElementById('negotiation-modal').classList.add('active');
+}
+
+function handleNegotiationOffer() {
+    const { desiredBonus, minAcceptableBonus, desiredDuration } = negotiationState;
+    const feedbackEl = document.getElementById('player-feedback');
+    
+    let offerDuration = parseInt(document.getElementById('offer-duration').value, 10);
+    let offerBonusStr = document.getElementById('offer-bonus').value.trim();
+    
+    if (isNaN(offerDuration) || offerDuration <= 0) {
+        feedbackEl.innerText = "Por favor, insira uma duração de contrato válida.";
+        return;
+    }
+
+    let offerBonus = 0;
+    if (offerBonusStr.toLowerCase().endsWith('m')) {
+        offerBonus = parseFloat(offerBonusStr.slice(0, -1)) * 1000000;
+    } else if (offerBonusStr.toLowerCase().endsWith('k')) {
+        offerBonus = parseFloat(offerBonusStr.slice(0, -1)) * 1000;
+    } else {
+        offerBonus = parseFloat(offerBonusStr);
+    }
+    
+    if (isNaN(offerBonus)) {
+        feedbackEl.innerText = "Por favor, insira um valor de luvas válido (ex: 500k, 1.2M).";
+        return;
+    }
+
+    negotiationState.rounds++;
+
+    const bonusRatio = offerBonus / minAcceptableBonus;
+    const durationDiff = Math.abs(offerDuration - desiredDuration);
+    let acceptanceScore = (bonusRatio * 0.8) - (durationDiff * 0.2);
+
+    if (acceptanceScore >= 1.0) {
+        finalizeDeal(offerDuration * 12, offerBonus);
+    } else if (negotiationState.rounds >= 4) {
+        feedbackEl.innerText = "Sua proposta final não me agrada. Vou procurar outras oportunidades.";
+        setTimeout(() => document.getElementById('negotiation-modal').classList.remove('active'), 2000);
+    } else {
+        if (bonusRatio < 0.85) {
+            feedbackEl.innerText = "As luvas estão muito abaixo do que eu esperava. Precisa melhorar bastante.";
+        } else if (durationDiff > 1) {
+            feedbackEl.innerText = `Um contrato de ${offerDuration} anos não é o ideal para mim. Mas podemos conversar se as luvas compensarem.`;
+        } else {
+            feedbackEl.innerText = "Estamos perto. Melhore um pouco a proposta e podemos fechar negócio.";
+        }
+    }
+}
+
+function finalizeDeal(contractMonths, bonus) {
+    const { player, type } = negotiationState;
+
+    if (gameState.clubFinances.balance < bonus) {
+        showInfoModal("Fundos Insuficientes", "Você não tem dinheiro para pagar as luvas do jogador.");
+        document.getElementById('negotiation-modal').classList.remove('active');
+        return;
+    }
+
+    addTransaction(-bonus, `Luvas de contrato para ${player.name}`);
+
+    if (type === 'renew') {
+        const playerInClub = gameState.userClub.players.find(p => p.name === player.name);
+        playerInClub.contractUntil = contractMonths;
+        showInfoModal("Contrato Renovado!", `${player.name} renovou seu contrato por ${formatContract(contractMonths)}!`);
+    } else { // hire
+        player.contractUntil = contractMonths;
+        gameState.userClub.players.push(player);
+        gameState.freeAgents = gameState.freeAgents.filter(p => p.name !== player.name);
+        showInfoModal("Contratação Realizada!", `Bem-vindo ao clube, ${player.name}!`);
+        if(gameState.currentMainContent === 'transfer-market-content') displayTransferMarket();
+    }
+    
+    document.getElementById('negotiation-modal').classList.remove('active');
+    if(gameState.currentMainContent === 'contracts-content') displayContractsScreen();
+}
+
+function checkExpiringContracts() {
+    for(const player of gameState.userClub.players) {
+        if (player.contractUntil === 2) {
+            showUserNewsModal("Contrato Expirando!", `${player.name} tem apenas 2 meses restantes em seu contrato. Se não for renovado, ele sairá de graça ao final do vínculo.`);
+        }
+    }
+}
+
+function handleExpiredContracts() {
+    for (const leagueId in leaguesData) {
+        for (const team of leaguesData[leagueId].teams) {
+            const expiredPlayers = team.players.filter(p => p.contractUntil <= 0);
+            if (expiredPlayers.length > 0) {
+                team.players = team.players.filter(p => p.contractUntil > 0);
+                for (const player of expiredPlayers) {
+                    player.contractUntil = 0;
+                    gameState.freeAgents.push(player);
+                    if (team.name === gameState.userClub.name) {
+                        showUserNewsModal("Contrato Encerrado", `O contrato de ${player.name} chegou ao fim. Ele deixou o clube e agora é um agente livre.`);
+                    }
+                }
+            }
+        }
+    }
+}
+
+function aiContractManagement() {
+    for (const leagueId in leaguesData) {
+        for (const team of leaguesData[leagueId].teams) {
+            if (team.name === gameState.userClub.name) continue;
+
+            const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
+
+            for (const player of team.players) {
+                if (player.contractUntil <= 6 && player.contractUntil > 0) {
+                    const isImportant = player.overall > teamOverallAvg;
+                    if (isImportant && player.age < 34 && Math.random() < 0.75) {
+                        player.contractUntil += (player.age < 30 ? 36 : 12);
+                    }
+                } else if (player.contractUntil > 12) {
+                    const isUnderperforming = player.overall < (teamOverallAvg - 5);
+                    const isOld = player.age > 33;
+                    if (isUnderperforming && isOld && Math.random() < 0.05) {
+                         player.contractUntil = 0;
+                    }
+                }
+            }
+        }
+    }
 }
 
 
