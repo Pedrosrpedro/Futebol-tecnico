@@ -99,6 +99,34 @@ function initializeSeason() {
     findNextUserMatch();
 }
 
+function setupInitialSquad() {
+    gameState.squadManagement.startingXI = {};
+    gameState.squadManagement.substitutes = [];
+    gameState.squadManagement.reserves = [];
+    const todosJogadores = [...gameState.userClub.players].sort((a, b) => (b.overall || 0) - (a.overall || 0));
+    const formacao = gameState.tactics.formation;
+    const posicoesDaFormacao = Object.keys(formationLayouts[formacao]);
+    let jogadoresDisponiveis = [...todosJogadores];
+
+    for (const posicaoDoEsquema of posicoesDaFormacao) {
+        const posicaoBase = posicaoDoEsquema.replace(/\d/g, '');
+        const indiceMelhorJogador = jogadoresDisponiveis.findIndex(p => p.position === posicaoBase);
+        if (indiceMelhorJogador !== -1) {
+            const jogadorEscolhido = jogadoresDisponiveis[indiceMelhorJogador];
+            gameState.squadManagement.startingXI[posicaoDoEsquema] = jogadorEscolhido;
+            jogadoresDisponiveis.splice(indiceMelhorJogador, 1);
+        }
+    }
+    for (const posicaoDoEsquema of posicoesDaFormacao) {
+        if (!gameState.squadManagement.startingXI[posicaoDoEsquema] && jogadoresDisponiveis.length > 0) {
+            gameState.squadManagement.startingXI[posicaoDoEsquema] = jogadoresDisponiveis.shift();
+        }
+    }
+    gameState.squadManagement.substitutes = jogadoresDisponiveis.splice(0, MAX_SUBSTITUTES);
+    gameState.squadManagement.reserves = jogadoresDisponiveis;
+}
+
+
 // --- Funções de Progressão, Aposentadoria e Valor ---
 function calculatePlayerOverall(player) {
     if (!player.attributes) return player.overall || 50;
@@ -134,12 +162,9 @@ function generateNewPlayer(team) {
         position: positions[Math.floor(Math.random() * positions.length)],
         age: 17 + Math.floor(Math.random() * 4),
         attributes: {
-            pace: 40 + Math.floor(Math.random() * 25),
-            shooting: 40 + Math.floor(Math.random() * 25),
-            passing: 40 + Math.floor(Math.random() * 25),
-            dribbling: 40 + Math.floor(Math.random() * 25),
-            defending: 40 + Math.floor(Math.random() * 25),
-            physical: 40 + Math.floor(Math.random() * 25),
+            pace: 40 + Math.floor(Math.random() * 25), shooting: 40 + Math.floor(Math.random() * 25),
+            passing: 40 + Math.floor(Math.random() * 25), dribbling: 40 + Math.floor(Math.random() * 25),
+            defending: 40 + Math.floor(Math.random() * 25), physical: 40 + Math.floor(Math.random() * 25),
         },
         contractUntil: 36 + Math.floor(Math.random() * 25),
     };
@@ -234,8 +259,16 @@ function initializeAllPlayerDataForTeam(team) {
 function initializeFreeAgents() {
     if (typeof freeAgents !== 'undefined' && freeAgents.players) {
         gameState.freeAgents = freeAgents.players.map(p => {
-            if (!p.overall && p.attributes) p.overall = calculatePlayerOverall(p);
-            if (!p.marketValue) updateMarketValue(p);
+            // Garante que jogadores sem 'attributes' recebam um
+            if (!p.attributes) {
+                p.attributes = { pace: p.overall, shooting: p.overall, passing: p.overall, dribbling: p.overall, defending: p.overall, physical: p.overall };
+            }
+            if (!p.overall) {
+                 p.overall = calculatePlayerOverall(p);
+            }
+            if (!p.marketValue) {
+                updateMarketValue(p);
+            }
             p.contractUntil = 0;
             return p;
         });
@@ -257,19 +290,23 @@ function parseMarketValue(valueStr) {
 function initializeClubFinances() { const clubFinancialData = typeof estimativaVerbaMedia2025 !== 'undefined' ? estimativaVerbaMedia2025.find(c => c.time === gameState.userClub.name) : null; let initialBudget = 5 * 1000000; if (clubFinancialData) { initialBudget = clubFinancialData.verba_media_estimada_milhoes_reais * 1000000; } gameState.clubFinances.balance = 0; gameState.clubFinances.history = []; addTransaction(initialBudget, "Verba inicial da temporada"); }
 function addTransaction(amount, description) { gameState.clubFinances.history.unshift({ date: new Date(gameState.currentDate), description, amount }); gameState.clubFinances.balance += amount; }
 function parseCurrencyInput(inputStr) {
+    if (typeof inputStr !== 'string' || inputStr.trim() === '') return 0;
     let value = 0;
     const cleanedStr = inputStr.replace(/[^0-9.,mk]/gi, '').trim();
-    if (cleanedStr.toLowerCase().endsWith('m')) {
+    const multiplier = cleanedStr.slice(-1).toLowerCase();
+
+    if (multiplier === 'm') {
         value = parseFloat(cleanedStr.slice(0, -1).replace(',', '.')) * 1000000;
-    } else if (cleanedStr.toLowerCase().endsWith('k')) {
+    } else if (multiplier === 'k') {
         value = parseFloat(cleanedStr.slice(0, -1).replace(',', '.')) * 1000;
     } else {
         value = parseFloat(cleanedStr.replace(',', '.'));
     }
+    
+    // Converte o valor da moeda da UI (ex: USD) para a moeda base do jogo (BRL)
     const rate = currencyRates[gameState.currency];
-    return isNaN(value) ? 0 : value * rate; // Converte de volta para BRL
+    return isNaN(value) ? 0 : value * rate; 
 }
-
 
 // --- Funções de Jogo, Tabela e Calendário ---
 function advanceDay() {
@@ -305,13 +342,13 @@ function advanceDay() {
 
 
 function simulateDayMatches() { const todayMatches = gameState.allMatches.filter(match => isSameDay(new Date(match.date), gameState.currentDate)); for (const match of todayMatches) { if (match.status === 'scheduled') { const isUserMatch = match.home.name === gameState.userClub.name || match.away.name === gameState.userClub.name; if (isUserMatch && !gameState.isOnHoliday) { continue; } simulateSingleMatch(match, isUserMatch); if (match.round !== 'Amistoso') { const leagueId = Object.keys(leaguesData).find(id => leaguesData[id].teams.some(t => t.name === match.home.name)); updateTableWithResult(leagueId, match); } } } }
-function simulateSingleMatch(match, isUserMatch) { const homeTeamData = findTeamInLeagues(match.home.name); const awayTeamData = findTeamInLeagues(match.away.name); let homeStrength, awayStrength; if (isUserMatch && match.home.name === gameState.userClub.name) { homeStrength = getTeamStrength(homeTeamData, true); awayStrength = getTeamStrength(awayTeamData, false); } else if (isUserMatch && match.away.name === gameState.userClub.name) { homeStrength = getTeamStrength(homeTeamData, false); awayStrength = getTeamStrength(awayTeamData, true); } else { homeStrength = getTeamStrength(homeTeamData, false); awayStrength = getTeamStrength(awayTeamData, false); } homeStrength *= 1.1; let homeScore = 0; let awayScore = 0; for (let i = 0; i < 10; i++) { const totalStrength = homeStrength + awayStrength; const homeChance = (homeStrength / totalStrength) * (0.5 + Math.random()); const awayChance = (awayStrength / totalStrength) * (0.5 + Math.random()); if (homeChance > 0.65) homeScore++; if (awayChance > 0.60) awayScore++; } match.homeScore = homeScore; match.awayScore = awayScore; match.status = 'played'; if (isUserMatch && match.round === 'Amistoso') { showFriendlyResultModal(match); } }
+function simulateSingleMatch(match, isUserMatch) { const homeTeamData = findTeamInLeagues(match.home.name); const awayTeamData = findTeamInLeagues(match.away.name); let homeStrength, awayStrength; if (isUserMatch && match.home.name === gameState.userClub.name) { homeStrength = getTeamStrength(homeTeamData, true); awayStrength = getTeamStrength(awayTeamData, false); } else if (isUserMatch && match.away.name === gameState.userClub.name) { homeStrength = getTeamStrength(homeTeamData, false); awayStrength = getTeamStrength(awayTeamData, true); } else { homeStrength = getTeamStrength(homeTeamData, false); awayStrength = getTeamStrength(awayTeamData, false); } homeStrength *= 1.1; let homeScore = 0; let awayScore = 0; for (let i = 0; i < 10; i++) { const totalStrength = homeStrength + awayStrength; const homeChance = (homeStrength / totalStrength) * (0.5 + Math.random()); const awayChance = (awayStrength / totalStrength) * (0.5 + Math.random()); if (homeChance > 0.65) homeScore++; if (awayChance > 0.60) awayScore++; } match.homeScore = homeScore; match.awayScore = awayScore; match.status = 'played'; }
 function getTeamStrength(teamData, isUser) { let strength = 0; if (isUser) { const startingXI = Object.values(gameState.squadManagement.startingXI); if (startingXI.length === 11 && startingXI.every(p => p)) { strength = startingXI.reduce((acc, player) => acc + calculateModifiedOverall(player, Object.keys(gameState.squadManagement.startingXI).find(pos => gameState.squadManagement.startingXI[pos].name === player.name)), 0) / 11; switch (gameState.tactics.mentality) { case 'very_attacking': strength *= 1.05; break; case 'attacking': strength *= 1.02; break; case 'defensive': strength *= 0.98; break; case 'very_defensive': strength *= 0.95; break; } } else { strength = teamData.players.slice(0, 11).reduce((acc, p) => acc + p.overall, 0) / 11; } } else { strength = teamData.players.sort((a,b)=>b.overall-a.overall).slice(0, 11).reduce((acc, p) => acc + p.overall, 0) / 11; } return strength; }
 function findNextUserMatch() { gameState.nextUserMatch = gameState.allMatches.filter(m => m.status === 'scheduled' && (m.home.name === gameState.userClub.name || m.away.name === gameState.userClub.name) && new Date(m.date) >= gameState.currentDate).sort((a,b) => new Date(a.date) - new Date(b.date))[0] || null; }
 function initializeLeagueTable(teams) { return teams.map(team => ({ name: team.name, logo: team.logo, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 })); }
 function generateSchedule(teams, leagueInfo, startDate, roundOffset = 0, phase = undefined) { let currentMatchDate = new Date(startDate); let clubes = [...teams]; if (clubes.length % 2 !== 0) { clubes.push({ name: "BYE", logo: "logo_default.png" }); } const numTeams = clubes.length; const isSerieCPhase1 = phase === 1; const matchesPerRound = numTeams / 2; let allMatches = []; for (let turn = 0; turn < (isSerieCPhase1 ? 1 : 2); turn++) { let tempClubes = [...clubes]; for (let r = 0; r < numTeams - 1; r++) { for (let i = 0; i < matchesPerRound; i++) { const home = turn === 0 ? tempClubes[i] : tempClubes[numTeams - 1 - i]; const away = turn === 0 ? tempClubes[numTeams - 1 - i] : tempClubes[i]; if(home.name !== "BYE" && away.name !== "BYE") allMatches.push({home, away}); } tempClubes.splice(1, 0, tempClubes.pop()); } } const schedule = []; for (let i = 0; i < allMatches.length; i++) { if (i > 0 && i % matchesPerRound === 0) { const gamesPerWeek = leagueInfo.gamesPerWeek || 1; const daysToAdd = gamesPerWeek === 2 ? (currentMatchDate.getDay() < 4 ? 3 : 4) : 7; currentMatchDate.setDate(currentMatchDate.getDate() + daysToAdd); } schedule.push({ ...allMatches[i], date: new Date(currentMatchDate).toISOString(), status: 'scheduled', round: Math.floor(i / matchesPerRound) + 1 + roundOffset }); } return schedule; }
 function isSameDay(date1, date2) { if(!date1 || !date2) return false; return date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth() && date1.getDate() === date2.getDate(); }
-function startHoliday() { const endDateStr = document.getElementById('confirm-holiday-btn').dataset.endDate; if (!endDateStr) return; gameState.holidayEndDate = new Date(endDateStr); gameState.isOnHoliday = true; document.getElementById('holiday-confirmation-modal').classList.remove('active'); document.getElementById('cancel-holiday-btn').style.display = 'block'; updateContinueButton(); holidayInterval = setInterval(advanceDayOnHoliday, 250); }
+
 function advanceDayOnHoliday() {
     if (new Date(gameState.currentDate) >= gameState.holidayEndDate) {
         stopHoliday();
@@ -333,6 +370,8 @@ function triggerNewSeason() {
     gameState.season++;
     processPromotionRelegation();
     initializeSeason();
+    updateLeagueTable(gameState.currentLeagueId);
+    populateLeagueSelectors();
 }
 
 function checkSeasonEvents() {
