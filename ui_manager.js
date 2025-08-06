@@ -1,6 +1,3 @@
-// A SER SALVO COMO: ui_manager.js
-
-// --- Funções de Navegação e Setup Inicial ---
 // ui_manager.js
 
 // Adicione estas funções, de preferência no topo do arquivo.
@@ -20,318 +17,134 @@ function showInfoModal(headline, body) {
 
 // ... continue com o resto do seu código no ui_manager.js, como a função populateLeagueSelectors, etc.
 
-function createManager() {
-    const nameInput = document.getElementById('manager-name-input');
-    if (nameInput.value.trim() === '') {
-        showInfoModal('Atenção', 'Por favor, digite seu nome.');
-        return;
-    }
-    gameState.managerName = nameInput.value.trim();
-    showScreen('start-screen');
-}
+function populateLeagueSelectors() { const selectors = [document.getElementById('league-table-selector'), document.getElementById('matches-league-selector')]; selectors.forEach(selector => { if (!selector) return; selector.innerHTML = ''; for (const leagueId in leaguesData) { const option = document.createElement('option'); option.value = leagueId; option.innerText = leaguesData[leagueId].name; selector.appendChild(option); } selector.value = gameState.currentLeagueId; }); }
+function findCurrentRound(leagueId) { if (!gameState.leagueStates[leagueId]) return 1; const schedule = gameState.leagueStates[leagueId].schedule; const lastPlayedMatch = [...schedule].reverse().find(m => m.status === 'played' && new Date(m.date) <= gameState.currentDate && typeof m.round === 'number'); return lastPlayedMatch ? lastPlayedMatch.round + 1 : 1; }
+function openFriendlyModal() { const selector = document.getElementById('friendly-opponent-selector'); selector.innerHTML = ''; let allTeams = []; for (const leagueId in leaguesData) { allTeams.push(...leaguesData[leagueId].teams); } allTeams.filter(team => team.name !== gameState.userClub.name).sort((a,b) => a.name.localeCompare(b.name)).forEach(team => { const option = document.createElement('option'); option.value = team.name; option.innerText = team.name; selector.appendChild(option); }); document.getElementById('schedule-friendly-modal').classList.add('active'); }
+function scheduleFriendlyMatch() { document.getElementById('schedule-friendly-modal').classList.remove('active'); const opponentName = document.getElementById('friendly-opponent-selector').value; const periodDays = parseInt(document.getElementById('friendly-period-selector').value, 10); const userStrength = getTeamStrength(gameState.userClub, true); const opponentData = findTeamInLeagues(opponentName); const opponentStrength = getTeamStrength(opponentData, false); const strengthDiff = userStrength - opponentStrength; let acceptanceChance = 0.5; if (strengthDiff > 15) acceptanceChance = 0.7; else if (strengthDiff > 5) acceptanceChance = 0.6; else if (strengthDiff < -15) acceptanceChance = 0.10; else if (strengthDiff < -5) acceptanceChance = 0.3; if (Math.random() > acceptanceChance) { showInfoModal('Convite Recusado', `${opponentName} recusou o convite para o amistoso.`); return; } const startDate = new Date(gameState.currentDate); const endDate = new Date(gameState.currentDate); endDate.setDate(endDate.getDate() + periodDays); let friendlyDate = null; let currentDate = new Date(startDate); currentDate.setDate(currentDate.getDate() + 1); while (currentDate <= endDate) { if (isDateAvailableForTeam(currentDate, gameState.userClub.name) && isDateAvailableForTeam(currentDate, opponentName)) { friendlyDate = new Date(currentDate); break; } currentDate.setDate(currentDate.getDate() + 1); } if (friendlyDate) { const newFriendly = { home: gameState.userClub, away: opponentData, date: friendlyDate.toISOString(), status: 'scheduled', round: 'Amistoso' }; gameState.allMatches.push(newFriendly); gameState.allMatches.sort((a,b) => new Date(a.date) - new Date(b.date)); findNextUserMatch(); updateContinueButton(); if (gameState.currentMainContent === 'calendar-content') updateCalendar(); showInfoModal('Amistoso Marcado!', `Amistoso contra ${opponentName} marcado para ${friendlyDate.toLocaleDateString('pt-BR')}!`); } else { showInfoModal('Sem Data Disponível', `${opponentName} aceitou o convite, mas não foi possível encontrar uma data compatível no período selecionado.`); } }
+function isDateAvailableForTeam(date, teamName) { return !gameState.allMatches.some(match => (match.home.name === teamName || match.away.name === teamName) && isSameDay(new Date(match.date), date)); }
 
-function loadLeagues() {
-    const leagueSelectionDiv = document.getElementById('league-selection');
-    leagueSelectionDiv.innerHTML = '';
-    for (const leagueId in leaguesData) {
-        const league = leaguesData[leagueId];
-        const leagueCard = document.createElement('div');
-        leagueCard.className = 'league-card';
-        leagueCard.innerHTML = `<img src="images/${league.logo}" alt="${league.name}"><span>${league.name}</span>`;
-        leagueCard.addEventListener('click', () => loadTeams(leagueId));
-        leagueSelectionDiv.appendChild(leagueCard);
-    }
-}
-
-function loadTeams(leagueId) {
-    gameState.currentLeagueId = leagueId;
-    const teamSelectionDiv = document.getElementById('team-selection');
-    teamSelectionDiv.innerHTML = '';
-    const teams = leaguesData[leagueId].teams;
-    for (const team of teams) {
-        const teamCard = document.createElement('div');
-        teamCard.className = 'team-card';
-        teamCard.innerHTML = `<img src="images/${team.logo}" alt="${team.name}"><span>${team.name}</span>`;
-        teamCard.addEventListener('click', () => startGame(team));
-        teamSelectionDiv.appendChild(teamCard);
-    }
-    showScreen('select-team-screen');
-}
-
-function createClub() {
-    const clubName = document.getElementById('club-name-input').value;
-    if (!clubName) {
-        showInfoModal("Atenção", "Por favor, preencha o nome do clube.");
-        return;
-    }
-    gameState.currentLeagueId = 'brasileirao_c'; // Novo clube começa na Série C
-    const generatedPlayers = [];
-    for (let i = 0; i < 22; i++) {
-        generatedPlayers.push(generateNewPlayer({ name: clubName }));
-    }
-    const newClub = { name: clubName, logo: 'logo_default.png', players: generatedPlayers };
-    startGame(newClub);
-}
-
-function startGame(team) {
-    gameState.userClub = team;
-
-    // Mescla todos os dados de diferentes arquivos em um só lugar
-    mergeAllData();
-    initializeFreeAgents();
-
-    // Garante que todos os jogadores (de clubes e livres) tenham dados completos
-    initializeAllPlayerData();
-    
-    initializeClubFinances();
-    initializeSeason();
-
-    document.getElementById('header-manager-name').innerText = gameState.managerName;
-    document.getElementById('header-club-name').innerText = gameState.userClub.name;
-    document.getElementById('header-club-logo').src = `images/${gameState.userClub.logo}`;
-
-    populateLeagueSelectors();
-    showScreen('main-game-screen');
-    showMainContent('home-content');
-    updateLeagueTable(gameState.currentLeagueId);
-}
-
-
-// --- Funções de UI ---
-function showScreen(screenId) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); const next = document.getElementById(screenId); if (next) next.classList.add('active'); gameState.currentScreen = screenId; }
-function showMainContent(contentId) {
-    clearSelection();
-    const currentPanel = document.getElementById(gameState.currentMainContent);
-    if (currentPanel) currentPanel.classList.remove('active');
-    const oldMenuItem = document.querySelector(`#sidebar li[data-content='${gameState.currentMainContent}']`);
-    if (oldMenuItem) oldMenuItem.classList.remove('active');
-    const newPanel = document.getElementById(contentId);
-    if (newPanel) newPanel.classList.add('active');
-    const newMenuItem = document.querySelector(`#sidebar li[data-content='${contentId}']`);
-    if (newMenuItem) newMenuItem.classList.add('active');
-    gameState.currentMainContent = contentId;
-
-    if (contentId === 'squad-content') loadSquadTable();
-    if (contentId === 'contracts-content') displayContractsScreen();
-    if (contentId === 'tactics-content') loadTacticsScreen();
-    if (contentId === 'transfer-market-content') displayTransferMarket();
-    if (contentId === 'development-content') displayDevelopmentScreen();
-    if (contentId === 'calendar-content') {
-        gameState.calendarDisplayDate = new Date(gameState.currentDate);
-        updateCalendar();
-    }
-    if (contentId === 'matches-content') {
-        gameState.matchesView.leagueId = gameState.matchesView.leagueId || gameState.currentLeagueId;
-        gameState.matchesView.round = findCurrentRound(gameState.matchesView.leagueId);
-        document.getElementById('matches-league-selector').value = gameState.matchesView.leagueId;
-        displayRound(gameState.matchesView.leagueId, gameState.matchesView.round);
-    }
-    if (contentId === 'league-content') {
-        gameState.tableView.leagueId = gameState.tableView.leagueId || gameState.currentLeagueId;
-        document.getElementById('league-table-selector').value = gameState.tableView.leagueId;
-        updateLeagueTable(gameState.tableView.leagueId);
-    }
-    if (contentId === 'news-content') displayNewsFeed();
-    if (contentId === 'finances-content') displayFinances();
-}
-function showInfoModal(headline, body) { document.getElementById('info-modal-headline').innerText = headline; document.getElementById('info-modal-body').innerText = body; document.getElementById('info-modal').classList.add('active'); }
-function showConfirmationModal(title, message, onConfirm) {
-    const modal = document.getElementById('confirmation-modal');
-    document.getElementById('confirmation-modal-title').innerText = title;
-    document.getElementById('confirmation-modal-body').innerText = message;
-    
-    const confirmBtn = document.getElementById('confirm-action-btn');
-    const cancelBtn = document.getElementById('cancel-action-btn');
-
-    // Clona o botão para remover listeners antigos e evitar acúmulo
-    const confirmClone = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(confirmClone, confirmBtn);
-    
-    confirmClone.addEventListener('click', () => {
-        onConfirm();
-        modal.classList.remove('active');
-    });
-
-    cancelBtn.onclick = () => modal.classList.remove('active');
-
-    modal.classList.add('active');
-}
-function showFriendlyResultModal(match) { document.getElementById('friendly-result-headline').innerText = "Resultado do Amistoso"; document.getElementById('friendly-result-body').innerText = `${match.home.name} ${match.homeScore} x ${match.awayScore} ${match.away.name}`; document.getElementById('friendly-result-modal').classList.add('active'); }
-function toggleFullScreen() { const doc = window.document; const docEl = doc.documentElement; const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen; const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen; if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) { requestFullScreen.call(docEl); } else { cancelFullScreen.call(doc); } }
-
-// --- Funções de Renderização de Componentes ---
-
-function loadSquadTable() {
-    const playerListDiv = document.getElementById('player-list-table');
-    if (!playerListDiv) return;
-    const positionOrder = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST'];
-    const sortedPlayers = [...gameState.userClub.players].sort((a, b) => {
-        return positionOrder.indexOf(a.position) - positionOrder.indexOf(b.position);
-    });
-    
-    let tableHTML = `<table><thead><tr><th>Nome</th><th>Idade</th><th>Pos.</th><th>GERAL</th><th>Valor</th><th>Contrato</th></tr></thead><tbody>`;
+// --- Seção de Contratos, Desenvolvimento e Mercado (UI) ---
+function displayContractsScreen() {
+    const container = document.getElementById('contracts-content');
+    container.innerHTML = '<h3>Situação Contratual do Elenco</h3>';
+    const tableContainer = document.createElement('div');
+    tableContainer.className = 'table-container';
+    const sortedPlayers = [...gameState.userClub.players].sort((a, b) => (a.contractUntil || 999) - (b.contractUntil || 999));
+    let tableHTML = `<table><thead><tr><th>Nome</th><th>Idade</th><th>Pos.</th><th>GERAL</th><th>Contrato Restante</th><th>Ações</th></tr></thead><tbody>`;
     for (const player of sortedPlayers) {
-        tableHTML += `
-            <tr>
-                <td>${player.name}</td>
-                <td>${player.age || 'N/A'}</td>
-                <td>${player.position}</td>
-                <td><b>${player.overall || 'N/A'}</b></td>
-                <td>${player.marketValue ? formatCurrency(player.marketValue) : 'N/A'}</td>
-                <td>${formatContract(player.contractUntil)}</td>
-            </tr>`;
+        let contractClass = '';
+        if (player.contractUntil <= 6) contractClass = 'negative';
+        else if (player.contractUntil <= 12) contractClass = 'text-secondary';
+        tableHTML += `<tr data-player-name="${player.name}">
+                        <td>${player.name}</td><td>${player.age}</td><td>${player.position}</td>
+                        <td><b>${player.overall}</b></td><td class="${contractClass}">${formatContract(player.contractUntil)}</td>
+                        <td><button class="renew-btn" data-player-name="${player.name}">Renovar</button> <button class="terminate-btn secondary" data-player-name="${player.name}">Rescindir</button></td>
+                      </tr>`;
     }
     tableHTML += `</tbody></table>`;
-    playerListDiv.innerHTML = tableHTML;
+    tableContainer.innerHTML = tableHTML;
+    container.appendChild(tableContainer);
+    container.querySelectorAll('.renew-btn').forEach(btn => btn.addEventListener('click', () => openNegotiationModal(gameState.userClub.players.find(p => p.name === btn.dataset.playerName), 'renew')));
+    container.querySelectorAll('.terminate-btn').forEach(btn => btn.addEventListener('click', () => handleContractTermination(gameState.userClub.players.find(p => p.name === btn.dataset.playerName))));
 }
 
-function updateContinueButton() {
-    const button = document.getElementById('advance-day-button');
-    const displayDate = document.getElementById('current-date-display');
-    displayDate.innerText = gameState.currentDate.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    button.disabled = gameState.isOnHoliday;
-    if (gameState.isOffSeason) {
-        button.innerText = "Avançar Pré-Temporada";
-        button.onclick = advanceDay;
-        return;
-    }
-    if (gameState.nextUserMatch && isSameDay(gameState.currentDate, new Date(gameState.nextUserMatch.date))) {
-        button.innerText = "DIA DO JOGO";
-        button.onclick = promptMatchConfirmation;
-    } else {
-        button.innerText = "Avançar Dia";
-        button.onclick = advanceDay;
-    }
-}
-
-function updateTableWithResult(leagueId, match) {
-    if (!leagueId || !gameState.leagueStates[leagueId] || match.round === 'Amistoso') return;
-    const leagueState = gameState.leagueStates[leagueId];
-    let tableToUpdate;
-    if (leagueId === 'brasileirao_c' && leagueState.serieCState.phase > 1) {
-        tableToUpdate = leagueState.table.filter(t => leagueState.serieCState.groups.A.includes(t.name) || leagueState.serieCState.groups.B.includes(t.name));
-    } else {
-        tableToUpdate = leagueState.table;
-    }
-    const homeTeam = tableToUpdate.find(t => t.name === match.home.name);
-    const awayTeam = tableToUpdate.find(t => t.name === match.away.name);
-    if (!homeTeam || !awayTeam) return;
-    homeTeam.played++;
-    awayTeam.played++;
-    homeTeam.goalsFor += match.homeScore;
-    homeTeam.goalsAgainst += match.awayScore;
-    awayTeam.goalsFor += match.awayScore;
-    awayTeam.goalsAgainst += match.homeScore;
-    homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst;
-    awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst;
-    if (match.homeScore > match.awayScore) {
-        homeTeam.wins++;
-        homeTeam.points += 3;
-        awayTeam.losses++;
-    } else if (match.awayScore > match.homeScore) {
-        awayTeam.wins++;
-        awayTeam.points += 3;
-        homeTeam.losses++;
-    } else {
-        homeTeam.draws++;
-        awayTeam.draws++;
-        homeTeam.points += 1;
-        awayTeam.points += 1;
-    }
-}
-
-function updateLeagueTable(leagueId) {
-    const container = document.getElementById('league-table-container');
-    if (!container) return;
-    const leagueState = gameState.leagueStates[leagueId];
-    if (!leagueState) return;
-    const leagueInfo = leaguesData[leagueId];
-    const tiebreakers = leagueInfo.leagueInfo.tiebreakers;
-    let tableHTML = '';
-    if (leagueId === 'brasileirao_c' && leagueState.serieCState.phase === 2) {
-        const groupA = leagueState.table.filter(t => leagueState.serieCState.groups.A.includes(t.name));
-        const groupB = leagueState.table.filter(t => leagueState.serieCState.groups.B.includes(t.name));
-        groupA.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; });
-        groupB.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; });
-        tableHTML += '<h4>Grupo A (Segunda Fase)</h4>';
-        tableHTML += renderTable(groupA, 1);
-        tableHTML += '<h4 style="margin-top: 20px;">Grupo B (Segunda Fase)</h4>';
-        tableHTML += renderTable(groupB, 1);
-    } else {
-        const table = [...leagueState.table];
-        table.sort((a, b) => { for (const key of tiebreakers) { if (a[key] > b[key]) return -1; if (a[key] < b[key]) return 1; } return 0; });
-        tableHTML = renderTable(table);
-    }
-    container.innerHTML = tableHTML;
-}
-
-function renderTable(tableData, startPos = 1) {
-    let html = `<table><thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>`;
-    tableData.forEach((team, index) => {
-        const isUserTeam = team.name === gameState.userClub.name;
-        html += `<tr class="${isUserTeam ? 'user-team-row' : ''}"><td>${index + startPos}</td><td>${team.name}</td><td>${team.points}</td><td>${team.played}</td><td>${team.wins}</td><td>${team.draws}</td><td>${team.losses}</td><td>${team.goalsFor}</td><td>${team.goalsAgainst}</td><td>${team.goalDifference}</td></tr>`;
+function displayDevelopmentScreen() {
+    const container = document.getElementById('development-content');
+    const players = gameState.userClub.players;
+    let improvingCount = 0, decliningCount = 0, stagnatingCount = 0;
+    let playerHTML = '';
+    players.forEach(player => {
+        const dev = predictPlayerDevelopment(player);
+        if (dev.overallChange > 0) improvingCount++;
+        else if (dev.overallChange < 0) decliningCount++;
+        else stagnatingCount++;
+        let overallChangeClass = dev.overallChange > 0 ? 'positive' : (dev.overallChange < 0 ? 'negative' : '');
+        let overallChangeString = dev.overallChange > 0 ? `+${dev.overallChange}` : (dev.overallChange !== 0 ? dev.overallChange : '-');
+        let attributesHTML = Object.entries(dev.attributeChanges).map(([key, value]) => `<span class="${value.startsWith('+') ? 'positive' : 'negative'}">${key.charAt(0).toUpperCase() + key.slice(1)} ${value}</span>`).join('');
+        playerHTML += `<div class="player-dev-card"><div class="player-dev-info"><h4>${player.name} (${player.age})</h4><p>Overall: ${player.overall} <span class="${overallChangeClass}">(${overallChangeString})</span></p><div class="attribute-changes">${attributesHTML || "Sem mudanças previstas."}</div></div><div class="player-dev-chart"><canvas id="chart-player-${player.name.replace(/\s/g, '')}"></canvas></div></div>`;
     });
-    html += `</tbody></table>`;
-    return html;
+    container.innerHTML = `<h3>Desenvolvimento do Elenco</h3><div class="team-dev-overview"><div class="team-dev-chart-container"><canvas id="team-dev-chart"></canvas></div><div class="team-dev-summary"><p><span class="positive-dot"></span> Jogadores Evoluindo: ${improvingCount}</p><p><span class="stagnating-dot"></span> Jogadores Estagnados: ${stagnatingCount}</p><p><span class="negative-dot"></span> Jogadores Regredindo: ${decliningCount}</p></div></div><div class="player-dev-grid">${playerHTML}</div>`;
+    new Chart(document.getElementById('team-dev-chart').getContext('2d'), { type: 'doughnut', data: { labels: ['Evoluindo', 'Regredindo', 'Estagnado'], datasets: [{ data: [improvingCount, decliningCount, stagnatingCount], backgroundColor: ['#3DDC97', '#f75c6c', '#4a525a'], borderColor: '#2C333A', borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
 }
 
-function updateCalendar() {
-    const container = document.getElementById('calendar-container');
-    if (!container || !gameState.calendarDisplayDate) return;
-    const date = gameState.calendarDisplayDate;
-    const month = date.getMonth();
-    const year = date.getFullYear();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    let html = `<div class="calendar-header"><button id="prev-month-btn">◀</button><h3>${date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3><button id="next-month-btn">▶</button></div><div class="calendar-grid"><div class="calendar-weekday">Dom</div><div class="calendar-weekday">Seg</div><div class="calendar-weekday">Ter</div><div class="calendar-weekday">Qua</div><div class="calendar-weekday">Qui</div><div class="calendar-weekday">Sex</div><div class="calendar-weekday">Sáb</div>`;
-    for (let i = 0; i < firstDay.getDay(); i++) {
-        html += `<div class="calendar-day other-month"></div>`;
-    }
-    for (let i = 1; i <= lastDay.getDate(); i++) {
-        const loopDate = new Date(year, month, i);
-        const isCurrent = isSameDay(loopDate, gameState.currentDate);
-        const matchOnThisDay = gameState.allMatches.find(m => isSameDay(new Date(m.date), loopDate) && (m.home.name === gameState.userClub.name || m.away.name === gameState.userClub.name));
-        let dayClasses = 'calendar-day';
-        let dayContent = `<span class="day-number">${i}</span>`;
-        if (matchOnThisDay) {
-            dayClasses += ' match-day';
-            const opponent = matchOnThisDay.home.name === gameState.userClub.name ? `vs ${matchOnThisDay.away.name}` : `@ ${matchOnThisDay.home.name}`;
-            dayContent += `<div class="match-details">${opponent}</div>`;
-        }
-        if (isCurrent) {
-            dayClasses += ' current-day';
-        }
-        html += `<div class="${dayClasses}" data-date="${loopDate.toISOString().split('T')[0]}">${dayContent}</div>`;
-    }
-    html += '</div>';
-    container.innerHTML = html;
-    document.getElementById('prev-month-btn').addEventListener('click', () => { if (!gameState.isOnHoliday) { gameState.calendarDisplayDate.setMonth(gameState.calendarDisplayDate.getMonth() - 1); updateCalendar(); } });
-    document.getElementById('next-month-btn').addEventListener('click', () => { if (!gameState.isOnHoliday) { gameState.calendarDisplayDate.setMonth(gameState.calendarDisplayDate.getMonth() + 1); updateCalendar(); } });
+function displayTransferMarket() {
+    const container = document.getElementById('transfer-market-content');
+    container.innerHTML = `<div class="tabs-container"><button class="tab-btn active" data-tab="search-players">Pesquisar Jogadores</button><button class="tab-btn" data-tab="top-free-agents">Top 20 Agentes Livres</button><button class="tab-btn" data-tab="market-hub" disabled>Mercado</button></div><div id="search-players-tab" class="tab-content active"></div><div id="top-free-agents-tab" class="tab-content"></div><div id="market-hub-tab" class="tab-content"><p>Funcionalidade em desenvolvimento.</p></div>`;
+    displayTopFreeAgents();
+    displayPlayerSearch();
+    container.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => { const tabId = btn.dataset.tab; container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); container.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); btn.classList.add('active'); container.querySelector(`#${tabId}-tab`).classList.add('active'); }));
 }
 
-function displayRound(leagueId, roundNumber) {
-    const container = document.getElementById('round-matches-container');
-    const roundDisplay = document.getElementById('round-display');
-    const prevBtn = document.getElementById('prev-round-btn');
-    const nextBtn = document.getElementById('next-round-btn');
-    const leagueState = gameState.leagueStates[leagueId];
-    if (!leagueState) return;
-    const roundMatches = leagueState.schedule.filter(m => m.round === roundNumber);
-    roundDisplay.innerText = `Rodada ${roundNumber}`;
-    container.innerHTML = '';
-    if (!roundMatches || roundMatches.length === 0) {
-        container.innerHTML = "<p>Nenhuma partida encontrada para esta rodada.</p>";
-        return;
+function displayTopFreeAgents() {
+    const container = document.getElementById('top-free-agents-tab');
+    const top20 = [...gameState.freeAgents].sort((a,b) => b.overall - a.overall).slice(0, 20);
+    container.innerHTML = `<div class="table-container">${renderPlayerList(top20)}</div>`;
+    addPlayerListEventListeners(container);
+}
+
+function displayPlayerSearch() {
+    const container = document.getElementById('search-players-tab');
+    container.innerHTML = `
+        <div class="player-search-bar">
+            <input type="text" id="player-search-input" placeholder="Nome do jogador...">
+            <select id="pos-filter"><option value="">Posição</option><option>GK</option><option>CB</option><option>LB</option><option>RB</option><option>CDM</option><option>CM</option><option>CAM</option><option>LW</option><option>RW</option><option>ST</option></select>
+            <input type="number" id="min-age-filter" placeholder="Idade Mín." min="15" max="50">
+            <input type="number" id="max-age-filter" placeholder="Idade Máx." min="15" max="50">
+            <button id="player-search-btn">Pesquisar</button>
+            <button id="show-all-free-agents-btn" class="secondary">Mostrar Todos</button>
+        </div>
+        <div class="table-container" id="player-search-results"><p style="padding: 20px; text-align: center;">Use os filtros para encontrar jogadores.</p></div>`;
+
+    document.getElementById('player-search-btn').addEventListener('click', applyPlayerSearchFilters);
+    document.getElementById('show-all-free-agents-btn').addEventListener('click', applyPlayerSearchFilters);
+}
+
+function applyPlayerSearchFilters(event) {
+    const resultsContainer = document.getElementById('player-search-results');
+    let results = [...gameState.freeAgents];
+
+    if (event && event.currentTarget.id !== 'show-all-free-agents-btn') {
+        const nameQuery = document.getElementById('player-search-input').value.toLowerCase();
+        const posQuery = document.getElementById('pos-filter').value;
+        const minAge = parseInt(document.getElementById('min-age-filter').value, 10) || 0;
+        const maxAge = parseInt(document.getElementById('max-age-filter').value, 10) || 99;
+
+        results = results.filter(p => {
+            const nameMatch = nameQuery ? p.name.toLowerCase().includes(nameQuery) : true;
+            const posMatch = posQuery ? p.position === posQuery : true;
+            const ageMatch = p.age >= minAge && p.age <= maxAge;
+            return nameMatch && posMatch && ageMatch;
+        });
     }
-    let roundHTML = '';
-    for (const match of roundMatches) {
-        const score = match.status === 'played' ? `${match.homeScore} - ${match.awayScore}` : 'vs';
-        roundHTML += ` <div class="match-card"> <div class="match-card-team home"> <span>${match.home.name}</span> <img src="images/${match.home.logo}" alt="${match.home.name}"> </div> <div class="match-score">${score}</div> <div class="match-card-team away"> <img src="images/${match.away.logo}" alt="${match.away.name}"> <span>${match.away.name}</span> </div> </div> `;
+
+    results.sort((a, b) => b.overall - a.overall);
+    resultsContainer.innerHTML = renderPlayerList(results);
+    addPlayerListEventListeners(resultsContainer);
+}
+
+
+function renderPlayerList(players) {
+    if (players.length === 0) return '<p style="padding: 20px; text-align: center;">Nenhum jogador encontrado.</p>';
+    let tableHTML = `<table><thead><tr><th>Nome</th><th>Idade</th><th>Pos.</th><th>GERAL</th><th>Valor de Mercado</th><th>Ação</th></tr></thead><tbody>`;
+    for (const player of players) {
+        tableHTML += `<tr data-player-name="${player.name}">
+                        <td>${player.name}</td><td>${player.age}</td><td>${player.position}</td>
+                        <td><b>${player.overall}</b></td><td>${formatCurrency(player.marketValue)}</td>
+                        <td><button class="propose-contract-btn" data-player-name="${player.name}">Propor Contrato</button></td>
+                      </tr>`;
     }
-    container.innerHTML = roundHTML;
-    prevBtn.disabled = roundNumber === 1;
-    const totalRounds = leagueState.schedule.length > 0 ? Math.max(...leagueState.schedule.map(m => m.round).filter(r => typeof r === 'number')) : 0;
-    nextBtn.disabled = roundNumber >= totalRounds;
+    tableHTML += `</tbody></table>`;
+    return tableHTML;
+}
+
+function addPlayerListEventListeners(container) {
+    container.querySelectorAll('.propose-contract-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const player = gameState.freeAgents.find(p => p.name === e.target.dataset.playerName);
+            if (player) openNegotiationModal(player, 'hire');
+        });
+    });
 }
 
 // --- Event Listeners ---
@@ -363,7 +176,7 @@ function initializeEventListeners() {
     
     document.getElementById('currency-selector')?.addEventListener('change', (e) => {
         gameState.currency = e.target.value;
-        if(gameState.userClub) {
+        if(gameState.userClub) { // Only update if game has started
             if (gameState.currentMainContent === 'finances-content') displayFinances();
             if (gameState.currentMainContent === 'squad-content') loadSquadTable();
             if (gameState.currentMainContent === 'contracts-content') displayContractsScreen();
@@ -385,6 +198,7 @@ function initializeEventListeners() {
     document.getElementById('resume-match-btn').addEventListener('click', () => togglePause());
     document.getElementById('close-post-match-btn').addEventListener('click', () => { document.getElementById('post-match-report-modal').classList.remove('active'); showScreen('main-game-screen'); updateContinueButton(); });
     
+    // Listeners do modal de negociação
     document.getElementById('close-negotiation-modal-btn').addEventListener('click', () => document.getElementById('negotiation-modal').classList.remove('active'));
     document.getElementById('submit-offer-btn').addEventListener('click', handleNegotiationOffer);
     document.getElementById('accept-demand-btn').addEventListener('click', () => {
@@ -393,13 +207,13 @@ function initializeEventListeners() {
     });
     document.getElementById('walk-away-btn').addEventListener('click', () => document.getElementById('negotiation-modal').classList.remove('active'));
 }
-
 function addMainScreenEventListeners() {
     document.getElementById('league-table-selector')?.addEventListener('change', (e) => { gameState.tableView.leagueId = e.target.value; updateLeagueTable(gameState.tableView.leagueId); });
     document.getElementById('matches-league-selector')?.addEventListener('change', (e) => { gameState.matchesView.leagueId = e.target.value; gameState.matchesView.round = findCurrentRound(e.target.value); displayRound(gameState.matchesView.leagueId, gameState.matchesView.round); });
     document.getElementById('prev-round-btn')?.addEventListener('click', () => { if (gameState.matchesView.round > 1) { gameState.matchesView.round--; displayRound(gameState.matchesView.leagueId, gameState.matchesView.round); } });
     document.getElementById('next-round-btn')?.addEventListener('click', () => { gameState.matchesView.round++; displayRound(gameState.matchesView.leagueId, gameState.matchesView.round); });
     
+    // Listener para as abas de finanças, que são criadas dinamicamente
     document.querySelector('#finances-content .tabs-container')?.addEventListener('click', (e) => {
         if(e.target.classList.contains('tab-btn')) {
             const tabId = e.target.dataset.tab;
