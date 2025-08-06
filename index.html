@@ -51,8 +51,9 @@
                  <ul>
                     <li data-content="home-content" class="active">Início</li>
                     <li data-content="squad-content">Elenco</li>
-                    <li data-content="contracts-content">Contratos</li> <!-- MUDANÇA AQUI: NOVO ITEM DE MENU -->
+                    <li data-content="contracts-content">Contratos</li>
                     <li data-content="tactics-content">Táticas</li>
+                    <li data-content="transfer-market-content">Mercado de Transferências</li>
                     <li data-content="development-content">Desenvolvimento</li>
                     <li data-content="league-content">Liga</li>
                     <li data-content="news-content">Notícias</li>
@@ -65,7 +66,8 @@
             <main id="main-content">
                 <div id="home-content" class="main-content-panel active"><h3>Página Inicial</h3><p>Bem-vindo ao seu clube!</p></div>
                 <div id="squad-content" class="main-content-panel"><h3>Elenco Principal</h3><div id="player-list-table" class="table-container"></div></div>
-                <div id="contracts-content" class="main-content-panel"></div> <!-- MUDANÇA AQUI: NOVO PAINEL DE CONTEÚDO -->
+                <div id="contracts-content" class="main-content-panel"></div>
+                <div id="transfer-market-content" class="main-content-panel"></div>
                 <div id="development-content" class="main-content-panel"></div>
                 <div id="tactics-content" class="main-content-panel">
                     <div class="tactics-header">
@@ -247,7 +249,44 @@
                 <button id="confirm-info-modal-btn">OK</button>
             </div>
         </div>
+        <div id="settings-modal" class="modal-overlay"><div class="modal-content"><button id="close-modal-btn" class="icon-btn modal-close-btn">×</button><h2>Configurações</h2><div class="settings-option"><span>Tela Cheia</span><button id="fullscreen-btn">Ativar</button></div><div class="settings-option"><span>Moeda</span><select id="currency-selector"><option value="BRL">Real (R$)</option><option value="USD">Dólar (US$)</option><option value="EUR">Euro (€)</option></select></div></div></div>
+        
+        <!-- NOVO MODAL DE NEGOCIAÇÃO -->
+        <div id="negotiation-modal" class="modal-overlay">
+            <div class="modal-content negotiation-modal-content">
+                <button id="close-negotiation-modal-btn" class="icon-btn modal-close-btn">×</button>
+                <h2 id="negotiation-title">Negociação de Contrato</h2>
+                <div class="negotiation-player-info">
+                    <h3 id="negotiation-player-name">Nome do Jogador</h3>
+                    <p>Idade: <span id="negotiation-player-age"></span> | Posição: <span id="negotiation-player-pos"></span> | Overall: <span id="negotiation-player-ovr"></span></p>
+                </div>
+                <div class="negotiation-area">
+                    <div class="negotiation-side" id="negotiation-player-side">
+                        <h4>Pedida do Jogador</h4>
+                        <p><b>Duração:</b> <span id="player-demand-duration"></span> anos</p>
+                        <p><b>Luvas:</b> <span id="player-demand-bonus"></span></p>
+                        <div class="negotiation-feedback" id="player-feedback"></div>
+                    </div>
+                    <div class="negotiation-side" id="negotiation-club-side">
+                        <h4>Sua Proposta</h4>
+                        <div class="negotiation-input">
+                            <label for="offer-duration">Duração (anos)</label>
+                            <input type="number" id="offer-duration" min="1" max="5" value="3">
+                        </div>
+                        <div class="negotiation-input">
+                            <label for="offer-bonus">Luvas (Bônus de Assinatura)</label>
+                            <input type="text" id="offer-bonus" placeholder="Ex: 500k, 1.2M">
+                        </div>
+                        <button id="submit-offer-btn">Fazer Proposta</button>
+                    </div>
+                </div>
+                <div class="negotiation-actions">
+                    <button id="walk-away-btn" class="secondary">Abandonar Negociação</button>
+                    <button id="accept-demand-btn">Aceitar Pedida</button>
+                </div>
+            </div>
+        </div>
+
     </div>
-    <div id="settings-modal" class="modal-overlay"><div class="modal-content"><button id="close-modal-btn" class="icon-btn modal-close-btn">×</button><h2>Configurações</h2><div class="settings-option"><span>Tela Cheia</span><button id="fullscreen-btn">Ativar</button></div><div class="settings-option"><span>Moeda</span><select id="currency-selector"><option value="BRL">Real (R$)</option><option value="USD">Dólar (US$)</option><option value="EUR">Euro (€)</option></select></div></div></div>
 </body>
 </html>
