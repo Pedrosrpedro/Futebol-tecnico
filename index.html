@@ -5,15 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Football Manager</title>
     <link rel="stylesheet" href="style.css">
-
-    <!-- Adicionado biblioteca de gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- 1. Inicializa os objetos de dados -->
+    <!-- 1. Dados -->
     <script src="data/data.js" defer></script> 
     <script src="data/player_bio_data.js" defer></script> 
-    
-    <!-- 2. Carrega os dados biográficos, de valor e contrato -->
     <script src="data/seriea_dinheiro_joga.js" defer></script>
     <script src="data/serieb_dinheiro_joga.js" defer></script>
     <script src="data/seriec_dinheiro_joga.js" defer></script> 
@@ -21,15 +17,15 @@
     <script src="data/contratos_serieb.js" defer></script> 
     <script src="data/contratos_seriec.js" defer></script>
     <script src="data/sem_contrato.js" defer></script>
-    
-    <!-- 3. Carrega os dados de atributos (que será a base) -->
     <script src="data/brasileirao_a.js" defer></script>
     <script src="data/brasileirao_b.js" defer></script>
     <script src="data/brasileirao_c.js" defer></script>
-
-    <!-- 4. Outros dados e o script principal -->
     <script src="data/verba_times.js" defer></script> 
-    <script src="script.js" defer></script>
+    
+    <!-- 2. Scripts do Jogo (em ordem de dependência) -->
+    <script src="game_core.js" defer></script>
+    <script src="match_engine.js" defer></script>
+    <script src="ui_manager.js" defer></script>
 </head>
 <body>
     <div id="game-container">
@@ -250,8 +246,6 @@
             </div>
         </div>
         <div id="settings-modal" class="modal-overlay"><div class="modal-content"><button id="close-modal-btn" class="icon-btn modal-close-btn">×</button><h2>Configurações</h2><div class="settings-option"><span>Tela Cheia</span><button id="fullscreen-btn">Ativar</button></div><div class="settings-option"><span>Moeda</span><select id="currency-selector"><option value="BRL">Real (R$)</option><option value="USD">Dólar (US$)</option><option value="EUR">Euro (€)</option></select></div></div></div>
-        
-        <!-- NOVO MODAL DE NEGOCIAÇÃO -->
         <div id="negotiation-modal" class="modal-overlay">
             <div class="modal-content negotiation-modal-content">
                 <button id="close-negotiation-modal-btn" class="icon-btn modal-close-btn">×</button>
@@ -286,16 +280,17 @@
                 </div>
             </div>
         </div>
-<div id="confirmation-modal" class="modal-overlay">
-    <div class="modal-content confirmation-modal-content">
-        <h2 id="confirmation-modal-title">Confirmar Ação</h2>
-        <p id="confirmation-modal-body">Você tem certeza?</p>
-        <div class="confirmation-modal-buttons">
-            <button id="confirm-action-btn">Confirmar</button>
-            <button id="cancel-action-btn" class="secondary">Cancelar</button>
+        <!-- NOVO MODAL DE CONFIRMAÇÃO -->
+        <div id="confirmation-modal" class="modal-overlay">
+            <div class="modal-content confirmation-modal-content">
+                <h2 id="confirmation-modal-title">Confirmar Ação</h2>
+                <p id="confirmation-modal-body">Você tem certeza?</p>
+                <div class="confirmation-modal-buttons">
+                    <button id="confirm-action-btn">Confirmar</button>
+                    <button id="cancel-action-btn" class="secondary">Cancelar</button>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
     </div>
 </body>
 </html>
