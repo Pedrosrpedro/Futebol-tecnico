@@ -718,3 +718,20 @@ span.negative { color: var(--danger-color); font-weight: bold; }
 .positive {
      color: var(--accent-color) !important;
 }
+
+/* style.css (adicionar no final) */
+
+/* --- Modal de Confirmação --- */
+.confirmation-modal-content {
+    text-align: center;
+}
+.confirmation-modal-content p {
+    margin: 20px 0;
+    font-size: 18px;
+    line-height: 1.6;
+}
+.confirmation-modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
