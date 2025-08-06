@@ -101,6 +101,42 @@ function initializeSeason() {
 
 // --- Funções de Inicialização e Setup do Jogo ---
 
+// --- Funções de Inicialização e Setup do Jogo ---
+
+function createManager() {
+    const nameInput = document.getElementById('manager-name-input');
+    if (nameInput.value.trim() === '') {
+        // Esta função (showInfoModal) precisa estar no ui_manager.js
+        showInfoModal('Atenção', 'Por favor, digite seu nome.');
+        return;
+    }
+    gameState.managerName = nameInput.value.trim();
+    // E esta (showScreen) também
+    showScreen('start-screen');
+}
+
+function createClub() { 
+    const clubName = document.getElementById('club-name-input').value; 
+    if (!clubName) { 
+        showInfoModal("Atenção", "Por favor, preencha o nome do clube."); 
+        return; 
+    } 
+    gameState.currentLeagueId = Object.keys(leaguesData)[0]; 
+    const generatedPlayers = []; 
+    for (let i = 0; i < 22; i++) { 
+        generatedPlayers.push({ 
+            name: `*Jogador Gerado ${i + 1}`, 
+            position: "CM", 
+            attributes: { pace: 55, shooting: 55, passing: 55, dribbling: 55, defending: 55, physical: 55 }, 
+            age: 23 
+        }); 
+    } 
+    const newClub = { name: clubName, logo: 'logo_default.png', players: generatedPlayers }; 
+    startGame(newClub); 
+}
+
+// ... continue com o resto do seu código no game_core.js
+
 function createManager() {
     const nameInput = document.getElementById('manager-name-input');
     if (nameInput.value.trim() === '') {
