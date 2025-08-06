@@ -1,6 +1,24 @@
 // A SER SALVO COMO: ui_manager.js
 
 // --- Funções de Navegação e Setup Inicial ---
+// ui_manager.js
+
+// Adicione estas funções, de preferência no topo do arquivo.
+
+function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const next = document.getElementById(screenId);
+    if (next) next.classList.add('active');
+    gameState.currentScreen = screenId;
+}
+
+function showInfoModal(headline, body) {
+    document.getElementById('info-modal-headline').innerText = headline;
+    document.getElementById('info-modal-body').innerText = body;
+    document.getElementById('info-modal').classList.add('active');
+}
+
+// ... continue com o resto do seu código no ui_manager.js, como a função populateLeagueSelectors, etc.
 
 function createManager() {
     const nameInput = document.getElementById('manager-name-input');
