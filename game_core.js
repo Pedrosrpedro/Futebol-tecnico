@@ -659,3 +659,156 @@ function getFullFirstPhaseTableC() {
         return 0;
     });
 }
+
+// Cole no game_core.js
+
+function updateContinueButton() {
+    const button = document.getElementById('advance-day-button');
+    const displayDate = document.getElementById('current-date-display');
+    displayDate.innerText = gameState.currentDate.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    button.disabled = gameState.isOnHoliday;
+    if (gameState.isOffSeason) {
+        button.innerText = "Avançar Pré-Temporada";
+        button.onclick = advanceDay;
+        return;
+    }
+    if (gameState.nextUserMatch && isSameDay(gameState.currentDate, new Date(gameState.nextUserMatch.date))) {
+        button.innerText = "DIA DO JOGO";
+        button.onclick = promptMatchConfirmation; // promptMatchConfirmation deve estar no match_engine.js
+    } else {
+        button.innerText = "Avançar Dia";
+        button.onclick = advanceDay;
+    }
+}
+
+function advanceDay() {
+    const today = new Date(gameState.currentDate);
+    if (today.getMonth() === 11 && today.getDate() === 31) {
+        handleEndOfSeason();
+        const nextDay = new Date(today);
+        nextDay.setDate(nextDay.getDate() + 1);
+        gameState.currentDate = nextDay;
+        triggerNewSeason();
+        return;
+    }
+    const nextDay = new Date(today);
+    nextDay.setDate(nextDay.getDate() + 1);
+    gameState.currentDate = nextDay;
+    if (today.getDate() === 1) {
+        handleExpiredContracts();
+        aiContractManagement();
+        aiTransferLogic();
+        checkExpiringContracts();
+    }
+    simulateDayMatches();
+    checkSeasonEvents();
+    findNextUserMatch();
+    Object.keys(gameState.leagueStates).forEach(id => updateTableWithResult(id, null, true));
+    updateContinueButton();
+    if (gameState.currentMainContent === 'calendar-content') updateCalendar();
+}
+
+function simulateDayMatches() {
+    const todayMatches = gameState.allMatches.filter(match => isSameDay(new Date(match.date), gameState.currentDate));
+    for (const match of todayMatches) {
+        if (match.status === 'scheduled') {
+            const isUserMatch = match.home.name === gameState.userClub.name || match.away.name === gameState.userClub.name;
+            if (isUserMatch && !gameState.isOnHoliday) {
+                continue;
+            }
+            simulateSingleMatch(match, isUserMatch);
+            if (match.round !== 'Amistoso') {
+                const leagueId = Object.keys(leaguesData).find(id => leaguesData[id].teams.some(t => t.name === match.home.name));
+                updateTableWithResult(leagueId, match);
+            }
+        }
+    }
+}
+
+function simulateSingleMatch(match, isUserMatch) {
+    const homeTeamData = findTeamInLeagues(match.home.name);
+    const awayTeamData = findTeamInLeagues(match.away.name);
+    let homeStrength, awayStrength;
+    if (isUserMatch && match.home.name === gameState.userClub.name) {
+        homeStrength = getTeamStrength(homeTeamData, true);
+        awayStrength = getTeamStrength(awayTeamData, false);
+    } else if (isUserMatch && match.away.name === gameState.userClub.name) {
+        homeStrength = getTeamStrength(homeTeamData, false);
+        awayStrength = getTeamStrength(awayTeamData, true);
+    } else {
+        homeStrength = getTeamStrength(homeTeamData, false);
+        awayStrength = getTeamStrength(awayTeamData, false);
+    }
+    homeStrength *= 1.1;
+    let homeScore = 0;
+    let awayScore = 0;
+    for (let i = 0; i < 10; i++) {
+        const totalStrength = homeStrength + awayStrength;
+        const homeChance = (homeStrength / totalStrength) * (0.5 + Math.random());
+        const awayChance = (awayStrength / totalStrength) * (0.5 + Math.random());
+        if (homeChance > 0.65) homeScore++;
+        if (awayChance > 0.60) awayScore++;
+    }
+    match.homeScore = homeScore;
+    match.awayScore = awayScore;
+    match.status = 'played';
+    if (isUserMatch && match.round === 'Amistoso') {
+        showFriendlyResultModal(match);
+    }
+}
+
+function getTeamStrength(teamData, isUser) {
+    let strength = 0;
+    if (isUser) {
+        const startingXI = Object.values(gameState.squadManagement.startingXI);
+        if (startingXI.length === 11 && startingXI.every(p => p)) {
+            strength = startingXI.reduce((acc, player) => acc + calculateModifiedOverall(player, Object.keys(gameState.squadManagement.startingXI).find(pos => gameState.squadManagement.startingXI[pos].name === player.name)), 0) / 11;
+            switch (gameState.tactics.mentality) {
+                case 'very_attacking': strength *= 1.05; break;
+                case 'attacking': strength *= 1.02; break;
+                case 'defensive': strength *= 0.98; break;
+                case 'very_defensive': strength *= 0.95; break;
+            }
+        } else {
+            strength = teamData.players.slice(0, 11).reduce((acc, p) => acc + p.overall, 0) / 11;
+        }
+    } else {
+        strength = teamData.players.sort((a, b) => b.overall - a.overall).slice(0, 11).reduce((acc, p) => acc + p.overall, 0) / 11;
+    }
+    return strength;
+}
+
+function findNextUserMatch() {
+    gameState.nextUserMatch = gameState.allMatches
+        .filter(m => m.status === 'scheduled' && (m.home.name === gameState.userClub.name || m.away.name === gameState.userClub.name) && new Date(m.date) >= gameState.currentDate)
+        .sort((a, b) => new Date(a.date) - new Date(b.date))[0] || null;
+}
+
+function startHoliday() {
+    const endDateStr = document.getElementById('confirm-holiday-btn').dataset.endDate;
+    if (!endDateStr) return;
+    gameState.holidayEndDate = new Date(endDateStr);
+    gameState.isOnHoliday = true;
+    document.getElementById('holiday-confirmation-modal').classList.remove('active');
+    document.getElementById('cancel-holiday-btn').style.display = 'block';
+    updateContinueButton();
+    holidayInterval = setInterval(advanceDayOnHoliday, 250);
+}
+
+function advanceDayOnHoliday() {
+    if (new Date(gameState.currentDate) >= gameState.holidayEndDate) {
+        stopHoliday();
+        return;
+    }
+    advanceDay();
+}
+
+function stopHoliday() {
+    clearInterval(holidayInterval);
+    holidayInterval = null;
+    gameState.isOnHoliday = false;
+    gameState.holidayEndDate = null;
+    document.getElementById('cancel-holiday-btn').style.display = 'none';
+    updateContinueButton();
+    findNextUserMatch();
+}
