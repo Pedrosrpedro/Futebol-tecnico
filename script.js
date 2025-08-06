@@ -30,11 +30,11 @@ const gameState = {
     clubFinances: { balance: 0, history: [] },
     allMatches: [],
     lastMatchDateOfYear: null,
-    freeAgents: [] // NOVO: Lista de agentes livres
+    freeAgents: [] 
 };
 let holidayInterval = null;
 let selectedPlayerInfo = null;
-let negotiationState = {}; // NOVO: Estado da negociação atual
+let negotiationState = {};
 const MAX_SUBSTITUTES = 7;
 
 const currencyRates = { BRL: 1, USD: 5.55, EUR: 6.42 };
@@ -100,6 +100,26 @@ function showMainContent(contentId) {
     if (contentId === 'news-content') displayNewsFeed();
     if (contentId === 'finances-content') displayFinances();
 }
+function showConfirmationModal(title, message, onConfirm) {
+    const modal = document.getElementById('confirmation-modal');
+    document.getElementById('confirmation-modal-title').innerText = title;
+    document.getElementById('confirmation-modal-body').innerText = message;
+    
+    const confirmBtn = document.getElementById('confirm-action-btn');
+    const cancelBtn = document.getElementById('cancel-action-btn');
+
+    const confirmClone = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(confirmClone, confirmBtn);
+    
+    confirmClone.addEventListener('click', () => {
+        onConfirm();
+        modal.classList.remove('active');
+    });
+
+    cancelBtn.onclick = () => modal.classList.remove('active');
+
+    modal.classList.add('active');
+}
 
 // --- Funções de Inicialização e Setup do Jogo ---
 function createManager() { const nameInput = document.getElementById('manager-name-input'); if (nameInput.value.trim() === '') { showInfoModal('Atenção', 'Por favor, digite seu nome.'); return; } gameState.managerName = nameInput.value.trim(); showScreen('start-screen'); }
@@ -111,20 +131,20 @@ function setupInitialSquad() { gameState.squadManagement.startingXI = {}; gameSt
 function startGame(team) {
     gameState.userClub = team;
 
-    mergePlayerData();
-    mergePlayerContractData();
+    // CORREÇÃO: Mesclar todos os dados antes de qualquer outra coisa
+    mergeAllData();
 
     // Inicializa os agentes livres com dados completos
     if (typeof freeAgents !== 'undefined' && freeAgents.players) {
         gameState.freeAgents = freeAgents.players.map(p => {
-            p.overall = calculatePlayerOverall(p);
-            updateMarketValue(p);
-            p.contractUntil = 0; // Agentes livres não têm contrato
+            if (!p.overall && p.attributes) p.overall = calculatePlayerOverall(p);
+            if (!p.marketValue) updateMarketValue(p);
+            p.contractUntil = 0; 
             return p;
         });
     }
 
-    initializeAllPlayerData();
+    initializeAllPlayerData(); // Garante que todos os jogadores dos clubes tenham overall e valor
     initializeClubFinances();
     initializeSeason();
 
@@ -183,9 +203,7 @@ function initializeSeason() {
 
 // --- Funções de Progressão, Aposentadoria e Valor ---
 function calculatePlayerOverall(player) {
-    if (!player.attributes) {
-        return player.overall || 50;
-    }
+    if (!player.attributes) return player.overall || 50;
     let weightedSum = 0;
     for (const attr in player.attributes) {
         weightedSum += player.attributes[attr] * (overallWeights[attr] || 0);
@@ -201,17 +219,13 @@ function calculatePlayerOverall(player) {
 function updateMarketValue(player) {
     const baseValueEUR = (player.overall / 100) ** 4 * 30000000;
     let ageMultiplier = 1.0;
-
     if (player.age < 21) ageMultiplier = 1.2;
     else if (player.age >= 21 && player.age <= 28) ageMultiplier = 1.5 - ((player.age - 21) * 0.05);
     else if (player.age > 28 && player.age < 33) ageMultiplier = 1.1 - ((player.age - 28) * 0.1);
     else ageMultiplier = Math.max(0.1, 0.5 - ((player.age - 33) * 0.03));
-
     const positionMultiplier = (['ST', 'LW', 'RW', 'CAM'].includes(player.position)) ? 1.2 : 1.0;
-
     let finalValueEUR = baseValueEUR * ageMultiplier * positionMultiplier;
     finalValueEUR = Math.max(10000, Math.round(finalValueEUR / 10000) * 10000);
-
     player.marketValue = finalValueEUR * currencyRates.EUR;
 }
 
@@ -237,21 +251,16 @@ function generateNewPlayer(team) {
 }
 
 function getDevelopmentLogic(age) {
-    if (age < 24) { // Potencial alto: ganho de 1 a 3
-        return () => (1 + Math.floor(Math.random() * 3));
-    } else if (age < 30) { // Auge: ganho de 0 a 1
-        return () => Math.floor(Math.random() * 2);
-    } else if (age < 33) { // Estabilidade: 20% de chance de variar +/- 1
-        return () => (Math.random() < 0.2) ? (Math.random() < 0.5 ? 1 : -1) : 0;
-    } else { // Declínio
-        return (attr) => {
-            let loss = Math.floor(Math.random() * 2); // Perda base de 0 a 1
-            if ((attr === 'pace' || attr === 'physical') && age >= 35) {
-                loss += Math.floor(Math.random() * 2); // Perda física maior
-            }
-            return -loss;
-        };
-    }
+    if (age < 24) return () => (1 + Math.floor(Math.random() * 3));
+    if (age < 30) return () => Math.floor(Math.random() * 2);
+    if (age < 33) return () => (Math.random() < 0.2) ? (Math.random() < 0.5 ? 1 : -1) : 0;
+    return (attr) => {
+        let loss = Math.floor(Math.random() * 2);
+        if ((attr === 'pace' || attr === 'physical') && age >= 35) {
+            loss += Math.floor(Math.random() * 2);
+        }
+        return -loss;
+    };
 }
 
 function updatePlayerDevelopment() {
@@ -260,7 +269,6 @@ function updatePlayerDevelopment() {
         for (const team of leaguesData[leagueId].teams) {
             const playersToRemove = [];
             const playersToAdd = [];
-
             for (const player of team.players) {
                 player.age++;
                 if (player.contractUntil) player.contractUntil -= 12;
@@ -273,12 +281,13 @@ function updatePlayerDevelopment() {
                 }
                 
                 const devLogic = getDevelopmentLogic(player.age);
-                Object.keys(player.attributes).forEach(attr => {
-                    const change = devLogic(attr);
-                    player.attributes[attr] = Math.min(99, Math.max(20, player.attributes[attr] + change));
-                });
-                
-                player.overall = calculatePlayerOverall(player);
+                if (player.attributes) {
+                    Object.keys(player.attributes).forEach(attr => {
+                        const change = devLogic(attr);
+                        player.attributes[attr] = Math.min(99, Math.max(20, player.attributes[attr] + change));
+                    });
+                    player.overall = calculatePlayerOverall(player);
+                }
                 updateMarketValue(player);
             }
             team.players = team.players.filter(p => !playersToRemove.includes(p.name));
@@ -287,6 +296,26 @@ function updatePlayerDevelopment() {
     }
 }
 
+// CORREÇÃO: Função centralizada para mesclar todos os dados
+function mergeAllData() {
+    for (const leagueId in leaguesData) {
+        if (!playerBioData[leagueId] || !playerBioData[leagueId].teams) continue;
+
+        for (const team of leaguesData[leagueId].teams) {
+            const bioTeam = playerBioData[leagueId].teams.find(t => t.name === team.name);
+            if (!bioTeam) continue;
+
+            for (const player of team.players) {
+                const bioPlayer = bioTeam.players.find(p => p.name === player.name);
+                if (bioPlayer) {
+                    // Object.assign para mesclar todas as propriedades do bioPlayer para o player
+                    // Isso vai adicionar idade, valor de mercado, contrato, etc.
+                    Object.assign(player, bioPlayer);
+                }
+            }
+        }
+    }
+}
 
 function initializeAllPlayerData() {
     for (const leagueId in leaguesData) {
@@ -298,10 +327,10 @@ function initializeAllPlayerData() {
 
 function initializeAllPlayerDataForTeam(team) {
     for (const player of team.players) {
-        if (player.overall === undefined) {
-            player.overall = calculatePlayerOverall(player);
-        }
-        if (player.marketValue === undefined) {
+        if (!player.overall && player.attributes) player.overall = calculatePlayerOverall(player);
+        if (typeof player.marketValue === 'string') {
+             player.marketValue = parseMarketValue(player.marketValue) * currencyRates.EUR;
+        } else if (!player.marketValue) {
             updateMarketValue(player);
         }
     }
@@ -312,64 +341,10 @@ function parseMarketValue(valueStr) {
     const value = valueStr.replace('€', '').trim();
     const multiplier = value.slice(-1).toLowerCase();
     const numberPart = parseFloat(value.slice(0, -1));
-
-    if (multiplier === 'm') {
-        return numberPart * 1000000;
-    } else if (multiplier === 'k') {
-        return numberPart * 1000;
-    }
+    if (multiplier === 'm') return numberPart * 1000000;
+    if (multiplier === 'k') return numberPart * 1000;
     return parseFloat(value);
 }
-
-function mergePlayerData() {
-    for (const leagueId in leaguesData) {
-        if (!playerBioData[leagueId] || !playerBioData[leagueId].teams) continue;
-
-        const leagueTeams = leaguesData[leagueId].teams;
-        const bioTeams = playerBioData[leagueId].teams;
-
-        for (const team of leagueTeams) {
-            const bioTeam = bioTeams.find(t => t.name === team.name);
-            if (!bioTeam) continue;
-
-            for (const player of team.players) {
-                const bioPlayer = bioTeam.players.find(p => p.name === player.name);
-                if (bioPlayer) {
-                    if (bioPlayer.age) player.age = bioPlayer.age;
-                    if (bioPlayer.marketValue) {
-                         player.marketValue = parseMarketValue(bioPlayer.marketValue) * currencyRates.EUR;
-                    }
-                }
-            }
-        }
-    }
-}
-
-function mergePlayerContractData() {
-    for (const leagueId in leaguesData) {
-        if (!playerBioData[leagueId] || !playerBioData[leagueId].teams.some(t => t.players.some(p => p.hasOwnProperty('contractUntil')))) {
-            continue;
-        }
-
-        const leagueTeams = leaguesData[leagueId].teams;
-        const bioTeams = playerBioData[leagueId].teams;
-
-        for (const team of leagueTeams) {
-            const bioTeam = bioTeams.find(t => t.name === team.name);
-            if (!bioTeam) continue;
-
-            for (const player of team.players) {
-                const bioPlayer = bioTeam.players.find(p => p.name === player.name && p.hasOwnProperty('contractUntil'));
-                if (bioPlayer) {
-                    player.contractUntil = bioPlayer.contractUntil;
-                } else if (player.contractUntil === undefined) {
-                    player.contractUntil = 18;
-                }
-            }
-        }
-    }
-}
-
 
 // --- Funções Financeiras e de Táticas ---
 function initializeClubFinances() { const clubFinancialData = typeof estimativaVerbaMedia2025 !== 'undefined' ? estimativaVerbaMedia2025.find(c => c.time === gameState.userClub.name) : null; let initialBudget = 5 * 1000000; if (clubFinancialData) { initialBudget = clubFinancialData.verba_media_estimada_milhoes_reais * 1000000; } gameState.clubFinances.balance = 0; gameState.clubFinances.history = []; addTransaction(initialBudget, "Verba inicial da temporada"); }
@@ -501,7 +476,6 @@ function displayRound(leagueId, roundNumber) { const container = document.getEle
 function advanceDay() {
     const today = new Date(gameState.currentDate);
     
-    // Finalização da temporada em 31 de Dezembro
     if (today.getMonth() === 11 && today.getDate() === 31) {
         handleEndOfSeason();
         const nextDay = new Date(today);
@@ -515,16 +489,16 @@ function advanceDay() {
     nextDay.setDate(nextDay.getDate() + 1);
     gameState.currentDate = nextDay;
 
-    // NOVO: Executar lógicas diárias de contrato
     if (today.getDate() === 1) { // Roda 1 vez por mês para otimizar
         handleExpiredContracts();
         aiContractManagement();
+        aiTransferLogic(); // NOVO: IA busca reforços
         checkExpiringContracts();
     }
     
     simulateDayMatches();
-    checkSeasonEvents(); // Verifica eventos como fim da fase da Série C
-    findNextUserMatch(); // Atualiza o próximo jogo
+    checkSeasonEvents();
+    findNextUserMatch();
     Object.keys(gameState.leagueStates).forEach(id => updateLeagueTable(id));
     updateContinueButton();
     if (gameState.currentMainContent === 'calendar-content') updateCalendar();
@@ -1181,8 +1155,7 @@ function triggerNewSeason() {
 function checkSeasonEvents() {
     if (gameState.isOffSeason) return;
 
-    // Apenas a Série C tem fases intermediárias
-    if (gameState.currentLeagueId === 'brasileirao_c' || leaguesData.brasileirao_c.teams.some(t => t.name === gameState.userClub.name)) {
+    if (leaguesData.brasileirao_c.teams.some(t => t.name === gameState.userClub.name) || gameState.currentLeagueId === 'brasileirao_c') {
         const leagueState = gameState.leagueStates['brasileirao_c'];
         const phase1Matches = leagueState.schedule.filter(m => m.round <= 19);
         if (phase1Matches.every(m => m.status === 'played') && leagueState.serieCState.phase === 1) {
@@ -1400,128 +1373,55 @@ function openFriendlyModal() { const selector = document.getElementById('friendl
 function scheduleFriendlyMatch() { document.getElementById('schedule-friendly-modal').classList.remove('active'); const opponentName = document.getElementById('friendly-opponent-selector').value; const periodDays = parseInt(document.getElementById('friendly-period-selector').value, 10); const userStrength = getTeamStrength(gameState.userClub, true); const opponentData = findTeamInLeagues(opponentName); const opponentStrength = getTeamStrength(opponentData, false); const strengthDiff = userStrength - opponentStrength; let acceptanceChance = 0.5; if (strengthDiff > 15) acceptanceChance = 0.7; else if (strengthDiff > 5) acceptanceChance = 0.6; else if (strengthDiff < -15) acceptanceChance = 0.10; else if (strengthDiff < -5) acceptanceChance = 0.3; if (Math.random() > acceptanceChance) { showInfoModal('Convite Recusado', `${opponentName} recusou o convite para o amistoso.`); return; } const startDate = new Date(gameState.currentDate); const endDate = new Date(gameState.currentDate); endDate.setDate(endDate.getDate() + periodDays); let friendlyDate = null; let currentDate = new Date(startDate); currentDate.setDate(currentDate.getDate() + 1); while (currentDate <= endDate) { if (isDateAvailableForTeam(currentDate, gameState.userClub.name) && isDateAvailableForTeam(currentDate, opponentName)) { friendlyDate = new Date(currentDate); break; } currentDate.setDate(currentDate.getDate() + 1); } if (friendlyDate) { const newFriendly = { home: gameState.userClub, away: opponentData, date: friendlyDate.toISOString(), status: 'scheduled', round: 'Amistoso' }; gameState.allMatches.push(newFriendly); gameState.allMatches.sort((a,b) => new Date(a.date) - new Date(b.date)); findNextUserMatch(); updateContinueButton(); if (gameState.currentMainContent === 'calendar-content') updateCalendar(); showInfoModal('Amistoso Marcado!', `Amistoso contra ${opponentName} marcado para ${friendlyDate.toLocaleDateString('pt-BR')}!`); } else { showInfoModal('Sem Data Disponível', `${opponentName} aceitou o convite, mas não foi possível encontrar uma data compatível no período selecionado.`); } }
 function isDateAvailableForTeam(date, teamName) { return !gameState.allMatches.some(match => (match.home.name === teamName || match.away.name === teamName) && isSameDay(new Date(match.date), date)); }
 
+// --- Seção de Contratos, Desenvolvimento e Mercado ---
 
-// --- NOVO: Seção de Contratos, Desenvolvimento e Mercado ---
+function aiTransferLogic() {
+    if (gameState.isOffSeason) return; // IA só contrata durante a temporada por enquanto
 
-function predictPlayerDevelopment(player) {
-    const originalAttributes = { ...player.attributes };
-    const originalOverall = player.overall;
-    let attributeChanges = {};
+    for (const leagueId in leaguesData) {
+        for (const team of leaguesData[leagueId].teams) {
+            if (team.name === gameState.userClub.name) continue;
 
-    const devLogic = getDevelopmentLogic(player.age);
+            // Chance de 10% por mês de o time tentar contratar
+            if (Math.random() > 0.10) continue;
 
-    Object.keys(originalAttributes).forEach(attr => {
-        const change = devLogic(attr);
-        if (change !== 0) {
-            attributeChanges[attr] = (change > 0 ? '+' : '') + change;
-            originalAttributes[attr] += change;
-        }
-    });
+            const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
+            const teamReputation = (teamOverallAvg / 85) * (leagueId === 'brasileirao_a' ? 3 : (leagueId === 'brasileirao_b' ? 2 : 1));
 
-    const newOverall = calculatePlayerOverall({ attributes: originalAttributes });
-    const overallChange = newOverall - originalOverall;
+            // Encontra o jogador mais fraco no elenco
+            const weakestPlayer = [...team.players].sort((a, b) => a.overall - b.overall)[0];
+            if (!weakestPlayer) continue;
 
-    return { overallChange, attributeChanges };
-}
+            // Busca um agente livre melhor para a mesma posição
+            const potentialSignings = gameState.freeAgents
+                .filter(p => p.position === weakestPlayer.position && p.overall > weakestPlayer.overall + 2)
+                .sort((a, b) => b.overall - a.overall);
 
-function displayDevelopmentScreen() {
-    const container = document.getElementById('development-content');
-    const players = gameState.userClub.players;
+            if (potentialSignings.length > 0) {
+                const targetPlayer = potentialSignings[0]; // Tenta o melhor disponível
+                
+                // Lógica de decisão: jogador aceita?
+                const playerReputation = targetPlayer.overall / 80;
+                const reputationDiff = teamReputation - playerReputation;
+                
+                // Chance baseada na reputação. Time mais forte tem mais chance de atrair jogador forte.
+                const acceptanceChance = 0.5 + (reputationDiff * 0.5); 
+                
+                if (Math.random() < acceptanceChance) {
+                    // CONTRATADO!
+                    team.players = team.players.filter(p => p.name !== weakestPlayer.name);
+                    team.players.push(targetPlayer);
+                    gameState.freeAgents = gameState.freeAgents.filter(p => p.name !== targetPlayer.name);
+                    
+                    // O jogador substituído vira um agente livre
+                    weakestPlayer.contractUntil = 0;
+                    gameState.freeAgents.push(weakestPlayer);
 
-    let improvingCount = 0;
-    let decliningCount = 0;
-    let stagnatingCount = 0;
-
-    let playerHTML = '';
-    players.forEach(player => {
-        const dev = predictPlayerDevelopment(player);
-        if (dev.overallChange > 0) improvingCount++;
-        else if (dev.overallChange < 0) decliningCount++;
-        else stagnatingCount++;
-
-        let overallChangeClass = dev.overallChange > 0 ? 'positive' : (dev.overallChange < 0 ? 'negative' : '');
-        let overallChangeString = dev.overallChange > 0 ? `+${dev.overallChange}` : (dev.overallChange !== 0 ? dev.overallChange : '-');
-        
-        let attributesHTML = Object.entries(dev.attributeChanges).map(([key, value]) => {
-            let changeClass = value.startsWith('+') ? 'positive' : 'negative';
-            return `<span class="${changeClass}">${key.charAt(0).toUpperCase() + key.slice(1)} ${value}</span>`;
-        }).join('');
-
-        playerHTML += `
-            <div class="player-dev-card">
-                <div class="player-dev-info">
-                    <h4>${player.name} (${player.age})</h4>
-                    <p>Overall: ${player.overall} <span class="${overallChangeClass}">(${overallChangeString})</span></p>
-                    <div class="attribute-changes">${attributesHTML || "Sem mudanças previstas."}</div>
-                </div>
-                <div class="player-dev-chart">
-                    <canvas id="chart-player-${player.name.replace(/\s/g, '')}"></canvas>
-                </div>
-            </div>`;
-    });
-
-    container.innerHTML = `
-        <h3>Desenvolvimento do Elenco</h3>
-        <div class="team-dev-overview">
-            <div class="team-dev-chart-container">
-                 <canvas id="team-dev-chart"></canvas>
-            </div>
-            <div class="team-dev-summary">
-                <p><span class="positive-dot"></span> Jogadores Evoluindo: ${improvingCount}</p>
-                <p><span class="stagnating-dot"></span> Jogadores Estagnados: ${stagnatingCount}</p>
-                <p><span class="negative-dot"></span> Jogadores Regredindo: ${decliningCount}</p>
-            </div>
-        </div>
-        <div class="player-dev-grid">
-            ${playerHTML}
-        </div>
-    `;
-
-    // Renderizar gráfico geral
-    const teamCtx = document.getElementById('team-dev-chart').getContext('2d');
-    new Chart(teamCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Evoluindo', 'Regredindo', 'Estagnado'],
-            datasets: [{
-                data: [improvingCount, decliningCount, stagnatingCount],
-                backgroundColor: ['#3DDC97', '#f75c6c', '#4a525a'],
-                borderColor: '#2C333A',
-                borderWidth: 2
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-    });
-
-    // Renderizar gráficos individuais
-    const seasonStartDate = new Date(`${gameState.currentDate.getFullYear()}-01-01`);
-    const seasonEndDate = new Date(`${gameState.currentDate.getFullYear()}-12-31`);
-    const totalSeasonDays = (seasonEndDate - seasonStartDate) / (1000 * 60 * 60 * 24);
-    const elapsedDays = (gameState.currentDate - seasonStartDate) / (1000 * 60 * 60 * 24);
-    const progress = Math.min(100, (elapsedDays / totalSeasonDays) * 100);
-
-    players.forEach(player => {
-        const playerCtx = document.getElementById(`chart-player-${player.name.replace(/\s/g, '')}`).getContext('2d');
-        new Chart(playerCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Progresso da Temporada', 'Restante'],
-                datasets: [{
-                    data: [progress, 100 - progress],
-                    backgroundColor: ['#3DDC97', '#4a525a'],
-                    circumference: 180,
-                    rotation: -90,
-                    borderWidth: 0,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                cutout: '70%'
+                    addNews("Transferência!", `${team.name} contrata o agente livre ${targetPlayer.name} para reforçar seu elenco.`, false, team.name);
+                }
             }
-        });
-    });
+        }
+    }
 }
 
 function displayTransferMarket() {
@@ -1677,31 +1577,38 @@ function displayContractsScreen() {
 }
 
 function handleContractTermination(player) {
-    const yearsLeft = Math.max(0, player.contractUntil / 12);
-    const terminationFee = (player.marketValue * 0.5) * yearsLeft;
+    const yearsLeft = Math.max(0, (player.contractUntil || 0) / 12);
+    const terminationFee = (player.marketValue || 0) * 0.5 * yearsLeft;
 
-    if (confirm(`Rescindir o contrato de ${player.name} custará ${formatCurrency(terminationFee)}. Deseja continuar?`)) {
-        if (gameState.clubFinances.balance < terminationFee) {
-            showInfoModal("Fundos Insuficientes", "Você não tem dinheiro suficiente para pagar a cláusula de rescisão.");
-            return;
+    showConfirmationModal(
+        'Rescindir Contrato',
+        `Rescindir o contrato de ${player.name} custará ${formatCurrency(terminationFee)}. Deseja continuar?`,
+        () => {
+            if (gameState.clubFinances.balance < terminationFee) {
+                showInfoModal("Fundos Insuficientes", "Você não tem dinheiro suficiente para pagar a cláusula de rescisão.");
+                return;
+            }
+
+            addTransaction(-terminationFee, `Rescisão de contrato de ${player.name}`);
+            gameState.userClub.players = gameState.userClub.players.filter(p => p.name !== player.name);
+            
+            player.contractUntil = 0;
+            gameState.freeAgents.push(player);
+
+            setupInitialSquad();
+            showInfoModal("Contrato Rescindido", `${player.name} não é mais jogador do seu clube.`);
+            displayContractsScreen();
         }
-        addTransaction(-terminationFee, `Rescisão de contrato de ${player.name}`);
-        gameState.userClub.players = gameState.userClub.players.filter(p => p.name !== player.name);
-        player.contractUntil = 0;
-        gameState.freeAgents.push(player);
-        setupInitialSquad();
-        showInfoModal("Contrato Rescindido", `${player.name} não é mais jogador do seu clube.`);
-        displayContractsScreen();
-    }
+    );
 }
 
 function openNegotiationModal(player, type) {
     negotiationState = {
         player,
-        type, // 'renew' or 'hire'
+        type, 
         rounds: 0,
-        minAcceptableBonus: player.marketValue * 0.10 * (player.overall / 80),
-        desiredBonus: player.marketValue * 0.20 * (player.overall / 75),
+        minAcceptableBonus: (player.marketValue || 50000) * 0.10 * (player.overall / 80),
+        desiredBonus: (player.marketValue || 50000) * 0.20 * (player.overall / 75),
         desiredDuration: player.age < 25 ? 5 : (player.age < 32 ? 3 : 2)
     };
     
@@ -1812,7 +1719,7 @@ function handleExpiredContracts() {
         for (const team of leaguesData[leagueId].teams) {
             const expiredPlayers = team.players.filter(p => p.contractUntil <= 0);
             if (expiredPlayers.length > 0) {
-                team.players = team.players.filter(p => p.contractUntil > 0);
+                team.players = team.players.filter(p => p.contractUntil > 0 || p.contractUntil === undefined); // Mantem quem não tem info
                 for (const player of expiredPlayers) {
                     player.contractUntil = 0;
                     gameState.freeAgents.push(player);
@@ -1850,7 +1757,6 @@ function aiContractManagement() {
     }
 }
 
-
 // --- Event Listeners ---
 function initializeEventListeners() {
     document.getElementById('confirm-manager-name-btn').addEventListener('click', createManager);
@@ -1862,7 +1768,7 @@ function initializeEventListeners() {
     document.getElementById('select-team-back-btn').addEventListener('click', () => showScreen('select-league-screen'));
     document.getElementById('exit-game-btn').addEventListener('click', () => window.location.reload());
     document.querySelectorAll('#sidebar li').forEach(item => { item.addEventListener('click', () => showMainContent(item.dataset.content)); });
-    document.getElementById('calendar-content').addEventListener('click', handleCalendarDayClick);
+    document.getElementById('calendar-container').addEventListener('click', handleCalendarDayClick);
     document.getElementById('confirm-holiday-btn').addEventListener('click', startHoliday);
     document.getElementById('cancel-holiday-btn').addEventListener('click', stopHoliday);
     document.getElementById('close-holiday-modal-btn').addEventListener('click', () => document.getElementById('holiday-confirmation-modal').classList.remove('active'));
@@ -1880,15 +1786,12 @@ function initializeEventListeners() {
     
     document.getElementById('currency-selector')?.addEventListener('change', (e) => {
         gameState.currency = e.target.value;
-        if (gameState.currentMainContent === 'finances-content') {
-            displayFinances();
-        }
-        if (gameState.currentMainContent === 'squad-content') {
-            loadSquadTable();
-        }
+        if (gameState.currentMainContent === 'finances-content') displayFinances();
+        if (gameState.currentMainContent === 'squad-content') loadSquadTable();
+        if (gameState.currentMainContent === 'contracts-content') displayContractsScreen();
+        if (gameState.currentMainContent === 'transfer-market-content') displayTransferMarket();
     });
 
-    document.querySelectorAll('.tab-btn').forEach(btn => { btn.addEventListener('click', () => { const tabId = btn.dataset.tab; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); btn.classList.add('active'); document.getElementById(`${tabId}-tab`).classList.add('active'); if(tabId === 'club-finances') renderFinanceChart(); }); });
     document.getElementById('open-friendly-modal-btn').addEventListener('click', openFriendlyModal);
     document.getElementById('close-friendly-modal-btn').addEventListener('click', () => document.getElementById('schedule-friendly-modal').classList.remove('active'));
     document.getElementById('cancel-schedule-friendly-btn').addEventListener('click', () => document.getElementById('schedule-friendly-modal').classList.remove('active'));
