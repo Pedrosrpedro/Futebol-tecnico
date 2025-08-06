@@ -30,9 +30,11 @@ const gameState = {
     clubFinances: { balance: 0, history: [] },
     allMatches: [],
     lastMatchDateOfYear: null,
+    freeAgents: [] // NOVO: Lista de agentes livres
 };
 let holidayInterval = null;
 let selectedPlayerInfo = null;
+let negotiationState = {}; // NOVO: Estado da negociação atual
 const MAX_SUBSTITUTES = 7;
 
 const currencyRates = { BRL: 1, USD: 5.55, EUR: 6.42 };
@@ -78,6 +80,7 @@ function showMainContent(contentId) {
     if (contentId === 'squad-content') loadSquadTable();
     if (contentId === 'contracts-content') displayContractsScreen();
     if (contentId === 'tactics-content') loadTacticsScreen();
+    if (contentId === 'transfer-market-content') displayTransferMarket();
     if (contentId === 'development-content') displayDevelopmentScreen();
     if (contentId === 'calendar-content') {
         gameState.calendarDisplayDate = new Date(gameState.currentDate);
@@ -104,11 +107,22 @@ function loadLeagues() { const leagueSelectionDiv = document.getElementById('lea
 function loadTeams(leagueId) { gameState.currentLeagueId = leagueId; const teamSelectionDiv = document.getElementById('team-selection'); teamSelectionDiv.innerHTML = ''; const teams = leaguesData[leagueId].teams; for (const team of teams) { const teamCard = document.createElement('div'); teamCard.className = 'team-card'; teamCard.innerHTML = `<img src="images/${team.logo}" alt="${team.name}"><span>${team.name}</span>`; teamCard.addEventListener('click', () => startGame(team)); teamSelectionDiv.appendChild(teamCard); } showScreen('select-team-screen'); }
 function createClub() { const clubName = document.getElementById('club-name-input').value; if (!clubName) { showInfoModal("Atenção", "Por favor, preencha o nome do clube."); return; } gameState.currentLeagueId = Object.keys(leaguesData)[0]; const generatedPlayers = []; for (let i = 0; i < 22; i++) { generatedPlayers.push({ name: `*Jogador Gerado ${i + 1}`, position: "CM", attributes: { pace: 55, shooting: 55, passing: 55, dribbling: 55, defending: 55, physical: 55 }, age: 23 }); } const newClub = { name: clubName, logo: 'logo_default.png', players: generatedPlayers }; startGame(newClub); }
 function setupInitialSquad() { gameState.squadManagement.startingXI = {}; gameState.squadManagement.substitutes = []; gameState.squadManagement.reserves = []; const todosJogadores = [...gameState.userClub.players].sort((a, b) => b.overall - a.overall); const formacao = gameState.tactics.formation; const posicoesDaFormacao = Object.keys(formationLayouts[formacao]); let jogadoresDisponiveis = [...todosJogadores]; for (const posicaoDoEsquema of posicoesDaFormacao) { const posicaoBase = posicaoDoEsquema.replace(/\d/g, ''); const indiceMelhorJogador = jogadoresDisponiveis.findIndex(p => p.position === posicaoBase); if (indiceMelhorJogador !== -1) { const jogadorEscolhido = jogadoresDisponiveis[indiceMelhorJogador]; gameState.squadManagement.startingXI[posicaoDoEsquema] = jogadorEscolhido; jogadoresDisponiveis.splice(indiceMelhorJogador, 1); } } for (const posicaoDoEsquema of posicoesDaFormacao) { if (!gameState.squadManagement.startingXI[posicaoDoEsquema] && jogadoresDisponiveis.length > 0) { gameState.squadManagement.startingXI[posicaoDoEsquema] = jogadoresDisponiveis.shift(); } } gameState.squadManagement.substitutes = jogadoresDisponiveis.splice(0, MAX_SUBSTITUTES); gameState.squadManagement.reserves = jogadoresDisponiveis; }
+
 function startGame(team) {
     gameState.userClub = team;
 
     mergePlayerData();
     mergePlayerContractData();
+
+    // NOVO: Inicializa os agentes livres com dados completos
+    if (typeof freeAgents !== 'undefined' && freeAgents.players) {
+        gameState.freeAgents = freeAgents.players.map(p => {
+            p.overall = calculatePlayerOverall(p);
+            updateMarketValue(p);
+            p.contractUntil = 0; // Agentes livres não têm contrato
+            return p;
+        });
+    }
 
     initializeAllPlayerData();
     initializeClubFinances();
@@ -277,14 +291,18 @@ function updatePlayerDevelopment() {
 function initializeAllPlayerData() {
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
-            for (const player of team.players) {
-                if (player.overall === undefined) {
-                    player.overall = calculatePlayerOverall(player);
-                }
-                if (player.marketValue === undefined) {
-                    updateMarketValue(player);
-                }
-            }
+            initializeAllPlayerDataForTeam(team);
+        }
+    }
+}
+
+function initializeAllPlayerDataForTeam(team) {
+    for (const player of team.players) {
+        if (player.overall === undefined) {
+            player.overall = calculatePlayerOverall(player);
+        }
+        if (player.marketValue === undefined) {
+            updateMarketValue(player);
         }
     }
 }
@@ -329,8 +347,8 @@ function mergePlayerData() {
 
 function mergePlayerContractData() {
     for (const leagueId in leaguesData) {
-        if (!playerBioData[leagueId] || !playerBioData[leagueId].teams.some(t => t.players.some(p => p.contractUntil))) {
-            continue;
+        if (!playerBioData[leagueId] || !playerBioData[leagueId].teams.some(t => t.players.some(p => p.hasOwnProperty('contractUntil')))) {
+            continue; 
         }
 
         const leagueTeams = leaguesData[leagueId].teams;
@@ -341,9 +359,11 @@ function mergePlayerContractData() {
             if (!bioTeam) continue;
 
             for (const player of team.players) {
-                const bioPlayer = bioTeam.players.find(p => p.name === player.name && p.contractUntil);
+                const bioPlayer = bioTeam.players.find(p => p.name === player.name && p.hasOwnProperty('contractUntil'));
                 if (bioPlayer) {
                     player.contractUntil = bioPlayer.contractUntil;
+                } else if (player.contractUntil === undefined) {
+                    player.contractUntil = 18;
                 }
             }
         }
@@ -478,16 +498,9 @@ function renderTable(tableData, startPos = 1) { let html = `<table><thead><tr><t
 function updateCalendar() { const container = document.getElementById('calendar-container'); if (!container || !gameState.calendarDisplayDate) return; const date = gameState.calendarDisplayDate; const month = date.getMonth(); const year = date.getFullYear(); const firstDay = new Date(year, month, 1); const lastDay = new Date(year, month + 1, 0); let html = `<div class="calendar-header"><button id="prev-month-btn">◀</button><h3>${date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3><button id="next-month-btn">▶</button></div><div class="calendar-grid"><div class="calendar-weekday">Dom</div><div class="calendar-weekday">Seg</div><div class="calendar-weekday">Ter</div><div class="calendar-weekday">Qua</div><div class="calendar-weekday">Qui</div><div class="calendar-weekday">Sex</div><div class="calendar-weekday">Sáb</div>`; for (let i = 0; i < firstDay.getDay(); i++) { html += `<div class="calendar-day other-month"></div>`; } for (let i = 1; i <= lastDay.getDate(); i++) { const loopDate = new Date(year, month, i); const isCurrent = isSameDay(loopDate, gameState.currentDate); const matchOnThisDay = gameState.allMatches.find(m => isSameDay(new Date(m.date), loopDate) && (m.home.name === gameState.userClub.name || m.away.name === gameState.userClub.name)); let dayClasses = 'calendar-day'; let dayContent = `<span class="day-number">${i}</span>`; if (matchOnThisDay) { dayClasses += ' match-day'; const opponent = matchOnThisDay.home.name === gameState.userClub.name ? `vs ${matchOnThisDay.away.name}` : `@ ${matchOnThisDay.home.name}`; dayContent += `<div class="match-details">${opponent}</div>`; } if (isCurrent) { dayClasses += ' current-day'; } html += `<div class="${dayClasses}" data-date="${loopDate.toISOString().split('T')[0]}">${dayContent}</div>`; } html += '</div>'; container.innerHTML = html; document.getElementById('prev-month-btn').addEventListener('click', () => { if (!gameState.isOnHoliday) { gameState.calendarDisplayDate.setMonth(gameState.calendarDisplayDate.getMonth() - 1); updateCalendar(); } }); document.getElementById('next-month-btn').addEventListener('click', () => { if (!gameState.isOnHoliday) { gameState.calendarDisplayDate.setMonth(gameState.calendarDisplayDate.getMonth() + 1); updateCalendar(); } }); }
 function displayRound(leagueId, roundNumber) { const container = document.getElementById('round-matches-container'); const roundDisplay = document.getElementById('round-display'); const prevBtn = document.getElementById('prev-round-btn'); const nextBtn = document.getElementById('next-round-btn'); const leagueState = gameState.leagueStates[leagueId]; if (!leagueState) return; const roundMatches = leagueState.schedule.filter(m => m.round === roundNumber); roundDisplay.innerText = `Rodada ${roundNumber}`; container.innerHTML = ''; if (!roundMatches || roundMatches.length === 0) { container.innerHTML = "<p>Nenhuma partida encontrada para esta rodada.</p>"; return; } let roundHTML = ''; for (const match of roundMatches) { const score = match.status === 'played' ? `${match.homeScore} - ${match.awayScore}` : 'vs'; roundHTML += ` <div class="match-card"> <div class="match-card-team home"> <span>${match.home.name}</span> <img src="images/${match.home.logo}" alt="${match.home.name}"> </div> <div class="match-score">${score}</div> <div class="match-card-team away"> <img src="images/${match.away.logo}" alt="${match.away.name}"> <span>${match.away.name}</span> </div> </div> `; } container.innerHTML = roundHTML; prevBtn.disabled = roundNumber === 1; const totalRounds = leagueState.schedule.length > 0 ? Math.max(...leagueState.schedule.map(m => m.round).filter(r => typeof r === 'number')) : 0; nextBtn.disabled = roundNumber >= totalRounds; }
 
-function triggerNewSeason() {
-    gameState.season++;
-    processPromotionRelegation();
-    initializeSeason();
-}
-
 function advanceDay() {
     const today = new Date(gameState.currentDate);
     
-    // Finalização da temporada em 31 de Dezembro
     if (today.getMonth() === 11 && today.getDate() === 31) {
         handleEndOfSeason();
         const nextDay = new Date(today);
@@ -501,8 +514,16 @@ function advanceDay() {
     nextDay.setDate(nextDay.getDate() + 1);
     gameState.currentDate = nextDay;
 
+    // NOVO: Executar lógicas diárias de contrato
+    if (today.getDate() === 1) { // Roda 1 vez por mês para otimizar
+        handleExpiredContracts();
+        aiContractManagement();
+        checkExpiringContracts();
+    }
+    
     simulateDayMatches();
     checkSeasonEvents(); // Verifica eventos como fim da fase da Série C
+    findNextUserMatch(); // Atualiza o próximo jogo
     Object.keys(gameState.leagueStates).forEach(id => updateLeagueTable(id));
     updateContinueButton();
     if (gameState.currentMainContent === 'calendar-content') updateCalendar();
@@ -1150,6 +1171,12 @@ function showPostMatchReport() {
 }
 
 // --- Lógica de Fim de Temporada, Promoção e Rebaixamento ---
+function triggerNewSeason() {
+    gameState.season++;
+    processPromotionRelegation();
+    initializeSeason();
+}
+
 function checkSeasonEvents() {
     if (gameState.isOffSeason) return;
 
@@ -1224,7 +1251,6 @@ function awardPrizeMoney() {
 function processPromotionRelegation() {
     updatePlayerDevelopment();
 
-    // Identificar times
     const tableA = getFullSeasonTable('brasileirao_a');
     const relegatedFromA = tableA.slice(-4).map(t => findTeamInLeagues(t.name)).filter(Boolean);
 
@@ -1237,8 +1263,7 @@ function processPromotionRelegation() {
     const groupA = leagueStateC.table.filter(t => leagueStateC.serieCState.groups.A.includes(t.name)).sort((a,b)=>{ for(const k of tiebreakers) { if(a[k]>b[k]) return -1; if(a[k]<b[k]) return 1; } return 0;});
     const groupB = leagueStateC.table.filter(t => leagueStateC.serieCState.groups.B.includes(t.name)).sort((a,b)=>{ for(const k of tiebreakers) { if(a[k]>b[k]) return -1; if(a[k]<b[k]) return 1; } return 0;});
     const promotedFromC = [...groupA.slice(0,2), ...groupB.slice(0,2)].map(t => findTeamInLeagues(t.name)).filter(Boolean);
-
-    // Rebaixamento da Série C e Promoção da "Série D"
+    
     const tableCFirstPhase = getFullFirstPhaseTableC();
     const relegatedFromC = tableCFirstPhase.slice(-4).map(t => findTeamInLeagues(t.name)).filter(Boolean);
     
@@ -1252,18 +1277,17 @@ function processPromotionRelegation() {
     promotedFromD.forEach(team => {
         team.players = [];
         for (let i = 0; i < 22; i++) { team.players.push(generateNewPlayer(team)); }
+        initializeAllPlayerDataForTeam(team);
     });
     
-    // Reconstruir listas de times
     leaguesData.brasileirao_a.teams = leaguesData.brasileirao_a.teams.filter(t => !relegatedFromA.some(r => r.name === t.name)).concat(promotedFromB);
     leaguesData.brasileirao_b.teams = leaguesData.brasileirao_b.teams.filter(t => !promotedFromB.some(p => p.name === t.name) && !relegatedFromB.some(r => r.name === t.name)).concat(relegatedFromA).concat(promotedFromC);
     leaguesData.brasileirao_c.teams = leaguesData.brasileirao_c.teams.filter(t => !promotedFromC.some(p => p.name === t.name) && !relegatedFromC.some(r => r.name === t.name)).concat(relegatedFromB).concat(promotedFromD);
     
-    // Atualizar liga do usuário
-    if(promotedFromB.some(t => t.name === gameState.userClub.name)) gameState.currentLeagueId = 'brasileirao_a';
-    if(relegatedFromA.some(t => t.name === gameState.userClub.name)) gameState.currentLeagueId = 'brasileirao_b';
-    if(promotedFromC.some(t => t.name === gameState.userClub.name)) gameState.currentLeagueId = 'brasileirao_b';
-    if(relegatedFromB.some(t => t.name === gameState.userClub.name)) gameState.currentLeagueId = 'brasileirao_c';
+    const userClubName = gameState.userClub.name;
+    if(leaguesData.brasileirao_a.teams.some(t => t.name === userClubName)) gameState.currentLeagueId = 'brasileirao_a';
+    else if(leaguesData.brasileirao_b.teams.some(t => t.name === userClubName)) gameState.currentLeagueId = 'brasileirao_b';
+    else gameState.currentLeagueId = 'brasileirao_c';
 }
 function findTeamInLeagues(teamName, isPlayerLookup = false) { 
     if (!teamName) return null; 
@@ -1371,43 +1395,7 @@ function scheduleFriendlyMatch() { document.getElementById('schedule-friendly-mo
 function isDateAvailableForTeam(date, teamName) { return !gameState.allMatches.some(match => (match.home.name === teamName || match.away.name === teamName) && isSameDay(new Date(match.date), date)); }
 
 
-// --- NOVO: Seção de Contratos e Desenvolvimento ---
-function displayContractsScreen() {
-    const container = document.getElementById('contracts-content');
-    container.innerHTML = '<h3>Situação Contratual do Elenco</h3>';
-    
-    const tableContainer = document.createElement('div');
-    tableContainer.className = 'table-container';
-
-    const sortedPlayers = [...gameState.userClub.players].sort((a, b) => {
-        const contractA = a.contractUntil === undefined ? 999 : a.contractUntil;
-        const contractB = b.contractUntil === undefined ? 999 : b.contractUntil;
-        return contractA - contractB;
-    });
-
-    let tableHTML = `<table><thead><tr><th>Nome</th><th>Idade</th><th>Pos.</th><th>GERAL</th><th>Contrato Restante</th><th>Ações</th></tr></thead><tbody>`;
-    for (const player of sortedPlayers) {
-        let contractClass = '';
-        if (player.contractUntil <= 6) {
-            contractClass = 'negative';
-        } else if (player.contractUntil <= 12) {
-            contractClass = 'text-secondary';
-        }
-
-        tableHTML += `
-            <tr>
-                <td>${player.name}</td>
-                <td>${player.age}</td>
-                <td>${player.position}</td>
-                <td><b>${player.overall}</b></td>
-                <td class="${contractClass}">${formatContract(player.contractUntil) || 'N/A'}</td>
-                <td><button disabled>Renovar</button> <button disabled class="secondary">Rescindir</button></td>
-            </tr>`;
-    }
-    tableHTML += `</tbody></table>`;
-    tableContainer.innerHTML = tableHTML;
-    container.appendChild(tableContainer);
-}
+// --- NOVO: Seção de Contratos, Desenvolvimento e Mercado ---
 
 function predictPlayerDevelopment(player) {
     const originalAttributes = { ...player.attributes };
@@ -1530,6 +1518,108 @@ function displayDevelopmentScreen() {
     });
 }
 
+function displayTransferMarket() {
+    const container = document.getElementById('transfer-market-content');
+    container.innerHTML = `
+        <div class="tabs-container">
+            <button class="tab-btn active" data-tab="top-free-agents">Top 20 Agentes Livres</button>
+            <button class="tab-btn" data-tab="search-players">Pesquisar Jogadores</button>
+            <button class="tab-btn" data-tab="market-hub" disabled>Mercado</button>
+        </div>
+        <div id="top-free-agents-tab" class="tab-content active"></div>
+        <div id="search-players-tab" class="tab-content"></div>
+        <div id="market-hub-tab" class="tab-content"><p>Funcionalidade em desenvolvimento.</p></div>
+    `;
+
+    displayTopFreeAgents();
+    displayPlayerSearch();
+
+    container.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.dataset.tab;
+            container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            container.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            container.querySelector(`#${tabId}-tab`).classList.add('active');
+        });
+    });
+}
+
+function displayTopFreeAgents() {
+    const container = document.getElementById('top-free-agents-tab');
+    const top20 = [...gameState.freeAgents].sort((a,b) => b.overall - a.overall).slice(0, 20);
+    container.innerHTML = `<div class="table-container">${renderPlayerList(top20)}</div>`;
+    addPlayerListEventListeners(container);
+}
+
+function displayPlayerSearch() {
+    const container = document.getElementById('search-players-tab');
+    container.innerHTML = `
+        <div class="player-search-bar">
+            <input type="text" id="player-search-input" placeholder="Pesquisar nome do jogador...">
+            <button id="show-all-free-agents-btn">Mostrar Todos</button>
+        </div>
+        <div class="table-container" id="player-search-results">
+            <p style="padding: 20px; text-align: center;">Use a busca para encontrar jogadores ou clique em "Mostrar Todos".</p>
+        </div>
+    `;
+
+    const input = document.getElementById('player-search-input');
+    const resultsContainer = document.getElementById('player-search-results');
+    
+    const performSearch = () => {
+        const query = input.value.toLowerCase();
+        if (query.length < 2) {
+            resultsContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Digite pelo menos 2 caracteres.</p>';
+            return;
+        }
+        const results = gameState.freeAgents.filter(p => p.name.toLowerCase().includes(query));
+        resultsContainer.innerHTML = renderPlayerList(results);
+        addPlayerListEventListeners(resultsContainer);
+    };
+
+    input.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') performSearch();
+    });
+
+    document.getElementById('show-all-free-agents-btn').addEventListener('click', () => {
+        const allSorted = [...gameState.freeAgents].sort((a,b) => b.overall - a.overall);
+        resultsContainer.innerHTML = renderPlayerList(allSorted);
+        addPlayerListEventListeners(resultsContainer);
+    });
+}
+
+function renderPlayerList(players) {
+    if (players.length === 0) return '<p style="padding: 20px; text-align: center;">Nenhum jogador encontrado.</p>';
+    let tableHTML = `<table><thead><tr><th>Nome</th><th>Idade</th><th>Pos.</th><th>GERAL</th><th>Valor de Mercado</th><th>Ação</th></tr></thead><tbody>`;
+    for (const player of players) {
+        tableHTML += `
+            <tr data-player-name="${player.name}">
+                <td>${player.name}</td>
+                <td>${player.age}</td>
+                <td>${player.position}</td>
+                <td><b>${player.overall}</b></td>
+                <td>${formatCurrency(player.marketValue)}</td>
+                <td><button class="propose-contract-btn" data-player-name="${player.name}">Propor Contrato</button></td>
+            </tr>`;
+    }
+    tableHTML += `</tbody></table>`;
+    return tableHTML;
+}
+
+function addPlayerListEventListeners(container) {
+    container.querySelectorAll('.propose-contract-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const playerName = e.target.dataset.playerName;
+            const player = gameState.freeAgents.find(p => p.name === playerName);
+            if (player) {
+                openNegotiationModal(player, 'hire');
+            }
+        });
+    });
+}
+
 
 // --- Event Listeners ---
 function initializeEventListeners() {
@@ -1582,6 +1672,15 @@ function initializeEventListeners() {
     document.getElementById('pause-match-btn').addEventListener('click', () => togglePause());
     document.getElementById('resume-match-btn').addEventListener('click', () => togglePause());
     document.getElementById('close-post-match-btn').addEventListener('click', () => { document.getElementById('post-match-report-modal').classList.remove('active'); showScreen('main-game-screen'); updateContinueButton(); });
+
+    // Listeners do modal de negociação
+    document.getElementById('close-negotiation-modal-btn').addEventListener('click', () => document.getElementById('negotiation-modal').classList.remove('active'));
+    document.getElementById('submit-offer-btn').addEventListener('click', handleNegotiationOffer);
+    document.getElementById('accept-demand-btn').addEventListener('click', () => {
+        const { desiredDuration, desiredBonus } = negotiationState;
+        finalizeDeal(desiredDuration * 12, desiredBonus);
+    });
+    document.getElementById('walk-away-btn').addEventListener('click', () => document.getElementById('negotiation-modal').classList.remove('active'));
 }
 function addMainScreenEventListeners() {
     document.getElementById('league-table-selector')?.addEventListener('change', (e) => { gameState.tableView.leagueId = e.target.value; updateLeagueTable(gameState.tableView.leagueId); });
