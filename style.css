@@ -611,3 +611,110 @@ span.negative { color: var(--danger-color); font-weight: bold; }
 .main-content-panel.active, #match-simulation-screen.active {
     height: 100%;
 }
+
+/* --- Estilos para o Mercado de Transferências --- */
+#transfer-market-content {
+    gap: 20px;
+}
+
+.player-search-bar {
+    display: flex;
+    gap: 10px;
+    padding: 15px;
+    background-color: var(--bg-dark);
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.player-search-bar input {
+    flex-grow: 1;
+    margin: 0;
+}
+
+.player-search-bar button {
+    margin: 0;
+}
+
+/* --- Estilos para o Modal de Negociação --- */
+.negotiation-modal-content {
+    max-width: 700px;
+}
+
+.negotiation-player-info {
+    text-align: center;
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+.negotiation-player-info p {
+    color: var(--text-secondary);
+}
+
+.negotiation-area {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.negotiation-side {
+    width: 48%;
+    background-color: var(--bg-medium);
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.negotiation-side h4 {
+    color: var(--accent-color);
+    margin-bottom: 15px;
+}
+
+.negotiation-side p {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.negotiation-input {
+    margin-bottom: 15px;
+}
+
+.negotiation-input label {
+    display: block;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+}
+.negotiation-input input {
+    width: 100%;
+    margin: 0;
+}
+
+.negotiation-feedback {
+    margin-top: 15px;
+    font-style: italic;
+    color: var(--selected-color);
+    min-height: 40px;
+}
+
+.negotiation-actions {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid var(--border-color);
+    padding-top: 15px;
+    margin-top: 15px;
+}
+
+#walk-away-btn {
+    background-color: var(--danger-color);
+}
+
+/* --- Cores de texto para contratos --- */
+.text-secondary {
+    color: var(--text-secondary);
+}
+.negative {
+    color: var(--danger-color) !important;
+}
+.positive {
+     color: var(--accent-color) !important;
+}
