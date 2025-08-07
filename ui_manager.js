@@ -418,6 +418,12 @@ function findCurrentRound(leagueId) {
     return lastPlayedMatch ? lastPlayedMatch.round + 1 : 1;
 }
 
+// --- Funções de Finanças ---
+function displayFinances() { const container = document.getElementById('finances-content'); if (!container) return; displayClubFinances(); displayOpponentFinances(); }
+function displayClubFinances() { const tabContent = document.getElementById('club-finances-tab'); const { balance, history } = gameState.clubFinances; tabContent.innerHTML = ` <div class="finance-overview"> <div class="finance-box"> <h4>Balanço Atual</h4> <p class="${balance >= 0 ? 'positive' : 'negative'}">${formatCurrency(balance)}</p> </div> </div> <div class="finance-chart-container"> <h4>Evolução Financeira</h4> <canvas id="finance-chart"></canvas> </div> <div class="finance-history-container"> <h4>Histórico de Transações</h4> <div class="table-container" id="finance-history-table"></div> </div> `; const historyTableContainer = document.getElementById('finance-history-table'); let tableHTML = `<table><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th></tr></thead><tbody>`; for (const item of history) { tableHTML += ` <tr> <td>${item.date.toLocaleDateString('pt-BR')}</td> <td>${item.description}</td> <td class="${item.amount >= 0 ? 'positive' : 'negative'}">${formatCurrency(item.amount)}</td> </tr> `; } tableHTML += `</tbody></table>`; historyTableContainer.innerHTML = tableHTML; renderFinanceChart(); }
+function renderFinanceChart() { const ctx = document.getElementById('finance-chart')?.getContext('2d'); if (!ctx) return; const history = [...gameState.clubFinances.history].reverse(); const labels = history.map(item => item.date.toLocaleDateString('pt-BR')); let cumulativeBalance = 0; const data = history.map(item => { cumulativeBalance += item.amount; return cumulativeBalance; }); if (window.financeChartInstance) { window.financeChartInstance.destroy(); } window.financeChartInstance = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label: 'Balanço do Clube', data: data, borderColor: 'rgb(61, 220, 151)', backgroundColor: 'rgba(61, 220, 151, 0.2)', tension: 0.1, fill: true }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { callback: function(value, index, values) { return formatCurrency(value); } } } } } }); }
+function displayOpponentFinances() { const container = document.getElementById('opponent-finances-tab'); if (typeof estimativaVerbaMedia2025 === 'undefined') { container.innerHTML = '<h3>Erro</h3><p>Os dados financeiros (verba_times.js) não foram encontrados.</p>'; return; } container.innerHTML = `<h3>Verba Estimada dos Clubes (Início da Temporada)</h3>`; const tableContainer = document.createElement('div'); tableContainer.className = 'table-container'; let fullHtml = ''; const divisionsOrder = ['Série A', 'Série B', 'Série C']; const financesByDivision = estimativaVerbaMedia2025.reduce((acc, team) => { const { divisao } = team; if (!acc[divisao]) acc[divisao] = []; acc[divisao].push(team); return acc; }, {}); for (const division of divisionsOrder) { if (!financesByDivision[division]) continue; fullHtml += `<h4 style="margin-top: 20px; margin-bottom: 10px;">${division}</h4>`; fullHtml += `<table><thead><tr><th>Time</th><th>Verba Média Estimada</th><th>Análise</th></tr></thead><tbody>`; const sortedTeams = financesByDivision[division].sort((a, b) => b.verba_media_estimada_milhoes_reais - a.verba_media_estimada_milhoes_reais); for (const team of sortedTeams) { const formattedVerba = formatCurrency(team.verba_media_estimada_milhoes_reais * 1000000); const cleanAnalysis = team.analise.replace(/\[.*?\]/g, '').trim(); fullHtml += `<tr> <td>${team.time}</td> <td>${formattedVerba}</td> <td>${cleanAnalysis}</td> </tr>`; } fullHtml += '</tbody></table>'; } tableContainer.innerHTML = fullHtml; container.appendChild(tableContainer); }
+
 // --- Funções Específicas de Telas ---
 function displayDevelopmentScreen() {
     const container = document.getElementById('development-content');
@@ -646,6 +652,50 @@ function swapPlayers(sourcePlayerInfo, destPlayerInfo) { const isMovingToSubs = 
 function calculateModifiedOverall(player, targetPosition) { if (!player || !targetPosition) return player ? player.overall : 0; const naturalPosition = player.position; const cleanTargetPosition = targetPosition.replace(/\d/g, ''); if (!positionMatrix[naturalPosition] || positionMatrix[naturalPosition][cleanTargetPosition] === undefined) { return Math.max(40, player.overall - 25); } const distance = positionMatrix[naturalPosition][cleanTargetPosition]; const penaltyFactor = 4; const penalty = distance * penaltyFactor; return Math.max(40, player.overall - penalty); }
 function createPlayerChip(player, currentPosition) { const chip = document.createElement('div'); chip.className = 'player-chip'; chip.dataset.playerId = player.name; const modifiedOverall = calculateModifiedOverall(player, currentPosition); let overallClass = 'player-overall'; if (modifiedOverall < player.overall) { overallClass += ' penalty'; } chip.innerHTML = ` <span class="player-name">${player.name.split(' ').slice(-1).join(' ')}</span> <span class="${overallClass}">${modifiedOverall}</span> <span class="player-pos">${player.position}</span> `; return chip; }
 function createSquadListPlayer(player) { const item = document.createElement('div'); item.className = 'squad-list-player'; item.dataset.playerId = player.name; item.innerHTML = ` <div class="player-info"> <div class="player-name">${player.name}</div> <div class="player-pos">${player.position}</div> </div> <div class="player-overall">${player.overall}</div> `; return item; }
+function loadTacticsScreen() {
+    const formation = gameState.tactics.formation;
+    const field = document.querySelector('#field-container .field-background');
+    const subsList = document.getElementById('substitutes-list');
+    const reservesList = document.getElementById('reserves-list');
+    field.innerHTML = ''; subsList.innerHTML = ''; reservesList.innerHTML = '';
+
+    Object.keys(gameState.tactics).forEach(key => {
+        const elementId = `tactic-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`;
+        const element = document.getElementById(elementId);
+        if (element) {
+            if (element.type === 'checkbox') {
+                element.checked = gameState.tactics[key];
+            } else {
+                element.value = gameState.tactics[key];
+            }
+        }
+    });
+
+    const positions = formationLayouts[formation];
+    for (const pos in positions) {
+        const slot = document.createElement('div');
+        slot.className = 'player-slot';
+        slot.dataset.position = pos;
+        slot.style.top = `${positions[pos][0]}%`;
+        slot.style.left = `${positions[pos][1]}%`;
+        const player = gameState.squadManagement.startingXI[pos];
+        if (player) {
+            slot.appendChild(createPlayerChip(player, pos));
+        } else {
+            slot.innerText = pos;
+        }
+        field.appendChild(slot);
+    }
+    gameState.squadManagement.substitutes.forEach(player => subsList.appendChild(createSquadListPlayer(player)));
+    gameState.squadManagement.reserves.forEach(player => reservesList.appendChild(createSquadListPlayer(player)));
+    document.getElementById('subs-count').innerText = gameState.squadManagement.substitutes.length;
+
+    if (selectedPlayerInfo) {
+        const element = document.querySelector(`[data-player-id="${selectedPlayerInfo.player.name}"]`);
+        if (element) element.classList.add('selected');
+    }
+}
+
 
 // --- Funções de Contratos e Transferências (UI) ---
 function displayContractsScreen() {
@@ -819,16 +869,15 @@ function finalizeDeal(contractMonths, bonus) {
         showInfoModal("Contrato Renovado!", `${player.name} renovou seu contrato por ${formatContract(contractMonths)}!`);
     } else { // hire
         player.contractUntil = contractMonths;
-        // CORREÇÃO: Garante que o jogador contratado tenha todos os dados necessários
-        if (!player.attributes) { // Se for um jogador como Di Maria que pode não ter atributos detalhados
-            player.attributes = { pace: 80, shooting: 80, passing: 80, dribbling: 80, defending: 50, physical: 65 }; // Atributos genéricos
-            player.overall = calculatePlayerOverall(player); // Recalcula o overall
+        if (!player.attributes) { 
+            player.attributes = { pace: 80, shooting: 80, passing: 80, dribbling: 80, defending: 50, physical: 65 };
+            player.overall = calculatePlayerOverall(player);
         }
-        updateMarketValue(player); // Garante que o valor está atualizado
+        updateMarketValue(player); 
         
         gameState.userClub.players.push(player);
         gameState.freeAgents = gameState.freeAgents.filter(p => p.name !== player.name);
-        setupInitialSquad(); // CORREÇÃO: Atualiza a gestão do elenco imediatamente
+        setupInitialSquad();
         showInfoModal("Contratação Realizada!", `Bem-vindo ao clube, ${player.name}!`);
         if(gameState.currentMainContent === 'transfer-market-content') displayTransferMarket();
     }
@@ -1022,7 +1071,6 @@ function drawMatch() {
     const ballY = (ballPos.y / 100) * height;
     ctx.beginPath(); ctx.arc(ballX, ballY, ballRadius, 0, 2 * Math.PI); ctx.fillStyle = 'white'; ctx.fill();
 }
-
 
 // --- Event Listeners ---
 function initializeEventListeners() {
