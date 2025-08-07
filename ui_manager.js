@@ -942,7 +942,7 @@ function handleNegotiationOffer() {
     let acceptanceScore = (bonusRatio * 0.8) - (durationDiff * 0.2);
 
     if (acceptanceScore >= 1.0) {
-        finalizeDeal(offerDuration * 12, offerBonus);
+        finalizeDeal(offerDuration * 12);
     } else if (negotiationState.rounds >= 4) {
         feedbackEl.innerText = "Sua proposta final não me agrada. Vou procurar outras oportunidades.";
         setTimeout(() => document.getElementById('negotiation-modal').classList.remove('active'), 2000);
