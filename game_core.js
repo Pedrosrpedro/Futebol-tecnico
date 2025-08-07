@@ -81,19 +81,34 @@ function mergeAllData() {
             const bioTeam = bioLeague.teams.find(t => t.name === team.name);
             const contractTeam = contractLeague.find(t => t.time === team.name);
 
-            if (!team.players || !bioTeam || !contractTeam) continue;
+            // Trecho modificado para depuração
+if (!team.players) continue;
 
-            for (const player of team.players) {
-                const bioPlayer = bioTeam.players.find(p => p.name === player.name);
-                const contractPlayer = contractTeam.jogadores.find(p => p.nome === player.name);
+if (!bioTeam) {
+    console.error(`[mergeAllData] Time de biografia "${team.name}" não encontrado no arquivo "dinheiro_joga" da liga.`);
+    continue;
+}
+if (!contractTeam) {
+    console.error(`[mergeAllData] Time de contrato "${team.name}" não encontrado no arquivo "contratos" da liga. Verifique a propriedade 'time'.`);
+    continue;
+}
 
-                if (bioPlayer) {
-                    Object.assign(player, bioPlayer);
-                }
+for (const player of team.players) {
+    const bioPlayer = bioTeam.players.find(p => p.name === player.name);
+    const contractPlayer = contractTeam.jogadores.find(p => p.nome === player.name);
 
-                if (contractPlayer && typeof contractPlayer.contrato_anos === 'number') {
-                    player.contractUntil = contractPlayer.contrato_anos * 12;
-                }
+    if (!bioPlayer) {
+        console.warn(`[mergeAllData] Jogador de biografia "${player.name}" não encontrado no time "${team.name}".`);
+    } else {
+        Object.assign(player, bioPlayer);
+    }
+
+    if (!contractPlayer) {
+        console.warn(`[mergeAllData] Jogador de contrato "${player.name}" não encontrado no time "${team.name}". Verifique a propriedade 'nome'.`);
+    } else if (typeof contractPlayer.contrato_anos === 'number') {
+        player.contractUntil = contractPlayer.contrato_anos * 12;
+    }
+}
             }
         }
     }
