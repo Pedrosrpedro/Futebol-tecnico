@@ -921,49 +921,52 @@ function aiTransferLogic() {
     if (gameState.isOffSeason) return;
 
     const getAITransferBudget = (team) => {
-        if (typeof estimativaVerbaMedia2025 !== 'undefined') {
-            const financialData = estimativaVerbaMedia2025.find(c => c.time === team.name);
-            if (financialData) {
-                return financialData.verba_media_estimada_milhoes_reais * 1000000 * 0.20;
-            }
+    if (typeof estimativaVerbaMedia2025 !== 'undefined') {
+        const financialData = estimativaVerbaMedia2025.find(c => c.time === team.name);
+        if (financialData) {
+            return financialData.verba_media_estimada_milhoes_reais * 1000000 * 0.20;
         }
-        const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
-        return Math.pow(teamOverallAvg / 100, 2) * 5000000 + 500000;
-    };
+    }
+    const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
+    return Math.pow(teamOverallAvg / 100, 2) * 5000000 + 500000;
+};
 
-    for (const leagueId in leaguesData) {
-        for (const team of leaguesData[leagueId].teams) {
-            if (team.name === gameState.userClub.name) continue;
-            if (Math.random() > 0.10) continue; 
+for (const leagueId in leaguesData) {
+    for (const team of leaguesData[leagueId].teams) {
+        if (team.name === gameState.userClub.name) continue;
+        if (Math.random() > 0.10) continue; 
 
-            const teamBudget = getAITransferBudget(team);
-            const weakestPlayer = [...team.players].sort((a, b) => a.overall - b.overall)[0];
-            if (!weakestPlayer) continue;
+        const teamBudget = getAITransferBudget(team);
+        const weakestPlayer = [...team.players].sort((a, b) => a.overall - b.overall)[0];
+        if (!weakestPlayer) continue;
 
-            const potentialSignings = gameState.freeAgents
-                .filter(p => 
-                    p.position === weakestPlayer.position && 
-                    p.overall > weakestPlayer.overall + 2 &&
-                    (p.marketValue * 0.25) < teamBudget
-                )
-                .sort((a, b) => b.overall - a.overall);
+        const potentialSignings = gameState.freeAgents
+            .filter(p => 
+                p.position === weakestPlayer.position && 
+                p.overall > weakestPlayer.overall + 2 &&
+                (p.marketValue * 0.25) < teamBudget // Verifica se as luvas são pagáveis
+            )
+            .sort((a, b) => b.overall - a.overall);
 
-            if (potentialSignings.length > 0) {
-                const targetPlayer = potentialSignings[0];
-                const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
-                const teamReputation = (teamOverallAvg / 85) * (leagueId === 'brasileirao_a' ? 3 : (leagueId === 'brasileirao_b' ? 2 : 1));
-                const playerReputation = targetPlayer.overall / 80;
-                const reputationDiff = teamReputation - playerReputation;
-                const acceptanceChance = 0.5 + (reputationDiff * 0.5); 
+        if (potentialSignings.length > 0) {
+            const targetPlayer = potentialSignings[0];
+            const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
+            
+            // Lógica de Reputação
+            const teamReputation = (teamOverallAvg / 85) * (leagueId === 'brasileirao_a' ? 3 : (leagueId === 'brasileirao_b' ? 2 : 1));
+            const playerReputation = targetPlayer.overall / 80;
+            const reputationDiff = teamReputation - playerReputation;
+            const acceptanceChance = 0.5 + (reputationDiff * 0.5); 
+            
+            if (Math.random() < acceptanceChance) {
+                team.players = team.players.filter(p => p.name !== weakestPlayer.name);
+                team.players.push(targetPlayer);
+                gameState.freeAgents = gameState.freeAgents.filter(p => p.name !== targetPlayer.name);
                 
-                if (Math.random() < acceptanceChance) {
-                    team.players = team.players.filter(p => p.name !== weakestPlayer.name);
-                    team.players.push(targetPlayer);
-                    gameState.freeAgents = gameState.freeAgents.filter(p => p.name !== targetPlayer.name);
-                    weakestPlayer.contractUntil = 0;
-                    gameState.freeAgents.push(weakestPlayer);
-                    addNews("Transferência!", `${team.name} contrata o agente livre ${targetPlayer.name} para reforçar seu elenco.`, false, team.name);
-                }
+                weakestPlayer.contractUntil = 0;
+                gameState.freeAgents.push(weakestPlayer);
+
+                addNews("Transferência!", `${team.name} contrata o agente livre ${targetPlayer.name} para reforçar seu elenco.`, false, team.name);
             }
         }
     }
