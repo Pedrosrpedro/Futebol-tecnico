@@ -7,7 +7,7 @@ Object.assign(playerBioData, {
                 "name": "América-MG",
                 "logo": "logo_america_mg.png",
                 "players": [
-                    { "name": "Dalbéerson", "position": "GK", "age": 28, "marketValue": "€700k" },
+                    { "name": "Dalbéerson", "position": "GK", "age": 28, "marketValue": "€701k" },
                     { "name": "Jori", "position": "GK", "age": 29, "marketValue": "€500k" },
                     { "name": "Cássio", "position": "GK", "age": 25, "marketValue": "€300k" },
                     { "name": "Éder", "position": "CB", "age": 30, "marketValue": "€800k" },
