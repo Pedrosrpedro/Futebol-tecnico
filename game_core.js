@@ -132,31 +132,55 @@ function initializeSeason() {
 }
 
 
+// ATENÇÃO: Substitua a sua função mergeAllData antiga por esta.
 function mergeAllData() {
-    // Medida de segurança caso o arquivo playerBioData não seja carregado
-    if (typeof playerBioData === 'undefined') {
-        console.error("Arquivo playerBioData.js não foi carregado. Idades e valores podem estar incorretos.");
+    // Medida de segurança caso algum arquivo não seja carregado.
+    if (typeof playerBioData === 'undefined' || typeof leaguesData === 'undefined') {
+        console.error("ERRO CRÍTICO: O arquivo player_bio_data.js ou os arquivos de liga não foram carregados.");
         return;
     }
 
-    for (const leagueId in leaguesData) {
-        if (!playerBioData[leagueId] || !playerBioData[leagueId].teams) continue;
+    // Mapeia os dados de contratos para facilitar o acesso
+    const allContracts = {
+        'brasileirao_a': typeof contratosSerieA !== 'undefined' ? contratosSerieA : [],
+        'brasileirao_b': typeof contratosSerieB !== 'undefined' ? contratosSerieB : [],
+        'brasileirao_c': typeof contratosSerieC !== 'undefined' ? contratosSerieC : [],
+    };
 
-        for (const team of leaguesData[leagueId].teams) {
-            const bioTeam = playerBioData[leagueId].teams.find(t => t.name === team.name);
-            if (bioTeam && bioTeam.players) {
-                for (const player of team.players) {
-                    const bioPlayer = bioTeam.players.find(p => p.name === player.name);
-                    if (bioPlayer) {
-                        // Junta os dados do playerBioData (idade, marketValue) no objeto do jogador
-                        Object.assign(player, bioPlayer);
-                    }
+    // Loop principal por cada liga (brasileirao_a, b, c)
+    for (const leagueId in leaguesData) {
+        const league = leaguesData[leagueId];
+        const bioLeague = playerBioData[leagueId];
+        const contractLeague = allContracts[leagueId];
+
+        if (!league || !bioLeague || !contractLeague) continue;
+
+        // Loop por cada time dentro da liga
+        for (const team of league.teams) {
+            const bioTeam = bioLeague.teams.find(t => t.name === team.name);
+            const contractTeam = contractLeague.find(t => t.time === team.name);
+
+            if (!team.players || !bioTeam || !contractTeam) continue;
+
+            // Loop final por cada jogador para juntar os dados
+            for (const player of team.players) {
+                const bioPlayer = bioTeam.players.find(p => p.name === player.name);
+                const contractPlayer = contractTeam.jogadores.find(p => p.nome === player.name);
+
+                // 1. Juntando dados de IDADE e VALOR (do player_bio_data.js)
+                if (bioPlayer) {
+                    Object.assign(player, bioPlayer); // Copia { age, marketValue } para o jogador
+                }
+
+                // 2. Juntando dados de CONTRATO (dos arquivos contratos_serie[a,b,c].js)
+                if (contractPlayer) {
+                    // Converte a duração do contrato de anos para meses
+                    player.contractUntil = contractPlayer.contrato_anos * 12;
                 }
             }
         }
     }
 }
-
 function initializeAllPlayerData() {
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
