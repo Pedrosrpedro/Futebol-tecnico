@@ -524,4 +524,4 @@ Object.assign(playerBioData, {
             { "name": "Alerrandro", "age": 25, "marketValue": "€1.5M" }
         ]
     }
-];
+]
