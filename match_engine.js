@@ -1,7 +1,11 @@
+// #####################################################################
+// #                                                                   #
+// #                    MOTOR DE SIMULAÇÃO DE PARTIDA                    #
+// #                                                                   #
+// #####################################################################
+
 let matchInterval;
 const SIMULATION_DURATION_MS = 4 * 60 * 1000;
-
-function promptMatchConfirmation() { if (!gameState.nextUserMatch) return; document.getElementById('match-confirmation-modal').classList.add('active'); }
 
 function startMatchSimulation() {
     document.getElementById('match-confirmation-modal').classList.remove('active');
@@ -311,8 +315,28 @@ function checkBallState() {
     }
 }
 
-function getClosestPlayer(target, teamKey = null) { let closestPlayer = null; let minDistance = Infinity; const teamsToScan = teamKey ? [gameState.matchState[teamKey]] : [gameState.matchState.home, gameState.matchState.away]; for (const team of teamsToScan) { for(const player of Object.values(team.startingXI)) { if(!player) continue; const playerPos = gameState.matchState.playerPositions.get(player.name); const distance = Math.hypot(playerPos.y - target.y, playerPos.x - target.x); if (distance < minDistance) { minDistance = distance; closestPlayer = player; } } } return { player: closestPlayer, distance: minDistance }; }
-function getPlayerTeam(player) { if(!player) return null; return Object.values(gameState.matchState.home.startingXI).some(p => p && p.name === player.name) ? 'home' : 'away'; }
+function getClosestPlayer(target, teamKey = null) {
+    let closestPlayer = null;
+    let minDistance = Infinity;
+    const teamsToScan = teamKey ? [gameState.matchState[teamKey]] : [gameState.matchState.home, gameState.matchState.away];
+    for (const team of teamsToScan) {
+        for(const player of Object.values(team.startingXI)) {
+            if(!player) continue;
+            const playerPos = gameState.matchState.playerPositions.get(player.name);
+            const distance = Math.hypot(playerPos.y - target.y, playerPos.x - target.x);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestPlayer = player;
+            }
+        }
+    }
+    return { player: closestPlayer, distance: minDistance };
+}
+
+function getPlayerTeam(player) {
+    if(!player) return null;
+    return Object.values(gameState.matchState.home.startingXI).some(p => p && p.name === player.name) ? 'home' : 'away';
+}
 
 function moveBall() {
     const { ball } = gameState.matchState;
@@ -497,125 +521,20 @@ function setPlayState(newState, teamToAct = null) {
     gameState.matchState.stateTimer = setupTime;
 }
 
-function endMatch() { clearInterval(matchInterval); gameState.isMatchLive = false; document.getElementById('match-time-status').innerText = 'FIM DE JOGO'; const match = gameState.allMatches.find(m => isSameDay(new Date(m.date), new Date(gameState.nextUserMatch.date))); if (match) { match.status = 'played'; match.homeScore = gameState.matchState.score.home; match.awayScore = gameState.matchState.score.away; if (match.round !== 'Amistoso') { const leagueId = Object.keys(leaguesData).find(id => leaguesData[id].teams.some(t => t.name === match.home.name)); updateTableWithResult(leagueId, match); } } showPostMatchReport(); findNextUserMatch(); }
-
-function resizeCanvas() {
-    const canvas = document.getElementById('match-pitch-canvas');
-    const container = document.getElementById('match-pitch-container');
-    if (!canvas || !container) return;
-    
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-    const canvasAspectRatio = 7 / 5; 
-    
-    let newWidth = containerWidth;
-    let newHeight = newWidth / canvasAspectRatio;
-
-    if (newHeight > containerHeight) {
-        newHeight = containerHeight;
-        newWidth = newHeight * canvasAspectRatio;
-    }
-
-    canvas.width = newWidth;
-    canvas.height = newHeight;
-    canvas.style.width = `${newWidth}px`;
-    canvas.style.height = `${newHeight}px`;
-
-    if(gameState.isMatchLive) drawMatch();
-}
-function drawMatch() {
-    const canvas = document.getElementById('match-pitch-canvas');
-    if (!canvas.getContext) return;
-    const ctx = canvas.getContext('2d');
-    const { width, height } = canvas;
-
-    ctx.clearRect(0, 0, width, height);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(0, 0, width, height); 
-    ctx.beginPath(); ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height); ctx.stroke(); 
-    ctx.beginPath(); ctx.arc(width / 2, height / 2, height * 0.15, 0, 2 * Math.PI); ctx.stroke(); 
-
-    const goalY = (100 - PITCH_DIMS.goalHeight) / 2 / 100 * height;
-    const goalH = PITCH_DIMS.goalHeight / 100 * height;
-    const goalW = 2 / 100 * width;
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(0, goalY, goalW, goalH);
-    ctx.strokeRect(width - goalW, goalY, goalW, goalH);
-
-    const playerRadius = Math.min(width / 50, height / 35);
-    const drawPlayer = (pos, color, hasBall) => { const x = (pos.x / 100) * width; const y = (pos.y / 100) * height; ctx.beginPath(); ctx.arc(x, y, playerRadius, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill(); if (hasBall) { ctx.strokeStyle = '#3DDC97'; ctx.lineWidth = 3; } else { ctx.strokeStyle = 'black'; ctx.lineWidth = 1; } ctx.stroke(); };
-    
-    for (const teamKey of ['home', 'away']) {
-        const team = gameState.matchState[teamKey];
-        const color = teamKey === 'home' ? '#c0392b' : '#f1c40f';
-        for (const player of Object.values(team.startingXI)) {
-            if (!player) continue;
-            const pos = gameState.matchState.playerPositions.get(player.name);
-            if(pos) drawPlayer(pos, color, gameState.matchState.ball.owner === player);
+function endMatch() {
+    clearInterval(matchInterval);
+    gameState.isMatchLive = false;
+    document.getElementById('match-time-status').innerText = 'FIM DE JOGO';
+    const match = gameState.allMatches.find(m => isSameDay(new Date(m.date), new Date(gameState.nextUserMatch.date)));
+    if (match) {
+        match.status = 'played';
+        match.homeScore = gameState.matchState.score.home;
+        match.awayScore = gameState.matchState.score.away;
+        if (match.round !== 'Amistoso') {
+            const leagueId = Object.keys(leaguesData).find(id => leaguesData[id].teams.some(t => t.name === match.home.name));
+            updateTableWithResult(leagueId, match);
         }
     }
-    
-    const ballRadius = playerRadius / 2;
-    const ballPos = gameState.matchState.ball;
-    const ballX = (ballPos.x / 100) * width;
-    const ballY = (ballPos.y / 100) * height;
-    ctx.beginPath(); ctx.arc(ballX, ballY, ballRadius, 0, 2 * Math.PI); ctx.fillStyle = 'white'; ctx.fill();
-}
-
-function updateScoreboard() {
-    if (!gameState.matchState) return;
-    const { score, gameTime } = gameState.matchState;
-    document.getElementById('match-score-display').innerText = `${score.home} - ${score.away}`;
-    
-    const minutes = Math.floor(gameTime);
-    const seconds = Math.floor((gameTime * 60) % 60);
-    document.getElementById('match-clock').innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    
-    const statusEl = document.getElementById('match-time-status');
-    if (statusEl.innerText === 'FIM DE JOGO') return;
-    
-    if (gameState.isPaused) {
-       if (gameState.matchState.half === 2 && gameTime >= 45) statusEl.innerText = 'INTERVALO';
-       else statusEl.innerText = "PAUSA";
-    } else {
-        statusEl.innerText = gameState.matchState.half === 1 ? 'PRIMEIRO TEMPO' : 'SEGUNDO TEMPO';
-    }
-}
-function togglePause(forcePause = null) { if (gameState.isMatchLive === false) return; gameState.isPaused = forcePause !== null ? forcePause : !gameState.isPaused; document.getElementById('pause-overlay').classList.toggle('active', gameState.isPaused); document.getElementById('pause-match-btn').innerText = gameState.isPaused ? '▶' : '❚❚'; updateScoreboard(); }
-function showNotification(message) { const area = document.getElementById('match-notification-area'); area.innerHTML = ''; const notification = document.createElement('div'); notification.className = 'match-notification'; notification.innerText = message; area.appendChild(notification); setTimeout(() => { if(notification) notification.remove(); }, 3500); }
-function updatePlayerRatings() { if(!gameState.matchState) return; for (const [playerName, currentRating] of gameState.matchState.playerRatings.entries()) { const performanceChange = (Math.random() - 0.47) * 0.2; let newRating = Math.max(0, Math.min(10, currentRating + performanceChange)); gameState.matchState.playerRatings.set(playerName, newRating); } }
-
-function showPostMatchReport() {
-    const { home, away, score } = gameState.matchState;
-    const modal = document.getElementById('post-match-report-modal');
-    const headline = document.getElementById('post-match-headline');
-    const summary = document.getElementById('post-match-summary');
-    let winner, loser, winnerScore, loserScore;
-    if (score.home > score.away) {
-        winner = home.team.name;
-        loser = away.team.name;
-        winnerScore = score.home;
-        loserScore = score.away;
-        headline.innerText = `${winner} vence ${loser} por ${winnerScore} a ${loserScore}!`;
-    } else if (score.away > score.home) {
-        winner = away.team.name;
-        loser = home.team.name;
-        winnerScore = score.away;
-        loserScore = score.home;
-        headline.innerText = `${winner} surpreende e vence ${loser} fora de casa!`;
-    } else {
-        headline.innerText = `${home.team.name} e ${away.team.name} empatam em jogo disputado.`;
-        summary.innerText = `A partida terminou com o placar de ${score.home} a ${score.away}. Ambos os times tiveram suas chances, mas a igualdade prevaleceu no placar final.`;
-        modal.classList.add('active');
-        return;
-    }
-    const performanceFactor = Math.random();
-    if (performanceFactor > 0.7) {
-        summary.innerText = `Apesar da vitória do ${winner}, foi o ${loser} que dominou a maior parte das ações, criando mais chances. No entanto, a eficiência do ${winner} na finalização fez a diferença, garantindo o resultado de ${winnerScore} a ${loserScore}.`;
-    } else {
-        summary.innerText = `Com uma performance sólida, o ${winner} controlou a partida e mereceu a vitória sobre o ${loser}. O placar final de ${winnerScore} a ${loserScore} refletiu a superioridade vista em campo.`;
-    }
-    modal.classList.add('active');
+    showPostMatchReport();
+    findNextUserMatch();
 }
