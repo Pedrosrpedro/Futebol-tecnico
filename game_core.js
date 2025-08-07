@@ -894,7 +894,7 @@ function calculateNegotiationCost(player, isRenewal) {
         if (player.age > 30) {
             costFactor -= 0.05;
         }
-    } else {
+    } else { // Para novas contratações
         costFactor = 0.50;
         if (player.age < 24) {
             costFactor += 0.15;
@@ -904,7 +904,15 @@ function calculateNegotiationCost(player, isRenewal) {
         }
     }
 
-    const finalCost = player.marketValue * Math.max(0.05, costFactor);
+    // Multiplicador de reputação para jogadores de elite
+    let reputationMultiplier = 1.0;
+    if (player.overall >= 90) {
+        reputationMultiplier = 2.5; // Craques mundiais pedem muito mais
+    } else if (player.overall >= 85) {
+        reputationMultiplier = 1.75; // Jogadores de alto nível
+    }
+
+    const finalCost = player.marketValue * Math.max(0.05, costFactor) * reputationMultiplier;
 
     return Math.round(finalCost / 10000) * 10000;
 }
