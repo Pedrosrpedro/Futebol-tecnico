@@ -1,3 +1,4 @@
+
 // --- Funções de UI (Telas, Modais, Notícias) ---
 
 function addNews(headline, body, isUserRelated = false, imageHint = null) {
@@ -39,7 +40,6 @@ function showMainContent(contentId) {
     
     gameState.currentMainContent = contentId;
 
-    // Carregar conteúdo dinâmico
     if (contentId === 'squad-content') loadSquadTable();
     if (contentId === 'contracts-content') displayContractsScreen();
     if (contentId === 'tactics-content') loadTacticsScreen();
