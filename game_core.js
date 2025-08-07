@@ -62,11 +62,18 @@ function startGame(team) {
 
     if (typeof freeAgents !== 'undefined' && freeAgents.players) {
         gameState.freeAgents = freeAgents.players.map(p => {
+            // Mantém a lógica original
             p.overall = p.overall || calculatePlayerOverall(p);
-            updateMarketValue(p); // Atualiza o valor de todos para garantir consistência
+            updateMarketValue(p); 
             p.contractUntil = 0; 
             return p;
         });
+
+        // --- CORREÇÃO ADICIONADA AQUI ---
+        // Roda a nossa função de limpeza e tradução de atributos na lista de agentes livres.
+        // Criamos um "time temporário" para passar para a função.
+        initializeAllPlayerDataForTeam({ name: 'FreeAgentsTemp', players: gameState.freeAgents });
+        // --- FIM DA CORREÇÃO ---
     }
 
     initializeAllPlayerData();
@@ -81,7 +88,6 @@ function startGame(team) {
     showScreen('main-game-screen');
     showMainContent('home-content');
 }
-
 function initializeSeason() {
     const year = 2025 + gameState.season - 1;
     gameState.isOffSeason = false;
