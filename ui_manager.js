@@ -1051,6 +1051,13 @@ function formatCurrency(valueInBRL) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: gameState.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(convertedValue);
 }
 
+function isSameDay(date1, date2) {
+    if(!date1 || !date2) return false;
+    return date1.getFullYear() === date2.getFullYear() && 
+           date1.getMonth() === date2.getMonth() && 
+           date1.getDate() === date2.getDate();
+}
+
 // --- Funções de Match UI ---
 function promptMatchConfirmation() {
     if (!gameState.nextUserMatch) return;
