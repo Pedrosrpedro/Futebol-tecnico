@@ -1002,6 +1002,42 @@ function handleExpiredContracts() {
         setupInitialSquad();
     }
 }
+
+function aiContractManagement() {
+    for (const leagueId in leaguesData) {
+        for (const team of leaguesData[leagueId].teams) {
+            if (team.name === gameState.userClub.name) continue;
+
+            const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
+
+            for (const player of team.players) {
+                // Lógica de Renovação
+                if (player.contractUntil !== null && player.contractUntil <= 6 && player.contractUntil > 0) {
+                    const isImportant = player.overall > teamOverallAvg;
+                    const isNotTooOld = player.age < 34;
+                    const shouldRenew = Math.random() < 0.75; // 75% de chance de tentar renovar
+
+                    if (isImportant && isNotTooOld && shouldRenew) {
+                        const newDurationMonths = player.age < 30 ? 36 : 12; // Contratos mais longos para jovens
+                        player.contractUntil += newDurationMonths;
+                    }
+                }
+                
+                // Lógica de Dispensa (pequena chance)
+                else if (player.contractUntil !== null && player.contractUntil > 12) {
+                    const isUnderperforming = player.overall < (teamOverallAvg - 5);
+                    const isOld = player.age > 33;
+                    const shouldRelease = Math.random() < 0.05; // 5% de chance por mês
+
+                    if (isUnderperforming && isOld && shouldRelease) {
+                         player.contractUntil = 0; // Marca para ser dispensado no próximo handleExpiredContracts
+                    }
+                }
+            }
+        }
+    }
+}
+    
 function aiContractManagement() {
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
