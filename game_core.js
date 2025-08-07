@@ -55,6 +55,26 @@ const formationLayouts = {
 const PITCH_DIMS = { top: 0, bottom: 100, left: 0, right: 100, goalHeight: 30 };
 const overallWeights = { pace: 0.15, shooting: 0.15, passing: 0.2, dribbling: 0.15, defending: 0.2, physical: 0.15 };
 
+function parseMarketValue(valueStr) {
+    if (typeof valueStr !== 'string') return 0;
+    const value = valueStr.replace('€', '').trim();
+    let multiplier = 1;
+    let numberPartStr = value;
+
+    if (value.slice(-1).toLowerCase() === 'm') {
+        multiplier = 1000000;
+        numberPartStr = value.slice(0, -1);
+    } else if (value.slice(-1).toLowerCase() === 'k') {
+        multiplier = 1000;
+        numberPartStr = value.slice(0, -1);
+    }
+    
+    const numberPart = parseFloat(numberPartStr.replace(',', '.'));
+    if (isNaN(numberPart)) return 0;
+
+    return numberPart * multiplier;
+}
+
 // --- Funções de Inicialização e Setup do Jogo ---
 
 // VERSÃO CORRIGIDA QUE JUNTA TODOS OS DADOS (IDADE, VALOR, CONTRATO)
@@ -1095,26 +1115,6 @@ function findTeamInLeagues(teamName, isPlayerLookup = false) {
         if (team) return team; 
     }
     return null; 
-}
-
-function parseMarketValue(valueStr) {
-    if (typeof valueStr !== 'string') return 0;
-    const value = valueStr.replace('€', '').trim();
-    let multiplier = 1;
-    let numberPartStr = value;
-
-    if (value.slice(-1).toLowerCase() === 'm') {
-        multiplier = 1000000;
-        numberPartStr = value.slice(0, -1);
-    } else if (value.slice(-1).toLowerCase() === 'k') {
-        multiplier = 1000;
-        numberPartStr = value.slice(0, -1);
-    }
-    
-    const numberPart = parseFloat(numberPartStr.replace(',', '.'));
-    if (isNaN(numberPart)) return 0;
-
-    return numberPart * multiplier;
 }
 
 }
