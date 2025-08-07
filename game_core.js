@@ -842,7 +842,9 @@ function getFullFirstPhaseTableC() {
         awayTeam.goalsAgainst += match.homeScore;
         homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst;
         awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst;
-        if (match.homeScore > match.homeScore) {
+        
+        // --- A CORREÇÃO ESTÁ AQUI ---
+        if (match.homeScore > match.awayScore) { // ANTES ESTAVA match.homeScore > match.homeScore
             homeTeam.wins++;
             homeTeam.points += 3;
             awayTeam.losses++;
