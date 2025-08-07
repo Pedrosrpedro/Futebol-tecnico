@@ -1268,7 +1268,7 @@ function initializeEventListeners() {
     document.getElementById('close-negotiation-modal-btn').addEventListener('click', () => document.getElementById('negotiation-modal').classList.remove('active'));
     document.getElementById('submit-offer-btn').addEventListener('click', handleNegotiationOffer);
     document.getElementById('accept-demand-btn').addEventListener('click', () => {
-        const { desiredDuration, desiredBonus } = negotiationState;
+        const { desiredDuration } = negotiationState;
         finalizeDeal(desiredDuration * 12, desiredBonus);
     });
     document.getElementById('walk-away-btn').addEventListener('click', () => document.getElementById('negotiation-modal').classList.remove('active'));
