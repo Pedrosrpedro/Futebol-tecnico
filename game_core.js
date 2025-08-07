@@ -164,7 +164,12 @@ function initializeAllPlayerDataForTeam(team) {
 
 // --- Funções de Progressão, Aposentadoria e Valor ---
 function calculatePlayerOverall(player) {
-    if (!player.attributes) return player.overall || 50;
+    // CORREÇÃO: Verifica se os atributos existem E se não estão vazios.
+    if (!player.attributes || Object.keys(player.attributes).length === 0) {
+        // Se não houver atributos, retorna o overall que o jogador já tinha ou um valor padrão de 50.
+        return player.overall || 50;
+    }
+    
     let weightedSum = 0;
     for (const attr in player.attributes) {
         weightedSum += player.attributes[attr] * (overallWeights[attr] || 0);
