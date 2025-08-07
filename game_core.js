@@ -260,15 +260,20 @@ function calculatePlayerOverall(player) {
 }
 
 // VERSÃO CORRIGIDA com fórmula mais suave e que respeita valores pré-existentes
-function updateMarketValue(player) {
+// VERSÃO CORRIGIDA com parâmetro para forçar o recálculo
+function updateMarketValue(player, forceRecalculation = false) {
     if (typeof player.marketValue === 'string') {
         player.marketValue = parseMarketValue(player.marketValue) * currencyRates.EUR;
+        // Não retorna aqui se for para forçar, permite que o cálculo aconteça depois
+        if (!forceRecalculation) return;
+    }
+    
+    // Se já tem um valor numérico, só para se a gente NÃO estiver forçando um recálculo
+    if (typeof player.marketValue === 'number' && player.marketValue > 0 && !forceRecalculation) {
         return;
     }
-    if (typeof player.marketValue === 'number' && player.marketValue > 0) {
-        return; // Se já tem um valor numérico (vindo da junção de dados), não faz nada.
-    }
 
+    // --- O CÁLCULO ACONTECE AQUI ---
     const baseValueEUR = (player.overall / 100) ** 3 * 5000000; 
 
     let ageMultiplier = 1.0;
