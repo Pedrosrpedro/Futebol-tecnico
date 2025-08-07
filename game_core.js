@@ -1057,40 +1057,6 @@ function aiContractManagement() {
         }
     }
 }
-    
-function aiContractManagement() {
-    for (const leagueId in leaguesData) {
-        for (const team of leaguesData[leagueId].teams) {
-            if (team.name === gameState.userClub.name) continue;
-
-            const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
-
-            for (const player of team.players) {
-                if (player.contractUntil !== null && player.contractUntil <= 6 && player.contractUntil > 0) {
-                    const isImportant = player.overall > teamOverallAvg;
-                    const isNotTooOld = player.age < 34;
-                    const shouldRenew = Math.random() < 0.75;
-
-                    if (isImportant && isNotTooOld && shouldRenew) {
-                        const newDurationMonths = player.age < 30 ? 36 : 12;
-                        player.contractUntil += newDurationMonths;
-                    }
-                }
-                
-                else if (player.contractUntil !== null && player.contractUntil > 12) {
-                    const isUnderperforming = player.overall < (teamOverallAvg - 5);
-                    const isOld = player.age > 33;
-                    const shouldRelease = Math.random() < 0.05;
-
-                    if (isUnderperforming && isOld && shouldRelease) {
-                         player.contractUntil = 0;
-                    }
-                }
-            }
-        }
-    }
-}
-
 
 // --- Funções Utilitárias ---
 function isSameDay(date1, date2) {
