@@ -769,22 +769,44 @@ function getFullFirstPhaseTableC() {
 function aiTransferLogic() {
     if (gameState.isOffSeason) return;
 
+    // Função auxiliar para estimar um orçamento de transferência para a IA
+    const getAITransferBudget = (team) => {
+        // Usa a verba média como base, se disponível
+        if (typeof estimativaVerbaMedia2025 !== 'undefined') {
+            const financialData = estimativaVerbaMedia2025.find(c => c.time === team.name);
+            if (financialData) {
+                // Define uma fatia da verba total para transferências (ex: 20%)
+                return financialData.verba_media_estimada_milhoes_reais * 1000000 * 0.20;
+            }
+        }
+        // Orçamento padrão para times sem dados financeiros
+        const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
+        return Math.pow(teamOverallAvg / 100, 2) * 5000000 + 500000; // Orçamento baseado no overall do time
+    };
+
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
             if (team.name === gameState.userClub.name) continue;
-            if (Math.random() > 0.10) continue;
+            // A chance de um time procurar reforços
+            if (Math.random() > 0.10) continue; 
 
-            const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
-            const teamReputation = (teamOverallAvg / 85) * (leagueId === 'brasileirao_a' ? 3 : (leagueId === 'brasileirao_b' ? 2 : 1));
+            const teamBudget = getAITransferBudget(team);
             const weakestPlayer = [...team.players].sort((a, b) => a.overall - b.overall)[0];
             if (!weakestPlayer) continue;
 
             const potentialSignings = gameState.freeAgents
-                .filter(p => p.position === weakestPlayer.position && p.overall > weakestPlayer.overall + 2)
+                .filter(p => 
+                    p.position === weakestPlayer.position && 
+                    p.overall > weakestPlayer.overall + 2 &&
+                    // CORREÇÃO: Filtro financeiro! O valor de mercado do jogador deve ser acessível para o time.
+                    (p.marketValue * 0.25) < teamBudget // Ex: luvas custam 25% do valor de mercado
+                )
                 .sort((a, b) => b.overall - a.overall);
 
             if (potentialSignings.length > 0) {
                 const targetPlayer = potentialSignings[0];
+                const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
+                const teamReputation = (teamOverallAvg / 85) * (leagueId === 'brasileirao_a' ? 3 : (leagueId === 'brasileirao_b' ? 2 : 1));
                 const playerReputation = targetPlayer.overall / 80;
                 const reputationDiff = teamReputation - playerReputation;
                 const acceptanceChance = 0.5 + (reputationDiff * 0.5); 
