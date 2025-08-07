@@ -369,9 +369,26 @@ function advanceDay() {
     if (gameState.currentMainContent === 'calendar-content') updateCalendar();
 }
 
-function updateMonthlyContracts() {
+ function updateMonthlyContracts() {
+    // --- LÓGICA PARA O CLUBE DO USUÁRIO ---
+    let totalWages = 0;
+    const userPlayers = gameState.userClub.players;
+    for (const player of userPlayers) {
+        if (player.contractUntil && player.contractUntil > 0) {
+            player.contractUntil--;
+            // Deduz o salário do jogador das finanças usando a nova função
+            totalWages += calculatePlayerWage(player);
+        }
+    }
+    if (totalWages > 0) {
+        addTransaction(-totalWages, "Salários mensais dos jogadores");
+    }
+
+    // --- LÓGICA PARA OS TIMES DA IA ---
+    // Mantém a lógica simples para a IA, apenas decrementando a duração do contrato.
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
+            if (team.name === gameState.userClub.name) continue; // Pula o time do usuário
             for (const player of team.players) {
                 if (player.contractUntil && player.contractUntil > 0) {
                     player.contractUntil--;
