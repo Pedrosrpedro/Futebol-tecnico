@@ -266,12 +266,19 @@ function calculatePlayerOverall(player) {
 // ATENÇÃO: Simplifique a função 'updateMarketValue' para que ela APENAS calcule.
 // A lógica de converter o texto foi movida para a função de inicialização.
 function updateMarketValue(player) {
-    // FÓRMULA ANTIGA: const baseValueEUR = (player.overall / 100) ** 4 * 30000000;
-    // FÓRMULA NOVA, MENOS AGRESSIVA: O expoente foi reduzido de 4 para 3.5 e a base multiplicadora foi diminuída.
-    const baseValueEUR = (player.overall / 100) ** 3.5 * 20000000; 
+    // Se o jogador JÁ TEM um valor de mercado (vindo do player_bio_data.js), nós o usamos e apenas o convertemos.
+    if (typeof player.marketValue === 'string') {
+        player.marketValue = parseMarketValue(player.marketValue) * currencyRates.EUR;
+        return; // Sai da função para não calcular um novo valor
+    }
+
+    // Se o jogador NÃO TEM valor, aí sim calculamos um com base no overall.
+    // FÓRMULA ANTIGA: const baseValueEUR = (player.overall / 100) ** 3.5 * 20000000;
+    // FÓRMULA NOVA, MUITO MAIS SUAVE:
+    const baseValueEUR = (player.overall / 100) ** 3 * 5000000; 
 
     let ageMultiplier = 1.0;
-    if (player.age < 21) ageMultiplier = 1.3; // Jogadores jovens têm maior potencial de valorização
+    if (player.age < 21) ageMultiplier = 1.3;
     else if (player.age >= 21 && player.age <= 28) ageMultiplier = 1.5 - ((player.age - 21) * 0.05);
     else if (player.age > 28 && player.age < 33) ageMultiplier = 1.1 - ((player.age - 28) * 0.1);
     else ageMultiplier = Math.max(0.1, 0.5 - ((player.age - 33) * 0.03));
@@ -279,9 +286,8 @@ function updateMarketValue(player) {
     const positionMultiplier = (['ST', 'LW', 'RW', 'CAM'].includes(player.position)) ? 1.2 : 1.0;
     let finalValueEUR = baseValueEUR * ageMultiplier * positionMultiplier;
 
-    // Garante um valor mínimo para qualquer jogador profissional
-    finalValueEUR = Math.max(25000, Math.round(finalValueEUR / 10000) * 10000);
-    player.marketValue = finalValueEUR * currencyRates.EUR;
+    finalValueEUR = Math.max(15000, Math.round(finalValueEUR / 5000) * 5000); // Valor mínimo e arredondado
+    player.marketValue = finalValueEUR * currencyRates.EUR; // Converte de Euro para Reais
 }
 
 function generateNewPlayer(team) {
