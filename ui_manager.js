@@ -475,7 +475,7 @@ function displayDevelopmentScreen() {
     });
 }
 
-// --- Funções de Interação com a UI que faltavam ---
+// --- Funções de Interação com a UI ---
 function handleCalendarDayClick(e) {
     if (gameState.isOnHoliday) return;
     const dayElement = e.target.closest('.calendar-day:not(.other-month)');
@@ -597,6 +597,7 @@ function scheduleFriendlyMatch() {
     }
 }
 
+// --- Funções de Táticas ---
 function handleTacticsInteraction(e) {
     const clickedElement = e.target.closest('[data-player-id], .player-slot, #substitutes-list, #reserves-list');
     if (!clickedElement) {
@@ -635,6 +636,123 @@ function handleTacticsInteraction(e) {
     }
 }
 
+function selectPlayer(player, sourceType, sourceId) { clearSelection(); selectedPlayerInfo = { player, sourceType, sourceId }; const element = document.querySelector(`[data-player-id="${player.name}"]`); if(element) element.classList.add('selected'); }
+function clearSelection() { if (selectedPlayerInfo) { const element = document.querySelector(`[data-player-id="${selectedPlayerInfo.player.name}"]`); if(element) element.classList.remove('selected'); } selectedPlayerInfo = null; }
+function getPlayerLocation(player) { for (const pos in gameState.squadManagement.startingXI) { if (gameState.squadManagement.startingXI[pos]?.name === player.name) { return { type: 'field', id: pos }; } } if (gameState.squadManagement.substitutes.some(p => p && p.name === player.name)) { return { type: 'subs', id: 'substitutes-list' }; } return { type: 'reserves', id: 'reserves-list' }; }
+function removePlayerFromSource(playerInfo) { if (!playerInfo || !playerInfo.player) return; if (playerInfo.sourceType === 'field') { delete gameState.squadManagement.startingXI[playerInfo.sourceId]; } else if (playerInfo.sourceType === 'subs') { gameState.squadManagement.substitutes = gameState.squadManagement.substitutes.filter(p => p && p.name !== playerInfo.player.name); } else { gameState.squadManagement.reserves = gameState.squadManagement.reserves.filter(p => p && p.name !== playerInfo.player.name); } }
+function addPlayerToDest(player, destInfo) { if (destInfo.type === 'field') { gameState.squadManagement.startingXI[destInfo.id] = player; } else if (destInfo.type === 'subs') { gameState.squadManagement.substitutes.push(player); } else { gameState.squadManagement.reserves.push(player); } }
+function movePlayer(playerInfo, destInfo) { if (destInfo.type === 'subs' && gameState.squadManagement.substitutes.length >= MAX_SUBSTITUTES) { showInfoModal('Banco Cheio', `O banco de reservas já tem o máximo de ${MAX_SUBSTITUTES} jogadores.`); return; } removePlayerFromSource(playerInfo); addPlayerToDest(playerInfo.player, destInfo); loadTacticsScreen(); }
+function swapPlayers(sourcePlayerInfo, destPlayerInfo) { const isMovingToSubs = destPlayerInfo.type === 'subs'; const isMovingFromSubs = sourcePlayerInfo.sourceType === 'subs'; if (!isMovingFromSubs && isMovingToSubs && gameState.squadManagement.substitutes.length >= MAX_SUBSTITUTES) { showInfoModal('Banco Cheio', `O banco de reservas já tem o máximo de ${MAX_SUBSTITUTES} jogadores.`); return; } removePlayerFromSource(sourcePlayerInfo); removePlayerFromSource(destPlayerInfo); addPlayerToDest(sourcePlayerInfo.player, { type: destPlayerInfo.type, id: destPlayerInfo.id }); addPlayerToDest(destPlayerInfo.player, { type: sourcePlayerInfo.sourceType, id: sourcePlayerInfo.sourceId }); loadTacticsScreen(); }
+function calculateModifiedOverall(player, targetPosition) { if (!player || !targetPosition) return player ? player.overall : 0; const naturalPosition = player.position; const cleanTargetPosition = targetPosition.replace(/\d/g, ''); if (!positionMatrix[naturalPosition] || positionMatrix[naturalPosition][cleanTargetPosition] === undefined) { return Math.max(40, player.overall - 25); } const distance = positionMatrix[naturalPosition][cleanTargetPosition]; const penaltyFactor = 4; const penalty = distance * penaltyFactor; return Math.max(40, player.overall - penalty); }
+function createPlayerChip(player, currentPosition) { const chip = document.createElement('div'); chip.className = 'player-chip'; chip.dataset.playerId = player.name; const modifiedOverall = calculateModifiedOverall(player, currentPosition); let overallClass = 'player-overall'; if (modifiedOverall < player.overall) { overallClass += ' penalty'; } chip.innerHTML = ` <span class="player-name">${player.name.split(' ').slice(-1).join(' ')}</span> <span class="${overallClass}">${modifiedOverall}</span> <span class="player-pos">${player.position}</span> `; return chip; }
+function createSquadListPlayer(player) { const item = document.createElement('div'); item.className = 'squad-list-player'; item.dataset.playerId = player.name; item.innerHTML = ` <div class="player-info"> <div class="player-name">${player.name}</div> <div class="player-pos">${player.position}</div> </div> <div class="player-overall">${player.overall}</div> `; return item; }
+
+// --- Funções de Contratos e Transferências (UI) ---
+function displayContractsScreen() {
+    const container = document.getElementById('contracts-content');
+    container.innerHTML = '<h3>Situação Contratual do Elenco</h3>';
+    
+    const tableContainer = document.createElement('div');
+    tableContainer.className = 'table-container';
+
+    const sortedPlayers = [...gameState.userClub.players].sort((a, b) => {
+        const contractA = a.contractUntil === undefined ? 999 : a.contractUntil;
+        const contractB = b.contractUntil === undefined ? 999 : b.contractUntil;
+        return contractA - contractB;
+    });
+
+    let tableHTML = `<table><thead><tr><th>Nome</th><th>Idade</th><th>Pos.</th><th>GERAL</th><th>Contrato Restante</th><th>Ações</th></tr></thead><tbody>`;
+    for (const player of sortedPlayers) {
+        let contractClass = '';
+        if (player.contractUntil <= 6) contractClass = 'negative';
+        else if (player.contractUntil <= 12) contractClass = 'text-secondary';
+
+        tableHTML += `
+            <tr data-player-name="${player.name}">
+                <td>${player.name}</td>
+                <td>${player.age}</td>
+                <td>${player.position}</td>
+                <td><b>${player.overall}</b></td>
+                <td class="${contractClass}">${formatContract(player.contractUntil) || 'N/A'}</td>
+                <td>
+                    <button class="renew-btn" data-player-name="${player.name}">Renovar</button> 
+                    <button class="terminate-btn secondary" data-player-name="${player.name}">Rescindir</button>
+                </td>
+            </tr>`;
+    }
+    tableHTML += `</tbody></table>`;
+    tableContainer.innerHTML = tableHTML;
+    container.appendChild(tableContainer);
+
+    container.querySelectorAll('.renew-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const player = gameState.userClub.players.find(p => p.name === btn.dataset.playerName);
+            openNegotiationModal(player, 'renew');
+        });
+    });
+    container.querySelectorAll('.terminate-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const player = gameState.userClub.players.find(p => p.name === btn.dataset.playerName);
+            handleContractTermination(player);
+        });
+    });
+}
+
+function handleContractTermination(player) {
+    const yearsLeft = Math.max(0, (player.contractUntil || 0) / 12);
+    const terminationFee = (player.marketValue || 0) * 0.5 * yearsLeft;
+
+    showConfirmationModal(
+        'Rescindir Contrato',
+        `Rescindir o contrato de ${player.name} custará ${formatCurrency(terminationFee)}. Deseja continuar?`,
+        () => {
+            if (gameState.clubFinances.balance < terminationFee) {
+                showInfoModal("Fundos Insuficientes", "Você não tem dinheiro suficiente para pagar a cláusula de rescisão.");
+                return;
+            }
+
+            addTransaction(-terminationFee, `Rescisão de contrato de ${player.name}`);
+            gameState.userClub.players = gameState.userClub.players.filter(p => p.name !== player.name);
+            
+            player.contractUntil = 0;
+            gameState.freeAgents.push(player);
+
+            setupInitialSquad();
+            showInfoModal("Contrato Rescindido", `${player.name} não é mais jogador do seu clube.`);
+            displayContractsScreen();
+        }
+    );
+}
+
+function openNegotiationModal(player, type) {
+    negotiationState = {
+        player,
+        type, 
+        rounds: 0,
+        minAcceptableBonus: (player.marketValue || 50000) * 0.10 * (player.overall / 80),
+        desiredBonus: (player.marketValue || 50000) * 0.20 * (player.overall / 75),
+        desiredDuration: player.age < 25 ? 5 : (player.age < 32 ? 3 : 2)
+    };
+    
+    negotiationState.desiredBonus *= (0.9 + Math.random() * 0.2);
+    negotiationState.minAcceptableBonus = Math.max(10000, negotiationState.desiredBonus * 0.7);
+
+    document.getElementById('negotiation-title').innerText = type === 'renew' ? 'Renovação de Contrato' : 'Contratar Jogador';
+    document.getElementById('negotiation-player-name').innerText = player.name;
+    document.getElementById('negotiation-player-age').innerText = player.age;
+    document.getElementById('negotiation-player-pos').innerText = player.position;
+    document.getElementById('negotiation-player-ovr').innerText = player.overall;
+
+    document.getElementById('player-demand-duration').innerText = negotiationState.desiredDuration;
+    document.getElementById('player-demand-bonus').innerText = formatCurrency(negotiationState.desiredBonus);
+    document.getElementById('player-feedback').innerText = "Aguardando sua proposta...";
+
+    document.getElementById('offer-duration').value = type === 'renew' ? Math.round(player.contractUntil / 12) : negotiationState.desiredDuration;
+    document.getElementById('offer-bonus').value = '';
+    
+    document.getElementById('negotiation-modal').classList.add('active');
+}
+
 function handleNegotiationOffer() {
     const { desiredBonus, minAcceptableBonus, desiredDuration } = negotiationState;
     const feedbackEl = document.getElementById('player-feedback');
@@ -646,7 +764,7 @@ function handleNegotiationOffer() {
         feedbackEl.innerText = "Por favor, insira uma duração de contrato válida.";
         return;
     }
-    
+
     let offerBonusRaw = 0;
     if (offerBonusStr.toLowerCase().endsWith('m')) {
         offerBonusRaw = parseFloat(offerBonusStr.slice(0, -1)) * 1000000;
@@ -661,7 +779,7 @@ function handleNegotiationOffer() {
         return;
     }
 
-    const offerBonus = offerBonusRaw * currencyRates[gameState.currency]; // Convertendo para BRL
+    const offerBonus = offerBonusRaw * currencyRates[gameState.currency];
     negotiationState.rounds++;
 
     const bonusRatio = offerBonus / minAcceptableBonus;
@@ -701,15 +819,82 @@ function finalizeDeal(contractMonths, bonus) {
         showInfoModal("Contrato Renovado!", `${player.name} renovou seu contrato por ${formatContract(contractMonths)}!`);
     } else { // hire
         player.contractUntil = contractMonths;
+        // CORREÇÃO: Garante que o jogador contratado tenha todos os dados necessários
+        if (!player.attributes) { // Se for um jogador como Di Maria que pode não ter atributos detalhados
+            player.attributes = { pace: 80, shooting: 80, passing: 80, dribbling: 80, defending: 50, physical: 65 }; // Atributos genéricos
+            player.overall = calculatePlayerOverall(player); // Recalcula o overall
+        }
+        updateMarketValue(player); // Garante que o valor está atualizado
+        
         gameState.userClub.players.push(player);
         gameState.freeAgents = gameState.freeAgents.filter(p => p.name !== player.name);
-        setupInitialSquad(); // Atualiza a gestão do elenco
+        setupInitialSquad(); // CORREÇÃO: Atualiza a gestão do elenco imediatamente
         showInfoModal("Contratação Realizada!", `Bem-vindo ao clube, ${player.name}!`);
         if(gameState.currentMainContent === 'transfer-market-content') displayTransferMarket();
     }
     
     document.getElementById('negotiation-modal').classList.remove('active');
     if(gameState.currentMainContent === 'contracts-content') displayContractsScreen();
+}
+
+function formatContract(months) {
+    if (months === undefined || months === null || months <= 0) {
+        return "Sem contrato";
+    }
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+    let result = '';
+    if (years > 0) {
+        result += `${years} ano${years > 1 ? 's' : ''}`;
+    }
+    if (remainingMonths > 0) {
+        if (years > 0) result += ' e ';
+        result += `${remainingMonths} mes${remainingMonths > 1 ? 'es' : ''}`;
+    }
+    return result || "Expirando";
+}
+
+// --- Funções Utilitárias de UI ---
+function formatCurrency(valueInBRL) {
+    if (typeof valueInBRL !== 'number') return 'N/A';
+    const rate = currencyRates[gameState.currency];
+    const convertedValue = valueInBRL / rate;
+
+    if (Math.abs(convertedValue) >= 1000000) {
+        const valueInMillions = (convertedValue / 1000000).toFixed(1).replace('.0', '');
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: gameState.currency }).format(0).replace('0,00', '') + valueInMillions + 'M';
+    } else if (Math.abs(convertedValue) >= 1000) {
+        const valueInThousands = Math.round(convertedValue / 1000);
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: gameState.currency }).format(0).replace('0,00', '') + valueInThousands + 'k';
+    }
+
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: gameState.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(convertedValue);
+}
+
+// --- Funções de Match UI ---
+function promptMatchConfirmation() {
+    if (!gameState.nextUserMatch) return;
+    document.getElementById('match-confirmation-modal').classList.add('active');
+}
+
+function updateScoreboard() {
+    if (!gameState.matchState) return;
+    const { score, gameTime } = gameState.matchState;
+    document.getElementById('match-score-display').innerText = `${score.home} - ${score.away}`;
+    
+    const minutes = Math.floor(gameTime);
+    const seconds = Math.floor((gameTime * 60) % 60);
+    document.getElementById('match-clock').innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    const statusEl = document.getElementById('match-time-status');
+    if (statusEl.innerText === 'FIM DE JOGO') return;
+    
+    if (gameState.isPaused) {
+       if (gameState.matchState.half === 2 && gameTime >= 45) statusEl.innerText = 'INTERVALO';
+       else statusEl.innerText = "PAUSA";
+    } else {
+        statusEl.innerText = gameState.matchState.half === 1 ? 'PRIMEIRO TEMPO' : 'SEGUNDO TEMPO';
+    }
 }
 
 function togglePause(forcePause = null) {
@@ -719,6 +904,125 @@ function togglePause(forcePause = null) {
     document.getElementById('pause-match-btn').innerText = gameState.isPaused ? '▶' : '❚❚';
     updateScoreboard();
 }
+
+function showNotification(message) {
+    const area = document.getElementById('match-notification-area');
+    area.innerHTML = '';
+    const notification = document.createElement('div');
+    notification.className = 'match-notification';
+    notification.innerText = message;
+    area.appendChild(notification);
+    setTimeout(() => { if(notification) notification.remove(); }, 3500);
+}
+
+function updatePlayerRatings() {
+    if(!gameState.matchState) return;
+    for (const [playerName, currentRating] of gameState.matchState.playerRatings.entries()) {
+        const performanceChange = (Math.random() - 0.47) * 0.2;
+        let newRating = Math.max(0, Math.min(10, currentRating + performanceChange));
+        gameState.matchState.playerRatings.set(playerName, newRating);
+    }
+}
+
+function showPostMatchReport() {
+    const { home, away, score } = gameState.matchState;
+    const modal = document.getElementById('post-match-report-modal');
+    const headline = document.getElementById('post-match-headline');
+    const summary = document.getElementById('post-match-summary');
+    let winner, loser, winnerScore, loserScore;
+    if (score.home > score.away) {
+        winner = home.team.name;
+        loser = away.team.name;
+        winnerScore = score.home;
+        loserScore = score.away;
+        headline.innerText = `${winner} vence ${loser} por ${winnerScore} a ${loserScore}!`;
+    } else if (score.away > score.home) {
+        winner = away.team.name;
+        loser = home.team.name;
+        winnerScore = score.away;
+        loserScore = score.home;
+        headline.innerText = `${winner} surpreende e vence ${loser} fora de casa!`;
+    } else {
+        headline.innerText = `${home.team.name} e ${away.team.name} empatam em jogo disputado.`;
+        summary.innerText = `A partida terminou com o placar de ${score.home} a ${score.away}. Ambos os times tiveram suas chances, mas a igualdade prevaleceu no placar final.`;
+        modal.classList.add('active');
+        return;
+    }
+    const performanceFactor = Math.random();
+    if (performanceFactor > 0.7) {
+        summary.innerText = `Apesar da vitória do ${winner}, foi o ${loser} que dominou a maior parte das ações, criando mais chances. No entanto, a eficiência do ${winner} na finalização fez a diferença, garantindo o resultado de ${winnerScore} a ${loserScore}.`;
+    } else {
+        summary.innerText = `Com uma performance sólida, o ${winner} controlou a partida e mereceu a vitória sobre o ${loser}. O placar final de ${winnerScore} a ${loserScore} refletiu a superioridade vista em campo.`;
+    }
+    modal.classList.add('active');
+}
+
+function resizeCanvas() {
+    const canvas = document.getElementById('match-pitch-canvas');
+    const container = document.getElementById('match-pitch-container');
+    if (!canvas || !container) return;
+    
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    const canvasAspectRatio = 7 / 5; 
+    
+    let newWidth = containerWidth;
+    let newHeight = newWidth / canvasAspectRatio;
+
+    if (newHeight > containerHeight) {
+        newHeight = containerHeight;
+        newWidth = newHeight * canvasAspectRatio;
+    }
+
+    canvas.width = newWidth;
+    canvas.height = newHeight;
+    canvas.style.width = `${newWidth}px`;
+    canvas.style.height = `${newHeight}px`;
+
+    if(gameState.isMatchLive) drawMatch();
+}
+
+function drawMatch() {
+    const canvas = document.getElementById('match-pitch-canvas');
+    if (!canvas.getContext) return;
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, 0, width, height); 
+    ctx.beginPath(); ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height); ctx.stroke(); 
+    ctx.beginPath(); ctx.arc(width / 2, height / 2, height * 0.15, 0, 2 * Math.PI); ctx.stroke(); 
+
+    const goalY = (100 - PITCH_DIMS.goalHeight) / 2 / 100 * height;
+    const goalH = PITCH_DIMS.goalHeight / 100 * height;
+    const goalW = 2 / 100 * width;
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(0, goalY, goalW, goalH);
+    ctx.strokeRect(width - goalW, goalY, goalW, goalH);
+
+    const playerRadius = Math.min(width / 50, height / 35);
+    const drawPlayer = (pos, color, hasBall) => { const x = (pos.x / 100) * width; const y = (pos.y / 100) * height; ctx.beginPath(); ctx.arc(x, y, playerRadius, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill(); if (hasBall) { ctx.strokeStyle = '#3DDC97'; ctx.lineWidth = 3; } else { ctx.strokeStyle = 'black'; ctx.lineWidth = 1; } ctx.stroke(); };
+    
+    for (const teamKey of ['home', 'away']) {
+        const team = gameState.matchState[teamKey];
+        const color = teamKey === 'home' ? '#c0392b' : '#f1c40f';
+        for (const player of Object.values(team.startingXI)) {
+            if (!player) continue;
+            const pos = gameState.matchState.playerPositions.get(player.name);
+            if(pos) drawPlayer(pos, color, gameState.matchState.ball.owner === player);
+        }
+    }
+    
+    const ballRadius = playerRadius / 2;
+    const ballPos = gameState.matchState.ball;
+    const ballX = (ballPos.x / 100) * width;
+    const ballY = (ballPos.y / 100) * height;
+    ctx.beginPath(); ctx.arc(ballX, ballY, ballRadius, 0, 2 * Math.PI); ctx.fillStyle = 'white'; ctx.fill();
+}
+
 
 // --- Event Listeners ---
 function initializeEventListeners() {
@@ -846,4 +1150,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     observer.observe(document.getElementById('main-game-screen'), { attributes: true });
-});```
+});
