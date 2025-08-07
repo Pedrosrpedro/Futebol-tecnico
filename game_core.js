@@ -870,6 +870,11 @@ function handleExpiredContracts() {
                 team.players = team.players.filter(p => p.contractUntil !== 0);
                 for (const player of expiredPlayers) {
                     player.contractUntil = 0;
+                    
+                    // --- CORREÇÃO ADICIONADA AQUI ---
+                    // Garante que o jogador tenha um valor de mercado atualizado ao se tornar agente livre.
+                    updateMarketValue(player); 
+                    
                     gameState.freeAgents.push(player);
                     if (team.name === gameState.userClub.name) {
                         showUserNewsModal("Contrato Encerrado", `O contrato de ${player.name} chegou ao fim. Ele deixou o clube e agora é um agente livre.`);
@@ -882,7 +887,6 @@ function handleExpiredContracts() {
         setupInitialSquad();
     }
 }
-
 // Esta função dá vida à gestão de contratos dos times da IA.
 function aiContractManagement() {
     for (const leagueId in leaguesData) {
