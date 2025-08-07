@@ -820,6 +820,59 @@ function getFullFirstPhaseTableC() {
 }
 
 // --- Funções de Contratos e Mercado de Transferências (IA e Jogador) ---
+
+function calculatePlayerWage(player) {
+    // O salário é baseado em uma pequena porcentagem do valor de mercado.
+    // Este fator pode ser ajustado para equilibrar a economia do jogo.
+    const wageFactor = 0.02; // Ex: 2% do valor de mercado ao mês
+    const monthlyWage = player.marketValue * wageFactor;
+
+    // Adiciona um multiplicador para jogadores de alto nível que exigem salários proporcionalmente maiores.
+    let overallMultiplier = 1.0;
+    if (player.overall > 85) {
+        overallMultiplier = 1.5;
+    } else if (player.overall > 80) {
+        overallMultiplier = 1.2;
+    }
+
+    // Garante um salário mínimo
+    return Math.max(5000, Math.round((monthlyWage * overallMultiplier) / 1000) * 1000);
+}
+
+
+/**
+ * Calcula o custo único (luvas + taxas de agente) para uma negociação de contrato.
+ * Faz uma GRANDE diferença entre renovar e contratar um novo jogador.
+ * @param {object} player - O objeto do jogador.
+ * @param {boolean} isRenewal - True se for uma renovação de contrato, false para uma nova contratação.
+ * @returns {number} O custo único da negociação em BRL.
+ */
+function calculateNegotiationCost(player, isRenewal) {
+    let costFactor;
+
+    if (isRenewal) {
+        // RENOVAÇÃO: Muito mais barato. Baseado em lealdade e idade.
+        costFactor = 0.15; // Custo base da renovação é 15% do valor de mercado
+        if (player.age > 30) {
+            costFactor -= 0.05; // Desconto para jogadores mais velhos e estabelecidos
+        }
+    } else {
+        // NOVA CONTRATAÇÃO (Agente Livre): Muito mais caro. Eles exigem um prêmio.
+        costFactor = 0.50; // Custo base da contratação é 50% do valor de mercado
+        if (player.age < 24) {
+            costFactor += 0.15; // Agentes livres jovens e com potencial são muito caros
+        }
+        if (player.overall > 80) {
+            costFactor += 0.20; // Agentes livres de "renome" exigem um bônus enorme
+        }
+    }
+
+    const finalCost = player.marketValue * Math.max(0.05, costFactor); // Garante que o custo seja de pelo menos 5%
+
+    // Retorna um valor arredondado para facilitar a visualização
+    return Math.round(finalCost / 10000) * 10000;
+}
+
 function aiTransferLogic() {
     if (gameState.isOffSeason) return;
 
