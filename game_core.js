@@ -358,16 +358,42 @@ function simulateSingleMatch(match, isUserMatch) {
         homeStrength = getTeamStrength(homeTeamData, false);
         awayStrength = getTeamStrength(awayTeamData, false);
     }
-    homeStrength *= 1.1; 
+
+    // --- LÓGICA DE SIMULAÇÃO APRIMORADA ---
+    homeStrength *= 1.1; // Mantém o fator casa
+
+    // Evita divisão por zero se ambas as forças forem 0
+    if (homeStrength <= 0 && awayStrength <= 0) {
+        match.homeScore = 0;
+        match.awayScore = 0;
+        match.status = 'played';
+        if (isUserMatch && match.round === 'Amistoso') showFriendlyResultModal(match);
+        return;
+    }
+
+    const averageGoalsPerMatch = 2.7; // Média de gols mais realista
+    const totalStrength = homeStrength + awayStrength;
+
+    // Calcula o número esperado de gols para cada time
+    let homeExpectedGoals = (homeStrength / totalStrength) * averageGoalsPerMatch;
+    let awayExpectedGoals = (awayStrength / totalStrength) * averageGoalsPerMatch;
+
+    // Adiciona um fator de aleatoriedade para mais surpresas
+    homeExpectedGoals *= (0.7 + Math.random() * 0.7); // Varia entre 70% e 140%
+    awayExpectedGoals *= (0.7 + Math.random() * 0.7);
+
+    // Simula os gols minuto a minuto (uma aproximação da Distribuição de Poisson)
     let homeScore = 0;
     let awayScore = 0;
-    for (let i = 0; i < 10; i++) {
-        const totalStrength = homeStrength + awayStrength;
-        const homeChance = (homeStrength / totalStrength) * (0.5 + Math.random());
-        const awayChance = (awayStrength / totalStrength) * (0.5 + Math.random());
-        if (homeChance > 0.65) homeScore++;
-        if (awayChance > 0.60) awayScore++;
+    for (let minute = 0; minute < 90; minute++) {
+        if (Math.random() < homeExpectedGoals / 90) {
+            homeScore++;
+        }
+        if (Math.random() < awayExpectedGoals / 90) {
+            awayScore++;
+        }
     }
+    
     match.homeScore = homeScore;
     match.awayScore = awayScore;
     match.status = 'played';
