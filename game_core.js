@@ -871,7 +871,8 @@ function getFullFirstPhaseTableC() {
 // --- Funções de Contratos e Mercado de Transferências (IA e Jogador) ---
 
 function calculatePlayerWage(player) {
-    const wageFactor = 0.02;
+    // O fator foi reduzido drasticamente. Antes era 0.02.
+    const wageFactor = 0.0020; 
     const monthlyWage = player.marketValue * wageFactor;
 
     let overallMultiplier = 1.0;
