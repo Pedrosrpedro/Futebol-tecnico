@@ -57,6 +57,13 @@ const overallWeights = { pace: 0.15, shooting: 0.15, passing: 0.2, dribbling: 0.
 
 // --- Funções de Inicialização e Setup do Jogo ---
 function startGame(team) {
+    // ESTA LINHA É ESSENCIAL! ELA DEVE SER A PRIMEIRA.
+    mergeAllData(); 
+    
+    // O resto do seu código continua aqui...
+    gameState.userClub = team;
+
+    if (typeof freeAgents !== 'undefined' && freeAgents.players) {
     gameState.userClub = team;
     mergeAllData();
 
