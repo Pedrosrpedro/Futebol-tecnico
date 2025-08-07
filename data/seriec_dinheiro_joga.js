@@ -460,6 +460,8 @@ Object.assign(playerBioData, {
             { "name": "Edson", "age": 29, "marketValue": "€250k" },
             { "name": "Zé Vitor", "age": 25, "marketValue": "€200k" },
             { "name": "Jhon", "age": 28, "marketValue": "€200k" }
+         ]
+            }
         ]
     }
 });
