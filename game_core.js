@@ -1116,3 +1116,5 @@ function parseMarketValue(valueStr) {
 
     return numberPart * multiplier;
 }
+
+}
