@@ -58,6 +58,7 @@ const overallWeights = { pace: 0.15, shooting: 0.15, passing: 0.2, dribbling: 0.
 // --- Funções de Inicialização e Setup do Jogo ---
 
 // VERSÃO CORRIGIDA QUE JUNTA TODOS OS DADOS (IDADE, VALOR, CONTRATO)
+// VERSÃO CORRIGIDA QUE JUNTA TODOS OS DADOS (IDADE, VALOR, CONTRATO)
 function mergeAllData() {
     if (typeof playerBioData === 'undefined' || typeof leaguesData === 'undefined') {
         console.error("ERRO CRÍTICO: O arquivo player_bio_data.js ou os arquivos de liga não foram carregados.");
@@ -75,44 +76,54 @@ function mergeAllData() {
         const bioLeague = playerBioData[leagueId];
         const contractLeague = allContracts[leagueId];
 
-        if (!league || !bioLeague || !contractLeague) continue;
+        if (!league) {
+            console.error(`ERRO: Dados da liga ${leagueId} não encontrados em leaguesData.`);
+            continue;
+        }
+        if (!bioLeague) {
+            console.error(`ERRO: Dados de biografia (idade/valor) para a liga ${leagueId} não foram carregados. Verifique o arquivo "dinheiro_joga" correspondente.`);
+            continue;
+        }
+        if (!contractLeague) {
+            console.error(`ERRO: Dados de contrato para a liga ${leagueId} não foram carregados. Verifique o arquivo "contratos" correspondente.`);
+            continue;
+        }
 
         for (const team of league.teams) {
             const bioTeam = bioLeague.teams.find(t => t.name === team.name);
             const contractTeam = contractLeague.find(t => t.time === team.name);
 
             // Trecho modificado para depuração
-if (!team.players) continue;
+            if (!team.players) continue;
 
-if (!bioTeam) {
-    console.error(`[mergeAllData] Time de biografia "${team.name}" não encontrado no arquivo "dinheiro_joga" da liga.`);
-    continue;
-}
-if (!contractTeam) {
-    console.error(`[mergeAllData] Time de contrato "${team.name}" não encontrado no arquivo "contratos" da liga. Verifique a propriedade 'time'.`);
-    continue;
-}
+            if (!bioTeam) {
+                console.error(`[mergeAllData] Time de biografia "${team.name}" não encontrado no arquivo "dinheiro_joga" da liga.`);
+                continue;
+            }
+            if (!contractTeam) {
+                console.error(`[mergeAllData] Time de contrato "${team.name}" não encontrado no arquivo "contratos" da liga. Verifique a propriedade 'time'.`);
+                continue;
+            }
 
-for (const player of team.players) {
-    const bioPlayer = bioTeam.players.find(p => p.name === player.name);
-    const contractPlayer = contractTeam.jogadores.find(p => p.nome === player.name);
+            for (const player of team.players) {
+                const bioPlayer = bioTeam.players.find(p => p.name === player.name);
+                const contractPlayer = contractTeam.jogadores.find(p => p.nome === player.name);
 
-    if (!bioPlayer) {
-        console.warn(`[mergeAllData] Jogador de biografia "${player.name}" não encontrado no time "${team.name}".`);
-    } else {
-        Object.assign(player, bioPlayer);
-    }
+                if (!bioPlayer) {
+                    console.warn(`[mergeAllData] Jogador de biografia "${player.name}" não encontrado no time "${team.name}".`);
+                } else {
+                    Object.assign(player, bioPlayer);
+                }
 
-    if (!contractPlayer) {
-        console.warn(`[mergeAllData] Jogador de contrato "${player.name}" não encontrado no time "${team.name}". Verifique a propriedade 'nome'.`);
-    } else if (typeof contractPlayer.contrato_anos === 'number') {
-        player.contractUntil = contractPlayer.contrato_anos * 12;
-    }
-}
+                if (!contractPlayer) {
+                    console.warn(`[mergeAllData] Jogador de contrato "${player.name}" não encontrado no time "${team.name}". Verifique a propriedade 'nome'.`);
+                } else if (typeof contractPlayer.contrato_anos === 'number') {
+                    player.contractUntil = contractPlayer.contrato_anos * 12;
+                }
             }
         }
     }
-}
+} // <-- FIM CORRETO DA FUNÇÃO
 
 
 function startGame(team) {
