@@ -235,17 +235,21 @@ function calculatePlayerOverall(player) {
 // ATENÇÃO: Simplifique a função 'updateMarketValue' para que ela APENAS calcule.
 // A lógica de converter o texto foi movida para a função de inicialização.
 function updateMarketValue(player) {
-    // Removemos a verificação 'if (typeof player.marketValue === 'string')' daqui.
-    // Esta função agora serve apenas para CALCULAR um valor com base nos stats.
-    const baseValueEUR = (player.overall / 100) ** 4 * 30000000;
+    // FÓRMULA ANTIGA: const baseValueEUR = (player.overall / 100) ** 4 * 30000000;
+    // FÓRMULA NOVA, MENOS AGRESSIVA: O expoente foi reduzido de 4 para 3.5 e a base multiplicadora foi diminuída.
+    const baseValueEUR = (player.overall / 100) ** 3.5 * 20000000; 
+
     let ageMultiplier = 1.0;
-    if (player.age < 21) ageMultiplier = 1.2;
+    if (player.age < 21) ageMultiplier = 1.3; // Jogadores jovens têm maior potencial de valorização
     else if (player.age >= 21 && player.age <= 28) ageMultiplier = 1.5 - ((player.age - 21) * 0.05);
     else if (player.age > 28 && player.age < 33) ageMultiplier = 1.1 - ((player.age - 28) * 0.1);
     else ageMultiplier = Math.max(0.1, 0.5 - ((player.age - 33) * 0.03));
+
     const positionMultiplier = (['ST', 'LW', 'RW', 'CAM'].includes(player.position)) ? 1.2 : 1.0;
     let finalValueEUR = baseValueEUR * ageMultiplier * positionMultiplier;
-    finalValueEUR = Math.max(10000, Math.round(finalValueEUR / 10000) * 10000);
+
+    // Garante um valor mínimo para qualquer jogador profissional
+    finalValueEUR = Math.max(25000, Math.round(finalValueEUR / 10000) * 10000);
     player.marketValue = finalValueEUR * currencyRates.EUR;
 }
 
