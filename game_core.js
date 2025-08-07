@@ -883,24 +883,43 @@ function handleExpiredContracts() {
     }
 }
 
+// Esta função dá vida à gestão de contratos dos times da IA.
 function aiContractManagement() {
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
-            if (team.name === gameState.userClub.name) continue;
+            if (team.name === gameState.userClub.name) continue; // Pula o time do jogador
 
+            // Calcula a média de overall do time para saber quem é "importante"
             const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
 
             for (const player of team.players) {
-                if (player.contractUntil <= 6 && player.contractUntil > 0) {
+                // LÓGICA DE RENOVAÇÃO
+                // Se o contrato do jogador está para acabar (6 meses ou menos)
+                if (player.contractUntil !== null && player.contractUntil <= 6 && player.contractUntil > 0) {
                     const isImportant = player.overall > teamOverallAvg;
-                    if (isImportant && player.age < 34 && Math.random() < 0.75) {
-                        player.contractUntil += (player.age < 30 ? 36 : 12);
+                    const isNotTooOld = player.age < 34;
+                    const shouldRenew = Math.random() < 0.75; // 75% de chance de tentar renovar
+
+                    if (isImportant && isNotTooOld && shouldRenew) {
+                        // Renova o contrato. Jogadores mais novos recebem contratos mais longos.
+                        const newDurationMonths = player.age < 30 ? 36 : 12; // 3 anos ou 1 ano
+                        player.contractUntil += newDurationMonths;
+                        // Opcional: Adicionar uma notícia sobre a renovação
+                        // addNews("Contrato Renovado", `${player.name} renovou seu vínculo com o ${team.name}.`, false, team.name);
                     }
-                } else if (player.contractUntil > 12) {
+                }
+                
+                // LÓGICA DE LIBERAÇÃO (BÔNUS)
+                // Se um jogador tem contrato longo, é velho e está rendendo mal, o time pode tentar liberá-lo.
+                else if (player.contractUntil !== null && player.contractUntil > 12) {
                     const isUnderperforming = player.overall < (teamOverallAvg - 5);
                     const isOld = player.age > 33;
-                    if (isUnderperforming && isOld && Math.random() < 0.05) {
+                    const shouldRelease = Math.random() < 0.05; // 5% de chance por mês
+
+                    if (isUnderperforming && isOld && shouldRelease) {
+                         // Define o contrato para 0, fazendo com que ele expire no próximo processamento.
                          player.contractUntil = 0;
+                         // addNews("Dispensa", `${team.name} decidiu não continuar com ${player.name}, que deixará o clube.`, false, team.name);
                     }
                 }
             }
