@@ -698,6 +698,111 @@ function loadTacticsScreen() {
 
 
 // --- Funções de Contratos e Transferências (UI) ---
+function displayTransferMarket() {
+    const container = document.getElementById('transfer-market-content');
+    container.innerHTML = `
+        <div class="tabs-container">
+            <button class="tab-btn active" data-tab="search-players">Pesquisar Jogadores</button>
+            <button class="tab-btn" data-tab="market-hub" disabled>Mercado</button>
+        </div>
+        <div id="search-players-tab" class="tab-content active"></div>
+        <div id="market-hub-tab" class="tab-content"><p>Funcionalidade em desenvolvimento.</p></div>
+    `;
+
+    displayPlayerSearch();
+
+    container.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.dataset.tab;
+            container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            container.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            container.querySelector(`#${tabId}-tab`).classList.add('active');
+        });
+    });
+}
+
+function displayPlayerSearch() {
+    const container = document.getElementById('search-players-tab');
+    container.innerHTML = `
+        <div class="player-search-bar">
+            <input type="text" id="player-search-input" placeholder="Nome do jogador...">
+            <select id="filter-position"><option value="">Posição</option><option>GK</option><option>CB</option><option>RB</option><option>LB</option><option>CDM</option><option>CM</option><option>CAM</option><option>RW</option><option>LW</option><option>ST</option></select>
+            <select id="filter-age"><option value="">Idade</option><option value="u21">Sub-21</option><option value="22-28">Auge (22-28)</option><option value="o29">Veterano (29+)</option></select>
+            <select id="filter-value"><option value="">Valor</option><option value="0-1m">Até 1M</option><option value="1m-5m">1M - 5M</option><option value="5m-10m">5M - 10M</option><option value="o10m">Acima de 10M</option></select>
+            <button id="search-player-btn">Pesquisar</button>
+        </div>
+        <div class="table-container" id="player-search-results">
+            <p style="padding: 20px; text-align: center;">Use a busca e os filtros para encontrar jogadores.</p>
+        </div>
+    `;
+
+    document.getElementById('search-player-btn').addEventListener('click', performSearch);
+}
+
+function performSearch() {
+    const nameQuery = document.getElementById('player-search-input').value.toLowerCase();
+    const posQuery = document.getElementById('filter-position').value;
+    const ageQuery = document.getElementById('filter-age').value;
+    const valueQuery = document.getElementById('filter-value').value;
+    
+    let results = [...gameState.freeAgents];
+
+    if (nameQuery) {
+        results = results.filter(p => p.name.toLowerCase().includes(nameQuery));
+    }
+    if (posQuery) {
+        results = results.filter(p => p.position === posQuery);
+    }
+    if (ageQuery) {
+        if (ageQuery === 'u21') results = results.filter(p => p.age <= 21);
+        else if (ageQuery === '22-28') results = results.filter(p => p.age >= 22 && p.age <= 28);
+        else if (ageQuery === 'o29') results = results.filter(p => p.age >= 29);
+    }
+    if (valueQuery) {
+        const base = 1000000 * currencyRates.EUR; // Valores são em BRL, base é EUR
+        if (valueQuery === '0-1m') results = results.filter(p => p.marketValue <= base);
+        else if (valueQuery === '1m-5m') results = results.filter(p => p.marketValue > base && p.marketValue <= base * 5);
+        else if (valueQuery === '5m-10m') results = results.filter(p => p.marketValue > base * 5 && p.marketValue <= base * 10);
+        else if (valueQuery === 'o10m') results = results.filter(p => p.marketValue > base * 10);
+    }
+
+    const resultsContainer = document.getElementById('player-search-results');
+    resultsContainer.innerHTML = renderPlayerList(results);
+    addPlayerListEventListeners(resultsContainer);
+}
+
+function renderPlayerList(players) {
+    if (players.length === 0) return '<p style="padding: 20px; text-align: center;">Nenhum jogador encontrado.</p>';
+    let tableHTML = `<table><thead><tr><th>Nome</th><th>Idade</th><th>Pos.</th><th>GERAL</th><th>Valor de Mercado</th><th>Ação</th></tr></thead><tbody>`;
+    for (const player of players) {
+        tableHTML += `
+            <tr data-player-name="${player.name}">
+                <td>${player.name}</td>
+                <td>${player.age}</td>
+                <td>${player.position}</td>
+                <td><b>${player.overall}</b></td>
+                <td>${formatCurrency(player.marketValue)}</td>
+                <td><button class="propose-contract-btn" data-player-name="${player.name}">Propor Contrato</button></td>
+            </tr>`;
+    }
+    tableHTML += `</tbody></table>`;
+    return tableHTML;
+}
+
+function addPlayerListEventListeners(container) {
+    container.querySelectorAll('.propose-contract-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const playerName = e.target.dataset.playerName;
+            const player = gameState.freeAgents.find(p => p.name === playerName);
+            if (player) {
+                openNegotiationModal(player, 'hire');
+            }
+        });
+    });
+}
+
 function displayContractsScreen() {
     const container = document.getElementById('contracts-content');
     container.innerHTML = '<h3>Situação Contratual do Elenco</h3>';
