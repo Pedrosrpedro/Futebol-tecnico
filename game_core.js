@@ -232,11 +232,11 @@ function calculatePlayerOverall(player) {
     return Math.min(99, Math.round(weightedSum));
 }
 
+// ATENÇÃO: Simplifique a função 'updateMarketValue' para que ela APENAS calcule.
+// A lógica de converter o texto foi movida para a função de inicialização.
 function updateMarketValue(player) {
-    if (typeof player.marketValue === 'string') {
-        player.marketValue = parseMarketValue(player.marketValue) * currencyRates.EUR;
-    }
-    
+    // Removemos a verificação 'if (typeof player.marketValue === 'string')' daqui.
+    // Esta função agora serve apenas para CALCULAR um valor com base nos stats.
     const baseValueEUR = (player.overall / 100) ** 4 * 30000000;
     let ageMultiplier = 1.0;
     if (player.age < 21) ageMultiplier = 1.2;
