@@ -231,8 +231,10 @@ function initializeAllPlayerDataForTeam(team) {
             }
         }
 
-        // Calcula o overall ANTES de calcular o valor, pois o valor depende do overall
-        player.overall = calculatePlayerOverall(player);
+        // Calcula o overall APENAS se ele não estiver definido no arquivo
+        if (!player.overall) {
+            player.overall = calculatePlayerOverall(player);
+        }
         
         // Agora atualiza/define o valor de mercado
         updateMarketValue(player);
