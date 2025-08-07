@@ -347,7 +347,7 @@ function updatePlayerDevelopment() {
                     });
                     player.overall = calculatePlayerOverall(player);
                 }
-                updateMarketValue(player);
+                updateMarketValue(player, true); // Adicionamos 'true' para forçar o recálculo
             }
             team.players = team.players.filter(p => !playersToRemove.includes(p.name));
             team.players.push(...playersToAdd);
