@@ -311,13 +311,16 @@ function generateNewPlayer(team) {
 }
 
 function getDevelopmentLogic(age) {
-    if (age < 24) return () => (1 + Math.floor(Math.random() * 3));
-    if (age < 30) return () => Math.floor(Math.random() * 2);
-    if (age < 33) return () => (Math.random() < 0.2) ? (Math.random() < 0.5 ? 1 : -1) : 0;
+    if (age < 24) return () => (1 + Math.floor(Math.random() * 3)); // Melhora de 1 a 2 pontos
+    if (age < 30) return () => Math.floor(Math.random() * 2); // Melhora de 0 a 1 ponto
+    if (age < 33) return () => (Math.random() < 0.2) ? (Math.random() < 0.5 ? 1 : -1) : 0; // Estagna, com pequena chance de mudar
+    
+    // Lógica de declínio para jogadores mais velhos
     return (attr) => {
-        let loss = Math.floor(Math.random() * 2);
+        let loss = Math.floor(Math.random() * 2); // Perde de 0 a 1 ponto
+        // Se for um atributo físico e o jogador for muito velho, a perda é maior
         if ((attr === 'pace' || attr === 'physical') && age >= 35) {
-            loss += Math.floor(Math.random() * 2);
+            loss += Math.floor(Math.random() * 2); // Perde mais 0 ou 1 ponto
         }
         return -loss;
     };
