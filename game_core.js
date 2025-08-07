@@ -56,31 +56,64 @@ const PITCH_DIMS = { top: 0, bottom: 100, left: 0, right: 100, goalHeight: 30 };
 const overallWeights = { pace: 0.15, shooting: 0.15, passing: 0.2, dribbling: 0.15, defending: 0.2, physical: 0.15 };
 
 // --- Funções de Inicialização e Setup do Jogo ---
-function startGame(team) {
-    // ESTA LINHA É ESSENCIAL! ELA DEVE SER A PRIMEIRA.
-    mergeAllData(); 
-    
-    // O resto do seu código continua aqui...
-    gameState.userClub = team;
 
-    if (typeof freeAgents !== 'undefined' && freeAgents.players) {
-    gameState.userClub = team;
+// VERSÃO CORRIGIDA QUE JUNTA TODOS OS DADOS (IDADE, VALOR, CONTRATO)
+function mergeAllData() {
+    if (typeof playerBioData === 'undefined' || typeof leaguesData === 'undefined') {
+        console.error("ERRO CRÍTICO: O arquivo player_bio_data.js ou os arquivos de liga não foram carregados.");
+        return;
+    }
+
+    const allContracts = {
+        'brasileirao_a': typeof contratos_seriea !== 'undefined' ? contratos_seriea : [],
+        'brasileirao_b': typeof contratos_serieb !== 'undefined' ? contratos_serieb : [],
+        'brasileirao_c': typeof contratos_seriec !== 'undefined' ? contratos_seriec : [],
+    };
+
+    for (const leagueId in leaguesData) {
+        const league = leaguesData[leagueId];
+        const bioLeague = playerBioData[leagueId];
+        const contractLeague = allContracts[leagueId];
+
+        if (!league || !bioLeague || !contractLeague) continue;
+
+        for (const team of league.teams) {
+            const bioTeam = bioLeague.teams.find(t => t.name === team.name);
+            const contractTeam = contractLeague.find(t => t.time === team.name);
+
+            if (!team.players || !bioTeam || !contractTeam) continue;
+
+            for (const player of team.players) {
+                const bioPlayer = bioTeam.players.find(p => p.name === player.name);
+                const contractPlayer = contractTeam.jogadores.find(p => p.nome === player.name);
+
+                if (bioPlayer) {
+                    Object.assign(player, bioPlayer);
+                }
+
+                if (contractPlayer && typeof contractPlayer.contrato_anos === 'number') {
+                    player.contractUntil = contractPlayer.contrato_anos * 12;
+                }
+            }
+        }
+    }
+}
+
+
+function startGame(team) {
+    // ESTA LINHA É A MAIS IMPORTANTE E DEVE SER A PRIMEIRA
     mergeAllData();
+    
+    gameState.userClub = team;
 
     if (typeof freeAgents !== 'undefined' && freeAgents.players) {
         gameState.freeAgents = freeAgents.players.map(p => {
-            // Mantém a lógica original
             p.overall = p.overall || calculatePlayerOverall(p);
             updateMarketValue(p); 
             p.contractUntil = 0; 
             return p;
         });
-
-        // --- CORREÇÃO ADICIONADA AQUI ---
-        // Roda a nossa função de limpeza e tradução de atributos na lista de agentes livres.
-        // Criamos um "time temporário" para passar para a função.
         initializeAllPlayerDataForTeam({ name: 'FreeAgentsTemp', players: gameState.freeAgents });
-        // --- FIM DA CORREÇÃO ---
     }
 
     initializeAllPlayerData();
@@ -95,6 +128,7 @@ function startGame(team) {
     showScreen('main-game-screen');
     showMainContent('home-content');
 }
+
 function initializeSeason() {
     const year = 2025 + gameState.season - 1;
     gameState.isOffSeason = false;
@@ -139,55 +173,6 @@ function initializeSeason() {
 }
 
 
-// ATENÇÃO: Substitua a sua função mergeAllData antiga por esta.
-function mergeAllData() {
-    // Medida de segurança caso algum arquivo não seja carregado.
-    if (typeof playerBioData === 'undefined' || typeof leaguesData === 'undefined') {
-        console.error("ERRO CRÍTICO: O arquivo player_bio_data.js ou os arquivos de liga não foram carregados.");
-        return;
-    }
-
-    // Mapeia os dados de contratos para facilitar o acesso
-    const allContracts = {
-        'brasileirao_a': typeof contratosSerieA !== 'undefined' ? contratosSerieA : [],
-        'brasileirao_b': typeof contratosSerieB !== 'undefined' ? contratosSerieB : [],
-        'brasileirao_c': typeof contratosSerieC !== 'undefined' ? contratosSerieC : [],
-    };
-
-    // Loop principal por cada liga (brasileirao_a, b, c)
-    for (const leagueId in leaguesData) {
-        const league = leaguesData[leagueId];
-        const bioLeague = playerBioData[leagueId];
-        const contractLeague = allContracts[leagueId];
-
-        if (!league || !bioLeague || !contractLeague) continue;
-
-        // Loop por cada time dentro da liga
-        for (const team of league.teams) {
-            const bioTeam = bioLeague.teams.find(t => t.name === team.name);
-            const contractTeam = contractLeague.find(t => t.time === team.name);
-
-            if (!team.players || !bioTeam || !contractTeam) continue;
-
-            // Loop final por cada jogador para juntar os dados
-            for (const player of team.players) {
-                const bioPlayer = bioTeam.players.find(p => p.name === player.name);
-                const contractPlayer = contractTeam.jogadores.find(p => p.nome === player.name);
-
-                // 1. Juntando dados de IDADE e VALOR (do player_bio_data.js)
-                if (bioPlayer) {
-                    Object.assign(player, bioPlayer); // Copia { age, marketValue } para o jogador
-                }
-
-                // 2. Juntando dados de CONTRATO (dos arquivos contratos_serie[a,b,c].js)
-                if (contractPlayer) {
-                    // Converte a duração do contrato de anos para meses
-                    player.contractUntil = contractPlayer.contrato_anos * 12;
-                }
-            }
-        }
-    }
-}
 function initializeAllPlayerData() {
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
@@ -196,20 +181,15 @@ function initializeAllPlayerData() {
     }
 }
 
-// --- VERSÃO CORRIGIDA E MAIS ROBUSTA ---
-// Substitua sua função initializeAllPlayerDataForTeam por esta versão mais completa.
-// Esta é a função mais importante. Ela vai padronizar TODOS os jogadores.
 function initializeAllPlayerDataForTeam(team) {
     const requiredAttributes = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical'];
     const attributeMap = { pac: 'pace', sho: 'shooting', pas: 'passing', dri: 'dribbling', def: 'defending', phy: 'physical' };
 
     for (const player of team.players) {
-        // 1. GARANTE A IDADE: Usa a idade do 'bioData' ou, como última segurança, define 23.
         if (typeof player.age !== 'number' || isNaN(player.age)) {
             player.age = 23; 
         }
 
-        // 2. TRADUZ ATRIBUTOS (Para Agentes Livres): Converte 'pac' para 'pace', etc.
         if (!player.attributes) player.attributes = {};
         for (const shortKey in attributeMap) {
             if (player.attributes.hasOwnProperty(shortKey)) {
@@ -219,35 +199,23 @@ function initializeAllPlayerDataForTeam(team) {
             }
         }
         
-        // 3. GARANTE ATRIBUTOS: Se algum dos 6 atributos estiver faltando, define como 50.
-        let needsRecalculation = !player.overall; // Assume que o overall precisa ser recalculado
         for (const attr of requiredAttributes) {
             if (typeof player.attributes[attr] !== 'number') {
                 player.attributes[attr] = 50;
             }
         }
 
-        // 4. PADRONIZA O VALOR DE MERCADO: Converte o texto em número.
-        if (typeof player.marketValue === 'string') {
-            // Se o valor é um texto ("€2.5M"), converte para um número e confia nele.
-            player.marketValue = parseMarketValue(player.marketValue);
-        } else if (typeof player.marketValue !== 'number') {
-            // Se não houver valor, aí sim nós calculamos um novo.
-            updateMarketValue(player);
-        }
-
-        // 5. CALCULA O OVERALL: Se o jogador não tinha um, ou se os atributos foram mexidos, calcula.
-        if (needsRecalculation) {
-            player.overall = calculatePlayerOverall(player);
-        }
+        // Calcula o overall ANTES de calcular o valor, pois o valor depende do overall
+        player.overall = calculatePlayerOverall(player);
+        
+        // Agora atualiza/define o valor de mercado
+        updateMarketValue(player);
     }
 }
 
 // --- Funções de Progressão, Aposentadoria e Valor ---
 function calculatePlayerOverall(player) {
-    // CORREÇÃO: Verifica se os atributos existem E se não estão vazios.
     if (!player.attributes || Object.keys(player.attributes).length === 0) {
-        // Se não houver atributos, retorna o overall que o jogador já tinha ou um valor padrão de 50.
         return player.overall || 50;
     }
     
@@ -263,18 +231,16 @@ function calculatePlayerOverall(player) {
     return Math.min(99, Math.round(weightedSum));
 }
 
-// ATENÇÃO: Simplifique a função 'updateMarketValue' para que ela APENAS calcule.
-// A lógica de converter o texto foi movida para a função de inicialização.
+// VERSÃO CORRIGIDA com fórmula mais suave e que respeita valores pré-existentes
 function updateMarketValue(player) {
-    // Se o jogador JÁ TEM um valor de mercado (vindo do player_bio_data.js), nós o usamos e apenas o convertemos.
     if (typeof player.marketValue === 'string') {
         player.marketValue = parseMarketValue(player.marketValue) * currencyRates.EUR;
-        return; // Sai da função para não calcular um novo valor
+        return;
+    }
+    if (typeof player.marketValue === 'number' && player.marketValue > 0) {
+        return; // Se já tem um valor numérico (vindo da junção de dados), não faz nada.
     }
 
-    // Se o jogador NÃO TEM valor, aí sim calculamos um com base no overall.
-    // FÓRMULA ANTIGA: const baseValueEUR = (player.overall / 100) ** 3.5 * 20000000;
-    // FÓRMULA NOVA, MUITO MAIS SUAVE:
     const baseValueEUR = (player.overall / 100) ** 3 * 5000000; 
 
     let ageMultiplier = 1.0;
@@ -286,8 +252,8 @@ function updateMarketValue(player) {
     const positionMultiplier = (['ST', 'LW', 'RW', 'CAM'].includes(player.position)) ? 1.2 : 1.0;
     let finalValueEUR = baseValueEUR * ageMultiplier * positionMultiplier;
 
-    finalValueEUR = Math.max(15000, Math.round(finalValueEUR / 5000) * 5000); // Valor mínimo e arredondado
-    player.marketValue = finalValueEUR * currencyRates.EUR; // Converte de Euro para Reais
+    finalValueEUR = Math.max(15000, Math.round(finalValueEUR / 5000) * 5000);
+    player.marketValue = finalValueEUR * currencyRates.EUR;
 }
 
 function generateNewPlayer(team) {
@@ -407,13 +373,11 @@ function advanceDay() {
 }
 
  function updateMonthlyContracts() {
-    // --- LÓGICA PARA O CLUBE DO USUÁRIO ---
     let totalWages = 0;
     const userPlayers = gameState.userClub.players;
     for (const player of userPlayers) {
         if (player.contractUntil && player.contractUntil > 0) {
             player.contractUntil--;
-            // Deduz o salário do jogador das finanças usando a nova função
             totalWages += calculatePlayerWage(player);
         }
     }
@@ -421,11 +385,9 @@ function advanceDay() {
         addTransaction(-totalWages, "Salários mensais dos jogadores");
     }
 
-    // --- LÓGICA PARA OS TIMES DA IA ---
-    // Mantém a lógica simples para a IA, apenas decrementando a duração do contrato.
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
-            if (team.name === gameState.userClub.name) continue; // Pula o time do usuário
+            if (team.name === gameState.userClub.name) continue;
             for (const player of team.players) {
                 if (player.contractUntil && player.contractUntil > 0) {
                     player.contractUntil--;
@@ -467,10 +429,8 @@ function simulateSingleMatch(match, isUserMatch) {
         awayStrength = getTeamStrength(awayTeamData, false);
     }
 
-    // --- LÓGICA DE SIMULAÇÃO APRIMORADA ---
-    homeStrength *= 1.1; // Mantém o fator casa
+    homeStrength *= 1.1;
 
-    // Evita divisão por zero se ambas as forças forem 0
     if (homeStrength <= 0 && awayStrength <= 0) {
         match.homeScore = 0;
         match.awayScore = 0;
@@ -479,18 +439,15 @@ function simulateSingleMatch(match, isUserMatch) {
         return;
     }
 
-    const averageGoalsPerMatch = 2.7; // Média de gols mais realista
+    const averageGoalsPerMatch = 2.7;
     const totalStrength = homeStrength + awayStrength;
 
-    // Calcula o número esperado de gols para cada time
     let homeExpectedGoals = (homeStrength / totalStrength) * averageGoalsPerMatch;
     let awayExpectedGoals = (awayStrength / totalStrength) * averageGoalsPerMatch;
 
-    // Adiciona um fator de aleatoriedade para mais surpresas
-    homeExpectedGoals *= (0.7 + Math.random() * 0.7); // Varia entre 70% e 140%
+    homeExpectedGoals *= (0.7 + Math.random() * 0.7);
     awayExpectedGoals *= (0.7 + Math.random() * 0.7);
 
-    // Simula os gols minuto a minuto (uma aproximação da Distribuição de Poisson)
     let homeScore = 0;
     let awayScore = 0;
     for (let minute = 0; minute < 90; minute++) {
@@ -849,7 +806,7 @@ function getFullFirstPhaseTableC() {
         awayTeam.goalsAgainst += match.homeScore;
         homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst;
         awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst;
-        if (match.homeScore > match.awayScore) {
+        if (match.homeScore > match.homeScore) {
             homeTeam.wins++;
             homeTeam.points += 3;
             awayTeam.losses++;
@@ -876,12 +833,9 @@ function getFullFirstPhaseTableC() {
 // --- Funções de Contratos e Mercado de Transferências (IA e Jogador) ---
 
 function calculatePlayerWage(player) {
-    // O salário é baseado em uma pequena porcentagem do valor de mercado.
-    // Este fator pode ser ajustado para equilibrar a economia do jogo.
-    const wageFactor = 0.02; // Ex: 2% do valor de mercado ao mês
+    const wageFactor = 0.02;
     const monthlyWage = player.marketValue * wageFactor;
 
-    // Adiciona um multiplicador para jogadores de alto nível que exigem salários proporcionalmente maiores.
     let overallMultiplier = 1.0;
     if (player.overall > 85) {
         overallMultiplier = 1.5;
@@ -889,66 +843,50 @@ function calculatePlayerWage(player) {
         overallMultiplier = 1.2;
     }
 
-    // Garante um salário mínimo
     return Math.max(5000, Math.round((monthlyWage * overallMultiplier) / 1000) * 1000);
 }
 
 
-/**
- * Calcula o custo único (luvas + taxas de agente) para uma negociação de contrato.
- * Faz uma GRANDE diferença entre renovar e contratar um novo jogador.
- * @param {object} player - O objeto do jogador.
- * @param {boolean} isRenewal - True se for uma renovação de contrato, false para uma nova contratação.
- * @returns {number} O custo único da negociação em BRL.
- */
 function calculateNegotiationCost(player, isRenewal) {
     let costFactor;
 
     if (isRenewal) {
-        // RENOVAÇÃO: Muito mais barato. Baseado em lealdade e idade.
-        costFactor = 0.15; // Custo base da renovação é 15% do valor de mercado
+        costFactor = 0.15;
         if (player.age > 30) {
-            costFactor -= 0.05; // Desconto para jogadores mais velhos e estabelecidos
+            costFactor -= 0.05;
         }
     } else {
-        // NOVA CONTRATAÇÃO (Agente Livre): Muito mais caro. Eles exigem um prêmio.
-        costFactor = 0.50; // Custo base da contratação é 50% do valor de mercado
+        costFactor = 0.50;
         if (player.age < 24) {
-            costFactor += 0.15; // Agentes livres jovens e com potencial são muito caros
+            costFactor += 0.15;
         }
         if (player.overall > 80) {
-            costFactor += 0.20; // Agentes livres de "renome" exigem um bônus enorme
+            costFactor += 0.20;
         }
     }
 
-    const finalCost = player.marketValue * Math.max(0.05, costFactor); // Garante que o custo seja de pelo menos 5%
+    const finalCost = player.marketValue * Math.max(0.05, costFactor);
 
-    // Retorna um valor arredondado para facilitar a visualização
     return Math.round(finalCost / 10000) * 10000;
 }
 
 function aiTransferLogic() {
     if (gameState.isOffSeason) return;
 
-    // Função auxiliar para estimar um orçamento de transferência para a IA
     const getAITransferBudget = (team) => {
-        // Usa a verba média como base, se disponível
         if (typeof estimativaVerbaMedia2025 !== 'undefined') {
             const financialData = estimativaVerbaMedia2025.find(c => c.time === team.name);
             if (financialData) {
-                // Define uma fatia da verba total para transferências (ex: 20%)
                 return financialData.verba_media_estimada_milhoes_reais * 1000000 * 0.20;
             }
         }
-        // Orçamento padrão para times sem dados financeiros
         const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
-        return Math.pow(teamOverallAvg / 100, 2) * 5000000 + 500000; // Orçamento baseado no overall do time
+        return Math.pow(teamOverallAvg / 100, 2) * 5000000 + 500000;
     };
 
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
             if (team.name === gameState.userClub.name) continue;
-            // A chance de um time procurar reforços
             if (Math.random() > 0.10) continue; 
 
             const teamBudget = getAITransferBudget(team);
@@ -959,8 +897,7 @@ function aiTransferLogic() {
                 .filter(p => 
                     p.position === weakestPlayer.position && 
                     p.overall > weakestPlayer.overall + 2 &&
-                    // CORREÇÃO: Filtro financeiro! O valor de mercado do jogador deve ser acessível para o time.
-                    (p.marketValue * 0.25) < teamBudget // Ex: luvas custam 25% do valor de mercado
+                    (p.marketValue * 0.25) < teamBudget
                 )
                 .sort((a, b) => b.overall - a.overall);
 
@@ -1002,11 +939,7 @@ function handleExpiredContracts() {
                 team.players = team.players.filter(p => p.contractUntil !== 0);
                 for (const player of expiredPlayers) {
                     player.contractUntil = 0;
-                    
-                    // --- CORREÇÃO ADICIONADA AQUI ---
-                    // Garante que o jogador tenha um valor de mercado atualizado ao se tornar agente livre.
                     updateMarketValue(player); 
-                    
                     gameState.freeAgents.push(player);
                     if (team.name === gameState.userClub.name) {
                         showUserNewsModal("Contrato Encerrado", `O contrato de ${player.name} chegou ao fim. Ele deixou o clube e agora é um agente livre.`);
@@ -1019,43 +952,32 @@ function handleExpiredContracts() {
         setupInitialSquad();
     }
 }
-// Esta função dá vida à gestão de contratos dos times da IA.
 function aiContractManagement() {
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
-            if (team.name === gameState.userClub.name) continue; // Pula o time do jogador
+            if (team.name === gameState.userClub.name) continue;
 
-            // Calcula a média de overall do time para saber quem é "importante"
             const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
 
             for (const player of team.players) {
-                // LÓGICA DE RENOVAÇÃO
-                // Se o contrato do jogador está para acabar (6 meses ou menos)
                 if (player.contractUntil !== null && player.contractUntil <= 6 && player.contractUntil > 0) {
                     const isImportant = player.overall > teamOverallAvg;
                     const isNotTooOld = player.age < 34;
-                    const shouldRenew = Math.random() < 0.75; // 75% de chance de tentar renovar
+                    const shouldRenew = Math.random() < 0.75;
 
                     if (isImportant && isNotTooOld && shouldRenew) {
-                        // Renova o contrato. Jogadores mais novos recebem contratos mais longos.
-                        const newDurationMonths = player.age < 30 ? 36 : 12; // 3 anos ou 1 ano
+                        const newDurationMonths = player.age < 30 ? 36 : 12;
                         player.contractUntil += newDurationMonths;
-                        // Opcional: Adicionar uma notícia sobre a renovação
-                        // addNews("Contrato Renovado", `${player.name} renovou seu vínculo com o ${team.name}.`, false, team.name);
                     }
                 }
                 
-                // LÓGICA DE LIBERAÇÃO (BÔNUS)
-                // Se um jogador tem contrato longo, é velho e está rendendo mal, o time pode tentar liberá-lo.
                 else if (player.contractUntil !== null && player.contractUntil > 12) {
                     const isUnderperforming = player.overall < (teamOverallAvg - 5);
                     const isOld = player.age > 33;
-                    const shouldRelease = Math.random() < 0.05; // 5% de chance por mês
+                    const shouldRelease = Math.random() < 0.05;
 
                     if (isUnderperforming && isOld && shouldRelease) {
-                         // Define o contrato para 0, fazendo com que ele expire no próximo processamento.
                          player.contractUntil = 0;
-                         // addNews("Dispensa", `${team.name} decidiu não continuar com ${player.name}, que deixará o clube.`, false, team.name);
                     }
                 }
             }
@@ -1092,9 +1014,19 @@ function findTeamInLeagues(teamName, isPlayerLookup = false) {
 function parseMarketValue(valueStr) {
     if (typeof valueStr !== 'string') return 0;
     const value = valueStr.replace('€', '').trim();
-    const multiplier = value.slice(-1).toLowerCase();
-    const numberPart = parseFloat(value.slice(0, -1));
-    if (multiplier === 'm') return numberPart * 1000000;
-    if (multiplier === 'k') return numberPart * 1000;
-    return parseFloat(value);
+    let multiplier = 1;
+    let numberPartStr = value;
+
+    if (value.slice(-1).toLowerCase() === 'm') {
+        multiplier = 1000000;
+        numberPartStr = value.slice(0, -1);
+    } else if (value.slice(-1).toLowerCase() === 'k') {
+        multiplier = 1000;
+        numberPartStr = value.slice(0, -1);
+    }
+    
+    const numberPart = parseFloat(numberPartStr.replace(',', '.'));
+    if (isNaN(numberPart)) return 0;
+
+    return numberPart * multiplier;
 }
