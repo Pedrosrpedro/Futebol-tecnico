@@ -1290,8 +1290,12 @@ function initializeEventListeners() {
     document.getElementById('close-negotiation-modal-btn').addEventListener('click', () => document.getElementById('negotiation-modal').classList.remove('active'));
     document.getElementById('submit-offer-btn').addEventListener('click', handleNegotiationOffer);
     document.getElementById('accept-demand-btn').addEventListener('click', () => {
-        const { desiredDuration } = negotiationState;
-        finalizeDeal(desiredDuration * 12, desiredBonus);
+        // CORREÇÃO: Pega o bônus do 'negotiationState', não de uma variável inexistente.
+        const { desiredDuration, desiredBonus } = negotiationState; 
+        
+        // A função finalizeDeal agora pega o bônus diretamente do negotiationState.
+        // A lógica de custo será calculada dentro da finalizeDeal.
+        finalizeDeal(desiredDuration * 12); 
     });
     document.getElementById('walk-away-btn').addEventListener('click', () => document.getElementById('negotiation-modal').classList.remove('active'));
 }
