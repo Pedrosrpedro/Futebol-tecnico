@@ -167,19 +167,19 @@ function initializeAllPlayerData() {
 
 // --- VERSÃO CORRIGIDA E MAIS ROBUSTA ---
 // Substitua sua função initializeAllPlayerDataForTeam por esta versão mais completa.
+// Esta é a função mais importante. Ela vai padronizar TODOS os jogadores.
 function initializeAllPlayerDataForTeam(team) {
     const requiredAttributes = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical'];
     const attributeMap = { pac: 'pace', sho: 'shooting', pas: 'passing', dri: 'dribbling', def: 'defending', phy: 'physical' };
 
     for (const player of team.players) {
-        // --- NOVA CORREÇÃO: GARANTE QUE A IDADE SEMPRE SEJA UM NÚMERO ---
+        // 1. GARANTE A IDADE: Usa a idade do 'bioData' ou, como última segurança, define 23.
         if (typeof player.age !== 'number' || isNaN(player.age)) {
-            player.age = 25; // Define uma idade padrão de 25 anos se a original estiver ausente ou inválida.
+            player.age = 23; 
         }
-        // --- FIM DA NOVA CORREÇÃO ---
 
+        // 2. TRADUZ ATRIBUTOS (Para Agentes Livres): Converte 'pac' para 'pace', etc.
         if (!player.attributes) player.attributes = {};
-
         for (const shortKey in attributeMap) {
             if (player.attributes.hasOwnProperty(shortKey)) {
                 const longKey = attributeMap[shortKey];
@@ -188,20 +188,27 @@ function initializeAllPlayerDataForTeam(team) {
             }
         }
         
-        let needsRecalculation = false;
+        // 3. GARANTE ATRIBUTOS: Se algum dos 6 atributos estiver faltando, define como 50.
+        let needsRecalculation = !player.overall; // Assume que o overall precisa ser recalculado
         for (const attr of requiredAttributes) {
             if (typeof player.attributes[attr] !== 'number') {
                 player.attributes[attr] = 50;
-                needsRecalculation = true;
             }
         }
 
-        if (needsRecalculation || !player.overall) {
-            player.overall = calculatePlayerOverall(player);
+        // 4. PADRONIZA O VALOR DE MERCADO: Converte o texto em número.
+        if (typeof player.marketValue === 'string') {
+            // Se o valor é um texto ("€2.5M"), converte para um número e confia nele.
+            player.marketValue = parseMarketValue(player.marketValue);
+        } else if (typeof player.marketValue !== 'number') {
+            // Se não houver valor, aí sim nós calculamos um novo.
+            updateMarketValue(player);
         }
 
-        // Esta função agora será chamada com uma idade válida, corrigindo o valor N/A.
-        updateMarketValue(player);
+        // 5. CALCULA O OVERALL: Se o jogador não tinha um, ou se os atributos foram mexidos, calcula.
+        if (needsRecalculation) {
+            player.overall = calculatePlayerOverall(player);
+        }
     }
 }
 
