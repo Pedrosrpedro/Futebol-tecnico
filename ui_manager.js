@@ -980,27 +980,24 @@ function handleNegotiationOffer() {
     }
 }
 function finalizeDeal(contractMonths) {
-    // O parâmetro 'bonus' que existia antes foi removido, pois o custo agora é calculado.
     const { player, type } = negotiationState;
     const isRenewal = type === 'renew';
 
-    // 1. Calcula o custo total da negociação usando a nova função.
     const cost = calculateNegotiationCost(player, isRenewal);
 
-    // 2. Verifica se o clube tem saldo para pagar o custo total (luvas + taxas).
     if (gameState.clubFinances.balance < cost) {
         showInfoModal("Dinheiro Insuficiente", `Você não tem verba suficiente para pagar as taxas de contrato (${formatCurrency(cost)}).`);
         document.getElementById('negotiation-modal').classList.remove('active');
         return;
     }
 
-    // 3. Deduz o custo total do saldo do clube.
     addTransaction(-cost, `Taxas de Contrato: ${player.name} (${isRenewal ? 'Renovação' : 'Nova Contratação'})`);
 
-    // 4. O resto da lógica para adicionar/atualizar o jogador continua a mesma.
     if (type === 'renew') {
         const playerInClub = gameState.userClub.players.find(p => p.name === player.name);
-        playerInClub.contractUntil = contractMonths;
+        if (playerInClub) {
+             playerInClub.contractUntil = contractMonths;
+        }
         showInfoModal("Contrato Renovado!", `${player.name} renovou seu contrato por ${formatContract(contractMonths)}!`);
     } else { // hire
         player.contractUntil = contractMonths;
@@ -1014,13 +1011,12 @@ function finalizeDeal(contractMonths) {
         gameState.freeAgents = gameState.freeAgents.filter(p => p.name !== player.name);
         setupInitialSquad();
         showInfoModal("Contratação Realizada!", `Bem-vindo ao clube, ${player.name}!`);
-        if(gameState.currentMainContent === 'transfer-market-content') displayTransferMarket();
+        if(gameState.currentMainContent === 'transfer-market-content') displayPlayerSearch();
     }
     
     document.getElementById('negotiation-modal').classList.remove('active');
     if(gameState.currentMainContent === 'contracts-content') displayContractsScreen();
 }
-
 function formatContract(months) {
     if (months === undefined || months === null || months <= 0) {
         return "Sem contrato";
