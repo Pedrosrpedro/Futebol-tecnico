@@ -462,4 +462,4 @@ Object.assign(playerBioData, {
             { "name": "Jhon", "age": 28, "marketValue": "€200k" }
         ]
     }
-];
+]
