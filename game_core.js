@@ -152,29 +152,25 @@ function initializeAllPlayerData() {
 }
 
 // --- VERSÃO CORRIGIDA E MAIS ROBUSTA ---
+// Substitua sua função initializeAllPlayerDataForTeam por esta versão mais completa.
 function initializeAllPlayerDataForTeam(team) {
     const requiredAttributes = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical'];
-    // NOVO: Mapa para "traduzir" os nomes de atributos abreviados para os completos.
-    const attributeMap = {
-        pac: 'pace',
-        sho: 'shooting',
-        pas: 'passing',
-        dri: 'dribbling',
-        def: 'defending',
-        phy: 'physical'
-    };
+    const attributeMap = { pac: 'pace', sho: 'shooting', pas: 'passing', dri: 'dribbling', def: 'defending', phy: 'physical' };
 
     for (const player of team.players) {
-        if (!player.attributes) {
-            player.attributes = {};
+        // --- NOVA CORREÇÃO: GARANTE QUE A IDADE SEMPRE SEJA UM NÚMERO ---
+        if (typeof player.age !== 'number' || isNaN(player.age)) {
+            player.age = 25; // Define uma idade padrão de 25 anos se a original estiver ausente ou inválida.
         }
+        // --- FIM DA NOVA CORREÇÃO ---
 
-        // CORREÇÃO: Traduz os atributos do formato curto para o longo.
+        if (!player.attributes) player.attributes = {};
+
         for (const shortKey in attributeMap) {
             if (player.attributes.hasOwnProperty(shortKey)) {
                 const longKey = attributeMap[shortKey];
                 player.attributes[longKey] = player.attributes[shortKey];
-                delete player.attributes[shortKey]; // Remove a chave antiga para evitar duplicidade.
+                delete player.attributes[shortKey];
             }
         }
         
@@ -190,9 +186,8 @@ function initializeAllPlayerDataForTeam(team) {
             player.overall = calculatePlayerOverall(player);
         }
 
-        if (typeof player.marketValue === 'string' || !player.marketValue) {
-            updateMarketValue(player);
-        }
+        // Esta função agora será chamada com uma idade válida, corrigindo o valor N/A.
+        updateMarketValue(player);
     }
 }
 
