@@ -131,7 +131,14 @@ function initializeSeason() {
     addNews(`Começa a Temporada ${year}!`, `A bola vai rolar para a ${leaguesData[gameState.currentLeagueId].name}. Boa sorte, ${gameState.managerName}!`, true, gameState.userClub.name);
 }
 
+
 function mergeAllData() {
+    // Medida de segurança caso o arquivo playerBioData não seja carregado
+    if (typeof playerBioData === 'undefined') {
+        console.error("Arquivo playerBioData.js não foi carregado. Idades e valores podem estar incorretos.");
+        return;
+    }
+
     for (const leagueId in leaguesData) {
         if (!playerBioData[leagueId] || !playerBioData[leagueId].teams) continue;
 
@@ -141,6 +148,7 @@ function mergeAllData() {
                 for (const player of team.players) {
                     const bioPlayer = bioTeam.players.find(p => p.name === player.name);
                     if (bioPlayer) {
+                        // Junta os dados do playerBioData (idade, marketValue) no objeto do jogador
                         Object.assign(player, bioPlayer);
                     }
                 }
