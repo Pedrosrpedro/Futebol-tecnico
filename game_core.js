@@ -154,28 +154,42 @@ function initializeAllPlayerData() {
 // --- VERSÃO CORRIGIDA E MAIS ROBUSTA ---
 function initializeAllPlayerDataForTeam(team) {
     const requiredAttributes = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical'];
+    // NOVO: Mapa para "traduzir" os nomes de atributos abreviados para os completos.
+    const attributeMap = {
+        pac: 'pace',
+        sho: 'shooting',
+        pas: 'passing',
+        dri: 'dribbling',
+        def: 'defending',
+        phy: 'physical'
+    };
 
     for (const player of team.players) {
-        // CORREÇÃO: Verifica se o objeto de atributos existe. Se não, cria um com valores padrão.
         if (!player.attributes) {
             player.attributes = {};
         }
 
-        // CORREÇÃO: Garante que todas as seis chaves de atributo existam.
+        // CORREÇÃO: Traduz os atributos do formato curto para o longo.
+        for (const shortKey in attributeMap) {
+            if (player.attributes.hasOwnProperty(shortKey)) {
+                const longKey = attributeMap[shortKey];
+                player.attributes[longKey] = player.attributes[shortKey];
+                delete player.attributes[shortKey]; // Remove a chave antiga para evitar duplicidade.
+            }
+        }
+        
         let needsRecalculation = false;
         for (const attr of requiredAttributes) {
             if (typeof player.attributes[attr] !== 'number') {
-                player.attributes[attr] = 50; // Atribui um valor padrão de 50 se o atributo estiver faltando.
+                player.attributes[attr] = 50;
                 needsRecalculation = true;
             }
         }
 
-        // Recalcula o overall se ele não existir ou se os atributos foram corrigidos.
         if (needsRecalculation || !player.overall) {
             player.overall = calculatePlayerOverall(player);
         }
 
-        // Atualiza o valor de mercado.
         if (typeof player.marketValue === 'string' || !player.marketValue) {
             updateMarketValue(player);
         }
