@@ -461,6 +461,8 @@ Object.assign(playerBioData, {
             { "name": "Cristiano", "age": 27, "marketValue": "€250k" },
             { "name": "Douglas Skilo", "age": 28, "marketValue": "€300k" },
             { "name": "Ítalo", "age": 32, "marketValue": "€200k" }
+         ]
+            }
         ]
     }
-]
+});
