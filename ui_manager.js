@@ -908,8 +908,9 @@ function openNegotiationModal(player, type) {
     document.getElementById('negotiation-modal').classList.add('active');
 }
 
+// No seu arquivo ui_manager.js, substitua esta função:
 function handleNegotiationOffer() {
-    const { desiredBonus, minAcceptableBonus, desiredDuration } = negotiationState;
+    const { minAcceptableBonus, desiredDuration } = negotiationState;
     const feedbackEl = document.getElementById('player-feedback');
     
     let offerDuration = parseInt(document.getElementById('offer-duration').value, 10);
@@ -934,29 +935,32 @@ function handleNegotiationOffer() {
         return;
     }
 
-    const offerBonus = offerBonusRaw * currencyRates[gameState.currency];
+    const offerBonus = offerBonusRaw; // Usamos o valor em BRL diretamente
     negotiationState.rounds++;
 
+    // LÓGICA DE ACEITAÇÃO MELHORADA
     const bonusRatio = offerBonus / minAcceptableBonus;
     const durationDiff = Math.abs(offerDuration - desiredDuration);
-    let acceptanceScore = (bonusRatio * 0.8) - (durationDiff * 0.2);
+    
+    // O jogador fica mais feliz se o bônus for alto e a duração for a que ele quer.
+    let acceptanceScore = (bonusRatio * 0.8) - (durationDiff * 0.1); 
 
-    if (acceptanceScore >= 1.0) {
-        finalizeDeal(offerDuration * 12);
+    if (acceptanceScore >= 0.95) { // Precisa de uma oferta boa para aceitar
+        finalizeDeal(offerDuration * 12); // Chamamos a finalizeDeal que calcula o custo final
     } else if (negotiationState.rounds >= 4) {
         feedbackEl.innerText = "Sua proposta final não me agrada. Vou procurar outras oportunidades.";
         setTimeout(() => document.getElementById('negotiation-modal').classList.remove('active'), 2000);
     } else {
-        if (bonusRatio < 0.85) {
-            feedbackEl.innerText = "As luvas estão muito abaixo do que eu esperava. Precisa melhorar bastante.";
+        // Feedbacks mais úteis
+        if (bonusRatio < 0.8) {
+            feedbackEl.innerText = "As luvas que você ofereceu estão muito abaixo do que eu esperava.";
         } else if (durationDiff > 1) {
-            feedbackEl.innerText = `Um contrato de ${offerDuration} anos não é o ideal para mim. Mas podemos conversar se as luvas compensarem.`;
+            feedbackEl.innerText = `Um contrato de ${offerDuration} anos não é o ideal para mim, mas a proposta de luvas está interessante. Melhore um pouco mais.`;
         } else {
-            feedbackEl.innerText = "Estamos perto. Melhore um pouco a proposta e podemos fechar negócio.";
+            feedbackEl.innerText = "Estamos quase lá. Melhore um pouco a proposta e podemos fechar negócio.";
         }
     }
 }
-
 function finalizeDeal(contractMonths) {
     // O parâmetro 'bonus' que existia antes foi removido, pois o custo agora é calculado.
     const { player, type } = negotiationState;
