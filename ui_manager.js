@@ -419,7 +419,25 @@ function findCurrentRound(leagueId) {
 }
 
 // --- Funções de Finanças ---
-function displayFinances() { const container = document.getElementById('finances-content'); if (!container) return; displayClubFinances(); displayOpponentFinances(); }
+function displayFinances() {
+    const container = document.getElementById('finances-content');
+    if (!container) return;
+    
+    // As chamadas para renderizar o conteúdo continuam as mesmas
+    displayClubFinances(); 
+    displayOpponentFinances();
+
+    // --- LÓGICA DE ABAS ADICIONADA ---
+    container.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.dataset.tab;
+            container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            container.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            container.querySelector(`#${tabId}-tab`).classList.add('active');
+        });
+    });
+}
 function displayClubFinances() { const tabContent = document.getElementById('club-finances-tab'); const { balance, history } = gameState.clubFinances; tabContent.innerHTML = ` <div class="finance-overview"> <div class="finance-box"> <h4>Balanço Atual</h4> <p class="${balance >= 0 ? 'positive' : 'negative'}">${formatCurrency(balance)}</p> </div> </div> <div class="finance-chart-container"> <h4>Evolução Financeira</h4> <canvas id="finance-chart"></canvas> </div> <div class="finance-history-container"> <h4>Histórico de Transações</h4> <div class="table-container" id="finance-history-table"></div> </div> `; const historyTableContainer = document.getElementById('finance-history-table'); let tableHTML = `<table><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th></tr></thead><tbody>`; for (const item of history) { tableHTML += ` <tr> <td>${item.date.toLocaleDateString('pt-BR')}</td> <td>${item.description}</td> <td class="${item.amount >= 0 ? 'positive' : 'negative'}">${formatCurrency(item.amount)}</td> </tr> `; } tableHTML += `</tbody></table>`; historyTableContainer.innerHTML = tableHTML; renderFinanceChart(); }
 function renderFinanceChart() { const ctx = document.getElementById('finance-chart')?.getContext('2d'); if (!ctx) return; const history = [...gameState.clubFinances.history].reverse(); const labels = history.map(item => item.date.toLocaleDateString('pt-BR')); let cumulativeBalance = 0; const data = history.map(item => { cumulativeBalance += item.amount; return cumulativeBalance; }); if (window.financeChartInstance) { window.financeChartInstance.destroy(); } window.financeChartInstance = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label: 'Balanço do Clube', data: data, borderColor: 'rgb(61, 220, 151)', backgroundColor: 'rgba(61, 220, 151, 0.2)', tension: 0.1, fill: true }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { callback: function(value, index, values) { return formatCurrency(value); } } } } } }); }
 function displayOpponentFinances() { const container = document.getElementById('opponent-finances-tab'); if (typeof estimativaVerbaMedia2025 === 'undefined') { container.innerHTML = '<h3>Erro</h3><p>Os dados financeiros (verba_times.js) não foram encontrados.</p>'; return; } container.innerHTML = `<h3>Verba Estimada dos Clubes (Início da Temporada)</h3>`; const tableContainer = document.createElement('div'); tableContainer.className = 'table-container'; let fullHtml = ''; const divisionsOrder = ['Série A', 'Série B', 'Série C']; const financesByDivision = estimativaVerbaMedia2025.reduce((acc, team) => { const { divisao } = team; if (!acc[divisao]) acc[divisao] = []; acc[divisao].push(team); return acc; }, {}); for (const division of divisionsOrder) { if (!financesByDivision[division]) continue; fullHtml += `<h4 style="margin-top: 20px; margin-bottom: 10px;">${division}</h4>`; fullHtml += `<table><thead><tr><th>Time</th><th>Verba Média Estimada</th><th>Análise</th></tr></thead><tbody>`; const sortedTeams = financesByDivision[division].sort((a, b) => b.verba_media_estimada_milhoes_reais - a.verba_media_estimada_milhoes_reais); for (const team of sortedTeams) { const formattedVerba = formatCurrency(team.verba_media_estimada_milhoes_reais * 1000000); const cleanAnalysis = team.analise.replace(/\[.*?\]/g, '').trim(); fullHtml += `<tr> <td>${team.time}</td> <td>${formattedVerba}</td> <td>${cleanAnalysis}</td> </tr>`; } fullHtml += '</tbody></table>'; } tableContainer.innerHTML = fullHtml; container.appendChild(tableContainer); }
