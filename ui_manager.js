@@ -44,7 +44,7 @@ function showMainContent(contentId) {
     if (contentId === 'contracts-content') displayContractsScreen();
     if (contentId === 'tactics-content') loadTacticsScreen();
     if (contentId === 'transfer-market-content') displayTransferMarket();
-    if (contentId === 'development-content') displayDevelopmentScreen(); // CORREÇÃO: Chamada da função
+    if (contentId === 'development-content') displayDevelopmentScreen();
     if (contentId === 'calendar-content') {
         gameState.calendarDisplayDate = new Date(gameState.currentDate);
         updateCalendar();
@@ -475,6 +475,251 @@ function displayDevelopmentScreen() {
     });
 }
 
+// --- Funções de Interação com a UI que faltavam ---
+function handleCalendarDayClick(e) {
+    if (gameState.isOnHoliday) return;
+    const dayElement = e.target.closest('.calendar-day:not(.other-month)');
+    if (!dayElement) return;
+    const dateStr = dayElement.dataset.date;
+    const clickedDate = new Date(dateStr + 'T12:00:00Z');
+    if (clickedDate <= gameState.currentDate) return;
+    const modal = document.getElementById('holiday-confirmation-modal');
+    const dateDisplay = document.getElementById('holiday-target-date');
+    dateDisplay.innerText = clickedDate.toLocaleDateString('pt-BR');
+    document.getElementById('confirm-holiday-btn').dataset.endDate = clickedDate.toISOString();
+    modal.classList.add('active');
+}
+
+function startHoliday() {
+    const endDateStr = document.getElementById('confirm-holiday-btn').dataset.endDate;
+    if (!endDateStr) return;
+    gameState.holidayEndDate = new Date(endDateStr);
+    gameState.isOnHoliday = true;
+    document.getElementById('holiday-confirmation-modal').classList.remove('active');
+    document.getElementById('cancel-holiday-btn').style.display = 'block';
+    updateContinueButton();
+    holidayInterval = setInterval(advanceDayOnHoliday, 250);
+}
+
+function advanceDayOnHoliday() {
+    if (new Date(gameState.currentDate) >= gameState.holidayEndDate) {
+        stopHoliday();
+        return;
+    }
+    advanceDay();
+}
+
+function stopHoliday() {
+    clearInterval(holidayInterval);
+    holidayInterval = null;
+    gameState.isOnHoliday = false;
+    gameState.holidayEndDate = null;
+    document.getElementById('cancel-holiday-btn').style.display = 'none';
+    updateContinueButton();
+    findNextUserMatch();
+}
+
+function openSettingsModal() { document.getElementById('settings-modal').classList.add('active'); }
+function closeSettingsModal() { document.getElementById('settings-modal').classList.remove('active'); }
+function toggleFullScreen() {
+    const doc = window.document;
+    const docEl = doc.documentElement;
+    const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+    const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+    if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+        requestFullScreen.call(docEl);
+    } else {
+        cancelFullScreen.call(doc);
+    }
+}
+
+function openFriendlyModal() {
+    const selector = document.getElementById('friendly-opponent-selector');
+    selector.innerHTML = '';
+    let allTeams = [];
+    for (const leagueId in leaguesData) {
+        allTeams.push(...leaguesData[leagueId].teams);
+    }
+    allTeams.filter(team => team.name !== gameState.userClub.name).sort((a,b) => a.name.localeCompare(b.name)).forEach(team => {
+        const option = document.createElement('option');
+        option.value = team.name;
+        option.innerText = team.name;
+        selector.appendChild(option);
+    });
+    document.getElementById('schedule-friendly-modal').classList.add('active');
+}
+
+function scheduleFriendlyMatch() {
+    document.getElementById('schedule-friendly-modal').classList.remove('active');
+    const opponentName = document.getElementById('friendly-opponent-selector').value;
+    const periodDays = parseInt(document.getElementById('friendly-period-selector').value, 10);
+    const userStrength = getTeamStrength(gameState.userClub, true);
+    const opponentData = findTeamInLeagues(opponentName);
+    const opponentStrength = getTeamStrength(opponentData, false);
+    const strengthDiff = userStrength - opponentStrength;
+    let acceptanceChance = 0.5;
+    if (strengthDiff > 15) acceptanceChance = 0.7;
+    else if (strengthDiff > 5) acceptanceChance = 0.6;
+    else if (strengthDiff < -15) acceptanceChance = 0.10;
+    else if (strengthDiff < -5) acceptanceChance = 0.3;
+
+    if (Math.random() > acceptanceChance) {
+        showInfoModal('Convite Recusado', `${opponentName} recusou o convite para o amistoso.`);
+        return;
+    }
+
+    const startDate = new Date(gameState.currentDate);
+    const endDate = new Date(gameState.currentDate);
+    endDate.setDate(endDate.getDate() + periodDays);
+
+    let friendlyDate = null;
+    let currentDate = new Date(startDate);
+    currentDate.setDate(currentDate.getDate() + 1);
+
+    while (currentDate <= endDate) {
+        if (isDateAvailableForTeam(currentDate, gameState.userClub.name) && isDateAvailableForTeam(currentDate, opponentName)) {
+            friendlyDate = new Date(currentDate);
+            break;
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    if (friendlyDate) {
+        const newFriendly = { home: gameState.userClub, away: opponentData, date: friendlyDate.toISOString(), status: 'scheduled', round: 'Amistoso' };
+        gameState.allMatches.push(newFriendly);
+        gameState.allMatches.sort((a,b) => new Date(a.date) - new Date(b.date));
+        findNextUserMatch();
+        updateContinueButton();
+        if (gameState.currentMainContent === 'calendar-content') updateCalendar();
+        showInfoModal('Amistoso Marcado!', `Amistoso contra ${opponentName} marcado para ${friendlyDate.toLocaleDateString('pt-BR')}!`);
+    } else {
+        showInfoModal('Sem Data Disponível', `${opponentName} aceitou o convite, mas não foi possível encontrar uma data compatível no período selecionado.`);
+    }
+}
+
+function handleTacticsInteraction(e) {
+    const clickedElement = e.target.closest('[data-player-id], .player-slot, #substitutes-list, #reserves-list');
+    if (!clickedElement) {
+        clearSelection();
+        return;
+    }
+
+    const clickedPlayerId = clickedElement.dataset.playerId;
+    if (clickedPlayerId) {
+        const player = gameState.userClub.players.find(p => p.name === clickedPlayerId);
+        const sourceInfo = getPlayerLocation(player);
+        if (selectedPlayerInfo) {
+            if (selectedPlayerInfo.player.name === player.name) {
+                clearSelection();
+            } else {
+                const destPlayerInfo = { player, ...sourceInfo };
+                swapPlayers(selectedPlayerInfo, destPlayerInfo);
+                clearSelection();
+            }
+        } else {
+            selectPlayer(player, sourceInfo.type, sourceInfo.id);
+        }
+    } else if (selectedPlayerInfo) {
+        let destInfo;
+        if (clickedElement.classList.contains('player-slot')) {
+            destInfo = { type: 'field', id: clickedElement.dataset.position };
+        } else if (clickedElement.id === 'substitutes-list') {
+            destInfo = { type: 'subs', id: 'substitutes-list' };
+        } else if (clickedElement.id === 'reserves-list') {
+            destInfo = { type: 'reserves', id: 'reserves-list' };
+        }
+        if (destInfo) {
+            movePlayer(selectedPlayerInfo, destInfo);
+            clearSelection();
+        }
+    }
+}
+
+function handleNegotiationOffer() {
+    const { desiredBonus, minAcceptableBonus, desiredDuration } = negotiationState;
+    const feedbackEl = document.getElementById('player-feedback');
+    
+    let offerDuration = parseInt(document.getElementById('offer-duration').value, 10);
+    let offerBonusStr = document.getElementById('offer-bonus').value.trim();
+    
+    if (isNaN(offerDuration) || offerDuration <= 0) {
+        feedbackEl.innerText = "Por favor, insira uma duração de contrato válida.";
+        return;
+    }
+    
+    let offerBonusRaw = 0;
+    if (offerBonusStr.toLowerCase().endsWith('m')) {
+        offerBonusRaw = parseFloat(offerBonusStr.slice(0, -1)) * 1000000;
+    } else if (offerBonusStr.toLowerCase().endsWith('k')) {
+        offerBonusRaw = parseFloat(offerBonusStr.slice(0, -1)) * 1000;
+    } else {
+        offerBonusRaw = parseFloat(offerBonusStr);
+    }
+    
+    if (isNaN(offerBonusRaw)) {
+        feedbackEl.innerText = "Por favor, insira um valor de luvas válido (ex: 500k, 1.2M).";
+        return;
+    }
+
+    const offerBonus = offerBonusRaw * currencyRates[gameState.currency]; // Convertendo para BRL
+    negotiationState.rounds++;
+
+    const bonusRatio = offerBonus / minAcceptableBonus;
+    const durationDiff = Math.abs(offerDuration - desiredDuration);
+    let acceptanceScore = (bonusRatio * 0.8) - (durationDiff * 0.2);
+
+    if (acceptanceScore >= 1.0) {
+        finalizeDeal(offerDuration * 12, offerBonus);
+    } else if (negotiationState.rounds >= 4) {
+        feedbackEl.innerText = "Sua proposta final não me agrada. Vou procurar outras oportunidades.";
+        setTimeout(() => document.getElementById('negotiation-modal').classList.remove('active'), 2000);
+    } else {
+        if (bonusRatio < 0.85) {
+            feedbackEl.innerText = "As luvas estão muito abaixo do que eu esperava. Precisa melhorar bastante.";
+        } else if (durationDiff > 1) {
+            feedbackEl.innerText = `Um contrato de ${offerDuration} anos não é o ideal para mim. Mas podemos conversar se as luvas compensarem.`;
+        } else {
+            feedbackEl.innerText = "Estamos perto. Melhore um pouco a proposta e podemos fechar negócio.";
+        }
+    }
+}
+
+function finalizeDeal(contractMonths, bonus) {
+    const { player, type } = negotiationState;
+
+    if (gameState.clubFinances.balance < bonus) {
+        showInfoModal("Fundos Insuficientes", "Você não tem dinheiro para pagar as luvas do jogador.");
+        document.getElementById('negotiation-modal').classList.remove('active');
+        return;
+    }
+
+    addTransaction(-bonus, `Luvas de contrato para ${player.name}`);
+
+    if (type === 'renew') {
+        const playerInClub = gameState.userClub.players.find(p => p.name === player.name);
+        playerInClub.contractUntil = contractMonths;
+        showInfoModal("Contrato Renovado!", `${player.name} renovou seu contrato por ${formatContract(contractMonths)}!`);
+    } else { // hire
+        player.contractUntil = contractMonths;
+        gameState.userClub.players.push(player);
+        gameState.freeAgents = gameState.freeAgents.filter(p => p.name !== player.name);
+        setupInitialSquad(); // Atualiza a gestão do elenco
+        showInfoModal("Contratação Realizada!", `Bem-vindo ao clube, ${player.name}!`);
+        if(gameState.currentMainContent === 'transfer-market-content') displayTransferMarket();
+    }
+    
+    document.getElementById('negotiation-modal').classList.remove('active');
+    if(gameState.currentMainContent === 'contracts-content') displayContractsScreen();
+}
+
+function togglePause(forcePause = null) {
+    if (gameState.isMatchLive === false) return;
+    gameState.isPaused = forcePause !== null ? forcePause : !gameState.isPaused;
+    document.getElementById('pause-overlay').classList.toggle('active', gameState.isPaused);
+    document.getElementById('pause-match-btn').innerText = gameState.isPaused ? '▶' : '❚❚';
+    updateScoreboard();
+}
+
 // --- Event Listeners ---
 function initializeEventListeners() {
     document.getElementById('confirm-manager-name-btn').addEventListener('click', createManager);
@@ -601,4 +846,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     observer.observe(document.getElementById('main-game-screen'), { attributes: true });
-});
+});```
