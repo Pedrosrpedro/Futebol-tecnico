@@ -30,7 +30,7 @@ const gameState = {
     clubFinances: { balance: 0, history: [] },
     allMatches: [],
     lastMatchDateOfYear: null,
-    freeAgents: [] 
+    freeAgents: []
 };
 let holidayInterval = null;
 let selectedPlayerInfo = null;
@@ -991,6 +991,7 @@ for (const leagueId in leaguesData) {
         }
     }
 }
+}
 
 function checkExpiringContracts() {
     for (const player of gameState.userClub.players) {
@@ -1081,6 +1082,4 @@ function findTeamInLeagues(teamName, isPlayerLookup = false) {
         if (team) return team; 
     }
     return null; 
-}
-
 }
