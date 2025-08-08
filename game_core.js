@@ -30,7 +30,7 @@ const gameState = {
     clubFinances: { balance: 0, history: [] },
     allMatches: [],
     lastMatchDateOfYear: null,
-    freeAgents: []
+    freeAgents: [] 
 };
 let holidayInterval = null;
 let selectedPlayerInfo = null;
@@ -76,9 +76,6 @@ function parseMarketValue(valueStr) {
 }
 
 // --- Funções de Inicialização e Setup do Jogo ---
-
-// VERSÃO CORRIGIDA QUE JUNTA TODOS OS DADOS (IDADE, VALOR, CONTRATO)
-// VERSÃO CORRIGIDA QUE JUNTA TODOS OS DADOS (IDADE, VALOR, CONTRATO)
 function mergeAllData() {
     if (typeof playerBioData === 'undefined' || typeof leaguesData === 'undefined') {
         console.error("ERRO CRÍTICO: O arquivo player_bio_data.js ou os arquivos de liga não foram carregados.");
@@ -113,7 +110,6 @@ function mergeAllData() {
             const bioTeam = bioLeague.teams.find(t => t.name === team.name);
             const contractTeam = contractLeague.find(t => t.time === team.name);
 
-            // Trecho modificado para depuração
             if (!team.players) continue;
 
             if (!bioTeam) {
@@ -143,11 +139,10 @@ function mergeAllData() {
             }
         }
     }
-} // <-- FIM CORRETO DA FUNÇÃO
+}
 
 
 function startGame(team) {
-    // ESTA LINHA É A MAIS IMPORTANTE E DEVE SER A PRIMEIRA
     mergeAllData();
     
     gameState.userClub = team;
@@ -251,12 +246,10 @@ function initializeAllPlayerDataForTeam(team) {
             }
         }
 
-        // Calcula o overall APENAS se ele não estiver definido no arquivo
         if (!player.overall) {
             player.overall = calculatePlayerOverall(player);
         }
         
-        // Agora atualiza/define o valor de mercado
         updateMarketValue(player);
     }
 }
@@ -279,21 +272,16 @@ function calculatePlayerOverall(player) {
     return Math.min(99, Math.round(weightedSum));
 }
 
-// VERSÃO CORRIGIDA com fórmula mais suave e que respeita valores pré-existentes
-// VERSÃO CORRIGIDA com parâmetro para forçar o recálculo
 function updateMarketValue(player, forceRecalculation = false) {
     if (typeof player.marketValue === 'string') {
         player.marketValue = parseMarketValue(player.marketValue) * currencyRates.EUR;
-        // Não retorna aqui se for para forçar, permite que o cálculo aconteça depois
         if (!forceRecalculation) return;
     }
     
-    // Se já tem um valor numérico, só para se a gente NÃO estiver forçando um recálculo
     if (typeof player.marketValue === 'number' && player.marketValue > 0 && !forceRecalculation) {
         return;
     }
 
-    // --- O CÁLCULO ACONTECE AQUI ---
     const baseValueEUR = (player.overall / 100) ** 3 * 5000000; 
 
     let ageMultiplier = 1.0;
@@ -330,6 +318,7 @@ function generateNewPlayer(team) {
     return newPlayer;
 }
 
+// --- ALTERADO --- Nova lógica de desenvolvimento baseada em idade
 function getDevelopmentLogic(age) {
     if (age < 24) return () => (1 + Math.floor(Math.random() * 3)); // Melhora de 1 a 2 pontos
     if (age < 30) return () => Math.floor(Math.random() * 2); // Melhora de 0 a 1 ponto
@@ -346,6 +335,7 @@ function getDevelopmentLogic(age) {
     };
 }
 
+// --- ALTERADO --- Função atualizada para usar a nova lógica e guardar as mudanças
 function updatePlayerDevelopment() {
     console.log("Processando desenvolvimento de jogadores para a nova temporada...");
     for (const leagueId in leaguesData) {
@@ -353,6 +343,8 @@ function updatePlayerDevelopment() {
             const playersToRemove = [];
             const playersToAdd = [];
             for (const player of team.players) {
+                const oldOverall = player.overall;
+
                 player.age++;
 
                 if (player.age >= 35 && Math.random() < (player.age - 34) / 10) {
@@ -363,14 +355,24 @@ function updatePlayerDevelopment() {
                 }
                 
                 const devLogic = getDevelopmentLogic(player.age);
+                const attributeChanges = {};
                 if (player.attributes) {
                     Object.keys(player.attributes).forEach(attr => {
                         const change = devLogic(attr);
+                        if (change !== 0) {
+                             attributeChanges[attr] = change;
+                        }
                         player.attributes[attr] = Math.min(99, Math.max(20, player.attributes[attr] + change));
                     });
                     player.overall = calculatePlayerOverall(player);
                 }
-                updateMarketValue(player, true); // Adicionamos 'true' para forçar o recálculo
+                updateMarketValue(player, true);
+
+                // Armazena as mudanças para a UI
+                player.lastSeasonChanges = {
+                    overallChange: player.overall - oldOverall,
+                    attributeChanges: attributeChanges
+                };
             }
             team.players = team.players.filter(p => !playersToRemove.includes(p.name));
             team.players.push(...playersToAdd);
@@ -523,6 +525,7 @@ function simulateSingleMatch(match, isUserMatch) {
     }
 }
 
+// --- ALTERADO --- Função considera agora as táticas e escalação do usuário
 function getTeamStrength(teamData, isUser) {
     let strength = 0;
     if (isUser) {
@@ -845,6 +848,7 @@ function getFullSeasonTable(leagueId) {
     });
 }
 
+// --- ALTERADO --- Corrigido o erro de digitação que impedia a promoção
 function getFullFirstPhaseTableC() {
     const leagueId = 'brasileirao_c';
     const allTeamsInC = leaguesData[leagueId].teams;
@@ -863,8 +867,7 @@ function getFullFirstPhaseTableC() {
         homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst;
         awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst;
         
-        // --- A CORREÇÃO ESTÁ AQUI ---
-        if (match.homeScore > match.awayScore) { // ANTES ESTAVA match.homeScore > match.homeScore
+        if (match.homeScore > match.awayScore) { // AQUI ESTAVA O ERRO
             homeTeam.wins++;
             homeTeam.points += 3;
             awayTeam.losses++;
@@ -891,7 +894,6 @@ function getFullFirstPhaseTableC() {
 // --- Funções de Contratos e Mercado de Transferências (IA e Jogador) ---
 
 function calculatePlayerWage(player) {
-    // O fator foi reduzido drasticamente. Antes era 0.02.
     const wageFactor = 0.0020; 
     const monthlyWage = player.marketValue * wageFactor;
 
@@ -914,7 +916,7 @@ function calculateNegotiationCost(player, isRenewal) {
         if (player.age > 30) {
             costFactor -= 0.05;
         }
-    } else { // Para novas contratações
+    } else {
         costFactor = 0.50;
         if (player.age < 24) {
             costFactor += 0.15;
@@ -924,12 +926,11 @@ function calculateNegotiationCost(player, isRenewal) {
         }
     }
 
-    // Multiplicador de reputação para jogadores de elite
     let reputationMultiplier = 1.0;
     if (player.overall >= 90) {
-        reputationMultiplier = 2.5; // Craques mundiais pedem muito mais
+        reputationMultiplier = 2.5;
     } else if (player.overall >= 85) {
-        reputationMultiplier = 1.75; // Jogadores de alto nível
+        reputationMultiplier = 1.75;
     }
 
     const finalCost = player.marketValue * Math.max(0.05, costFactor) * reputationMultiplier;
@@ -964,7 +965,7 @@ for (const leagueId in leaguesData) {
             .filter(p => 
                 p.position === weakestPlayer.position && 
                 p.overall > weakestPlayer.overall + 2 &&
-                (p.marketValue * 0.25) < teamBudget // Verifica se as luvas são pagáveis
+                (p.marketValue * 0.25) < teamBudget
             )
             .sort((a, b) => b.overall - a.overall);
 
@@ -972,7 +973,6 @@ for (const leagueId in leaguesData) {
             const targetPlayer = potentialSignings[0];
             const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
             
-            // Lógica de Reputação
             const teamReputation = (teamOverallAvg / 85) * (leagueId === 'brasileirao_a' ? 3 : (leagueId === 'brasileirao_b' ? 2 : 1));
             const playerReputation = targetPlayer.overall / 80;
             const reputationDiff = teamReputation - playerReputation;
@@ -1002,6 +1002,7 @@ function checkExpiringContracts() {
     }
 }
 
+// --- ALTERADO --- Adicionada a notificação para o usuário
 function handleExpiredContracts() {
     for (const leagueId in leaguesData) {
         for (const team of leaguesData[leagueId].teams) {
@@ -1032,26 +1033,24 @@ function aiContractManagement() {
             const teamOverallAvg = team.players.reduce((sum, p) => sum + p.overall, 0) / team.players.length;
 
             for (const player of team.players) {
-                // Lógica de Renovação
                 if (player.contractUntil !== null && player.contractUntil <= 6 && player.contractUntil > 0) {
                     const isImportant = player.overall > teamOverallAvg;
                     const isNotTooOld = player.age < 34;
-                    const shouldRenew = Math.random() < 0.75; // 75% de chance de tentar renovar
+                    const shouldRenew = Math.random() < 0.75;
 
                     if (isImportant && isNotTooOld && shouldRenew) {
-                        const newDurationMonths = player.age < 30 ? 36 : 12; // Contratos mais longos para jovens
+                        const newDurationMonths = player.age < 30 ? 36 : 12;
                         player.contractUntil += newDurationMonths;
                     }
                 }
                 
-                // Lógica de Dispensa (pequena chance)
                 else if (player.contractUntil !== null && player.contractUntil > 12) {
                     const isUnderperforming = player.overall < (teamOverallAvg - 5);
                     const isOld = player.age > 33;
-                    const shouldRelease = Math.random() < 0.05; // 5% de chance por mês
+                    const shouldRelease = Math.random() < 0.05;
 
                     if (isUnderperforming && isOld && shouldRelease) {
-                         player.contractUntil = 0; // Marca para ser dispensado no próximo handleExpiredContracts
+                         player.contractUntil = 0;
                     }
                 }
             }
