@@ -1,12 +1,8 @@
 // ===================================================================================
 // ARQUIVO UI_MANAGER.JS COMPLETO E CORRIGIDO
-// Data da Versão: 07 de Agosto de 2025
-// Inclui todas as correções de bugs e a nova funcionalidade de Mercado de Transferências.
 // ===================================================================================
 
-
-// --- Funções Utilitárias (Copiadas do game_core.js para evitar erros) ---
-
+// --- Funções Utilitárias ---
 function isSameDay(date1, date2) {
     if(!date1 || !date2) return false;
     return date1.getFullYear() === date2.getFullYear() && 
@@ -222,7 +218,6 @@ function setupInitialSquad() {
     
     let jogadoresDisponiveis = [...todosJogadores];
 
-    // Preenche titulares com jogadores na posição natural
     for (const posicaoDoEsquema of posicoesDaFormacao) {
         const posicaoBase = posicaoDoEsquema.replace(/\d/g, '');
         const indiceMelhorJogador = jogadoresDisponiveis.findIndex(p => p.position === posicaoBase);
@@ -234,7 +229,6 @@ function setupInitialSquad() {
         }
     }
 
-    // Preenche posições vazias com os melhores jogadores restantes
     for (const posicaoDoEsquema of posicoesDaFormacao) {
         if (!gameState.squadManagement.startingXI[posicaoDoEsquema] && jogadoresDisponiveis.length > 0) {
             gameState.squadManagement.startingXI[posicaoDoEsquema] = jogadoresDisponiveis.shift();
@@ -452,16 +446,13 @@ function findCurrentRound(leagueId) {
 }
 
 // --- Funções de Finanças ---
-// --- FUNÇÃO SUBSTITUÍDA ---
 function displayFinances() {
     const container = document.getElementById('finances-content');
     if (!container) return;
     
-    // As chamadas para renderizar o conteúdo continuam as mesmas
     displayClubFinances(); 
     displayOpponentFinances();
 
-    // --- LÓGICA DE ABAS ADICIONADA ---
     container.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const tabId = btn.dataset.tab;
@@ -478,19 +469,14 @@ function renderFinanceChart() { const ctx = document.getElementById('finance-cha
 function displayOpponentFinances() { const container = document.getElementById('opponent-finances-tab'); if (typeof estimativaVerbaMedia2025 === 'undefined') { container.innerHTML = '<h3>Erro</h3><p>Os dados financeiros (verba_times.js) não foram encontrados.</p>'; return; } container.innerHTML = `<h3>Verba Estimada dos Clubes (Início da Temporada)</h3>`; const tableContainer = document.createElement('div'); tableContainer.className = 'table-container'; let fullHtml = ''; const divisionsOrder = ['Série A', 'Série B', 'Série C']; const financesByDivision = estimativaVerbaMedia2025.reduce((acc, team) => { const { divisao } = team; if (!acc[divisao]) acc[divisao] = []; acc[divisao].push(team); return acc; }, {}); for (const division of divisionsOrder) { if (!financesByDivision[division]) continue; fullHtml += `<h4 style="margin-top: 20px; margin-bottom: 10px;">${division}</h4>`; fullHtml += `<table><thead><tr><th>Time</th><th>Verba Média Estimada</th><th>Análise</th></tr></thead><tbody>`; const sortedTeams = financesByDivision[division].sort((a, b) => b.verba_media_estimada_milhoes_reais - a.verba_media_estimada_milhoes_reais); for (const team of sortedTeams) { const formattedVerba = formatCurrency(team.verba_media_estimada_milhoes_reais * 1000000); const cleanAnalysis = team.analise.replace(/\[.*?\]/g, '').trim(); fullHtml += `<tr> <td>${team.time}</td> <td>${formattedVerba}</td> <td>${cleanAnalysis}</td> </tr>`; } fullHtml += '</tbody></table>'; } tableContainer.innerHTML = fullHtml; container.appendChild(tableContainer); }
 
 // --- Funções Específicas de Telas ---
-// --- FUNÇÃO SUBSTITUÍDA ---
+// --- ALTERADO --- Função agora mostra as mudanças de atributos e overall
 function displayDevelopmentScreen() {
     const container = document.getElementById('development-content');
     if (!container) return;
 
-    const playersWithProgress = gameState.userClub.players.map(p => ({
-        ...p,
-        potential: Math.min(99, p.overall + Math.floor((30 - p.age) / 2) + Math.floor(Math.random() * 5))
-    }));
-    
-    const youngPlayers = playersWithProgress.filter(p => p.age < 24).length;
-    const peakPlayers = playersWithProgress.filter(p => p.age >= 24 && p.age < 30).length;
-    const veteranPlayers = playersWithProgress.filter(p => p.age >= 30).length;
+    const youngPlayers = gameState.userClub.players.filter(p => p.age < 24).length;
+    const peakPlayers = gameState.userClub.players.filter(p => p.age >= 24 && p.age < 30).length;
+    const veteranPlayers = gameState.userClub.players.filter(p => p.age >= 30).length;
 
     container.innerHTML = `
         <h3>Desenvolvimento do Elenco</h3>
@@ -506,14 +492,36 @@ function displayDevelopmentScreen() {
     `;
 
     const grid = container.querySelector('.player-dev-grid');
-    playersWithProgress.sort((a,b) => b.overall - a.overall).forEach(player => {
+    grid.innerHTML = '';
+    
+    gameState.userClub.players.sort((a,b) => b.overall - a.overall).forEach(player => {
         const card = document.createElement('div');
         card.className = 'player-dev-card';
+        
+        let overallChangeHtml = '';
+        if (player.lastSeasonChanges && player.lastSeasonChanges.overallChange !== 0) {
+            const change = player.lastSeasonChanges.overallChange;
+            const changeClass = change > 0 ? 'positive' : 'negative';
+            overallChangeHtml = ` <span class="${changeClass}">(${change > 0 ? '+' : ''}${change})</span>`;
+        }
+
+        let attributeChangesHtml = '<div class="attribute-changes">Sem mudanças na última temporada.</div>';
+        if (player.lastSeasonChanges && Object.keys(player.lastSeasonChanges.attributeChanges).length > 0) {
+            attributeChangesHtml = '<div class="attribute-changes">';
+            for(const attr in player.lastSeasonChanges.attributeChanges) {
+                const change = player.lastSeasonChanges.attributeChanges[attr];
+                const changeClass = change > 0 ? 'positive' : 'negative';
+                const formattedAttr = attr.charAt(0).toUpperCase() + attr.slice(1);
+                attributeChangesHtml += `<span class="${changeClass}">${formattedAttr} ${change > 0 ? '+' : ''}${change}</span>`;
+            }
+            attributeChangesHtml += '</div>';
+        }
+
         card.innerHTML = `
             <div class="player-dev-info">
                 <div class="player-name">${player.name} <span class="text-secondary">(${player.age})</span></div>
-                <p>Overall: <b>${player.overall}</b></p>
-                <p class="text-secondary">Potencial Estimado: ${player.potential}</p>
+                <p>Overall: <b>${player.overall}</b>${overallChangeHtml}</p>
+                ${attributeChangesHtml}
             </div>
             <div class="player-dev-chart">
                  <!-- Gráfico pode ser implementado aqui -->
@@ -552,6 +560,12 @@ function startHoliday() {
 function advanceDayOnHoliday() {
     if (new Date(gameState.currentDate) >= gameState.holidayEndDate) {
         stopHoliday();
+        return;
+    }
+    const matchToday = gameState.nextUserMatch && isSameDay(gameState.currentDate, new Date(gameState.nextUserMatch.date));
+    if (matchToday) {
+        stopHoliday();
+        showInfoModal("Férias Interrompidas", "Suas férias foram interrompidas pois hoje é dia de jogo!");
         return;
     }
     advanceDay();
@@ -740,7 +754,6 @@ function loadTacticsScreen() {
 
 
 // --- Funções de Contratos e Transferências (UI) ---
-// --- FUNÇÃO SUBSTITUÍDA ---
 function displayTransferMarket() {
     const container = document.getElementById('transfer-market-content');
     container.innerHTML = `
@@ -752,8 +765,8 @@ function displayTransferMarket() {
         <div id="market-hub-tab" class="tab-content"></div>
     `;
 
-    displayPlayerSearch(); // Carrega a busca de agentes livres por padrão
-    displayMarketHub(); // Prepara a aba de comprar jogadores
+    displayPlayerSearch();
+    displayMarketHub();
 
     container.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -766,7 +779,6 @@ function displayTransferMarket() {
     });
 }
 
-// --- NOVA FUNÇÃO ---
 function displayMarketHub() {
     const container = document.getElementById('market-hub-tab');
     container.innerHTML = `
@@ -807,7 +819,6 @@ function displayMarketHub() {
     document.getElementById('market-search-btn').addEventListener('click', performMarketSearch);
 }
 
-// --- NOVA FUNÇÃO ---
 function performMarketSearch() {
     const nameQuery = document.getElementById('market-search-input').value.toLowerCase();
     const leagueQuery = document.getElementById('market-filter-league').value;
@@ -842,7 +853,6 @@ function performMarketSearch() {
     });
 }
 
-// --- NOVA FUNÇÃO ---
 function renderMarketPlayerList(players) {
     if (players.length === 0) return '<p style="padding: 20px; text-align: center;">Nenhum jogador encontrado.</p>';
     
@@ -863,12 +873,10 @@ function renderMarketPlayerList(players) {
     return tableHTML;
 }
 
-// --- NOVA FUNÇÃO (PLACEHOLDER) ---
 function handlePurchaseOffer(playerName, teamName) {
     const player = findTeamInLeagues(playerName, true);
     if (!player) return;
     
-    // Por enquanto, apenas um alerta. A lógica de negociação será adicionada depois.
     showInfoModal("Função em Desenvolvimento", `A lógica para fazer uma proposta de compra por ${playerName} do ${teamName} ainda não foi implementada.`);
 }
 
@@ -910,7 +918,7 @@ function performSearch() {
         else if (ageQuery === 'o29') results = results.filter(p => p.age >= 29);
     }
     if (valueQuery) {
-        const base = 1000000 * currencyRates.EUR; // Valores são em BRL, base é EUR
+        const base = 1000000 * currencyRates.EUR;
         if (valueQuery === '0-1m') results = results.filter(p => p.marketValue <= base);
         else if (valueQuery === '1m-5m') results = results.filter(p => p.marketValue > base && p.marketValue <= base * 5);
         else if (valueQuery === '5m-10m') results = results.filter(p => p.marketValue > base * 5 && p.marketValue <= base * 10);
@@ -1108,7 +1116,6 @@ function handleNegotiationOffer() {
     }
 }
 
-// --- FUNÇÃO SUBSTITUÍDA ---
 function finalizeDeal(contractMonths) {
     const { player, type } = negotiationState;
     const isRenewal = type === 'renew';
@@ -1129,7 +1136,7 @@ function finalizeDeal(contractMonths) {
              playerInClub.contractUntil = contractMonths;
         }
         showInfoModal("Contrato Renovado!", `${player.name} renovou seu contrato por ${formatContract(contractMonths)}!`);
-    } else { // 'hire' para agentes livres
+    } else {
         player.contractUntil = contractMonths;
         if (!player.attributes) { 
             player.attributes = { pace: 80, shooting: 80, passing: 80, dribbling: 80, defending: 50, physical: 65 };
@@ -1417,7 +1424,6 @@ function initializeEventListeners() {
     document.getElementById('close-negotiation-modal-btn').addEventListener('click', () => document.getElementById('negotiation-modal').classList.remove('active'));
     document.getElementById('submit-offer-btn').addEventListener('click', handleNegotiationOffer);
     
-    // --- BOTÃO 'ACEITAR PEDIDA' CORRIGIDO ---
     document.getElementById('accept-demand-btn').addEventListener('click', () => {
         const { desiredDuration } = negotiationState;
         finalizeDeal(desiredDuration * 12);
