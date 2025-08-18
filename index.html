@@ -6,24 +6,22 @@
     <title>Football Manager</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <!-- 1. Dados -->
-    <script src="data/data.js" defer></script> 
-    <script src="data/player_bio_data.js" defer></script> 
+    <script src="data/data.js" defer></script>
+    <script src="data/player_bio_data.js" defer></script>
     <script src="data/seriea_dinheiro_joga.js" defer></script>
     <script src="data/serieb_dinheiro_joga.js" defer></script>
-    <script src="data/seriec_dinheiro_joga.js" defer></script> 
+    <script src="data/seriec_dinheiro_joga.js" defer></script>
     <script src="data/contratos_seriea.js" defer></script>
-    <script src="data/contratos_serieb.js" defer></script> 
+    <script src="data/contratos_serieb.js" defer></script>
     <script src="data/contratos_seriec.js" defer></script>
     <script src="data/sem_contrato.js" defer></script>
     <script src="data/brasileirao_a.js" defer></script>
     <script src="data/brasileirao_b.js" defer></script>
     <script src="data/brasileirao_c.js" defer></script>
-    <script src="data/verba_times.js" defer></script> 
-    
+    <script src="data/verba_times.js" defer></script>
     <!-- 2. Scripts do Jogo (em ordem de dependência) -->
-    <script src="game_core.js" defer></script>
+    <script src="script.js" defer></script>
     <script src="match_engine.js" defer></script>
     <script src="ui_manager.js" defer></script>
 </head>
@@ -44,7 +42,7 @@
                 <div class="header-manager-info"><span id="header-manager-name">Nome do Treinador</span><button id="settings-btn" class="icon-btn" title="Configurações">⚙️</button><button id="exit-game-btn">Sair</button></div>
             </header>
             <nav id="sidebar">
-                 <ul>
+                <ul>
                     <li data-content="home-content" class="active">Início</li>
                     <li data-content="squad-content">Elenco</li>
                     <li data-content="contracts-content">Contratos</li>
@@ -56,6 +54,7 @@
                     <li data-content="calendar-content">Calendário</li>
                     <li data-content="matches-content">Jogos</li>
                     <li data-content="finances-content">Finanças</li>
+                    <li data-content="sponsorship-content">Patrocínios</li> <!-- NOVO ITEM AQUI -->
                     <li data-content="stadium-content">Estádio</li>
                 </ul>
             </nav>
@@ -81,7 +80,7 @@
                         </div>
                         <div class="tactics-field-column"><div id="field-container"><div class="field-background"></div></div></div>
                         <div class="tactics-squad-column" data-panel-id="squad">
-                             <button class="panel-toggle-btn close-panel-btn" data-panel="squad">►</button>
+                            <button class="panel-toggle-btn close-panel-btn" data-panel="squad">►</button>
                             <div class="squad-list-container"><h4>BANCO (<span id="subs-count">0</span>/7)</h4><div id="substitutes-list" class="player-list"></div></div>
                             <div class="squad-list-container"><h4>RESERVAS</h4><div id="reserves-list" class="player-list"></div></div>
                         </div>
@@ -89,7 +88,7 @@
                     </div>
                 </div>
                 <div id="league-content" class="main-content-panel">
-                    <div class="matches-header"> 
+                    <div class="matches-header">
                         <div class="competition-selector-container">
                             <label for="league-table-selector">Competição:</label>
                             <select id="league-table-selector"></select>
@@ -133,10 +132,11 @@
                         <!-- Conteúdo das finanças dos adversários gerado pelo JS -->
                     </div>
                 </div>
+                <div id="sponsorship-content" class="main-content-panel"></div> <!-- NOVO PAINEL AQUI -->
                 <div id="stadium-content" class="main-content-panel"><h3>Editor de Estádio</h3><p>Recurso em desenvolvimento.</p></div>
             </main>
         </div>
-        
+
         <!-- Tela de Simulação de Partida -->
         <div id="match-simulation-screen" class="screen">
             <div id="match-header">
@@ -231,10 +231,10 @@
         </div>
         <div id="friendly-result-modal" class="modal-overlay">
             <div class="modal-content">
-                 <button id="close-friendly-result-modal-btn" class="icon-btn modal-close-btn">×</button>
-                 <h2 id="friendly-result-headline">Resultado do Amistoso</h2>
-                 <p id="friendly-result-body">O resultado da partida amistosa vai aqui.</p>
-                 <button id="confirm-friendly-result-btn">OK</button>
+                <button id="close-friendly-result-modal-btn" class="icon-btn modal-close-btn">×</button>
+                <h2 id="friendly-result-headline">Resultado do Amistoso</h2>
+                <p id="friendly-result-body">O resultado da partida amistosa vai aqui.</p>
+                <button id="confirm-friendly-result-btn">OK</button>
             </div>
         </div>
         <div id="info-modal" class="modal-overlay">
