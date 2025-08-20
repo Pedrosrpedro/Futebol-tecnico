@@ -3,6 +3,7 @@
 // mas auxiliam na manipulação de dados e formatação.
 
 function isSameDay(date1, date2) {
+    // Verifica se duas datas são o mesmo dia (ignorando hora, minuto, segundo).
     if(!date1 || !date2) return false;
     return date1.getFullYear() === date2.getFullYear() &&
            date1.getMonth() === date2.getMonth() &&
@@ -32,9 +33,8 @@ function findTeamInLeagues(teamName, isPlayerLookup = false) {
 
 function parseMarketValue(valueStr) {
     // Converte strings de valor de mercado (ex: "1.2M", "500K") para números.
-    // Presume que o valor de entrada pode estar em EUR se for uma string original.
     if (typeof valueStr !== 'string') return valueStr; // Se já for número, retorna
-    const value = valueStr.replace('€', '').trim();
+    const value = valueStr.replace('€', '').trim(); // Remove Euro symbol if present
     let multiplier = 1;
     let numberPartStr = value;
 
@@ -46,7 +46,7 @@ function parseMarketValue(valueStr) {
         numberPartStr = value.slice(0, -1);
     }
 
-    const numberPart = parseFloat(numberPartStr.replace(',', '.'));
+    const numberPart = parseFloat(numberPartStr.replace(',', '.')); // Handle comma as decimal separator
     if (isNaN(numberPart)) return 0;
 
     return numberPart * multiplier;
@@ -59,18 +59,21 @@ function formatCurrency(valueInBRL) {
     const convertedValue = valueInBRL / rate;
 
     if (Math.abs(convertedValue) >= 1000000) {
-        const valueInMillions = (convertedValue / 1000000).toFixed(1).replace('.0', '');
+        // Formata em milhões (M)
+        const valueInMillions = (convertedValue / 1000000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).replace(',0', '');
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: gameState.currency }).format(0).replace('0,00', '') + valueInMillions + 'M';
     } else if (Math.abs(convertedValue) >= 1000) {
-        const valueInThousands = Math.round(convertedValue / 1000);
+        // Formata em milhares (k)
+        const valueInThousands = Math.round(convertedValue / 1000).toLocaleString('pt-BR');
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: gameState.currency }).format(0).replace('0,00', '') + valueInThousands + 'k';
     }
 
+    // Formata valor normal (sem casas decimais para inteiros, com para decimais)
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: gameState.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(convertedValue);
 }
 
 function formatContract(months) {
-    // Formata o número de meses de contrato para uma string legível.
+    // Formata o número de meses de contrato para uma string legível (ex: "2 anos e 6 meses").
     if (months === undefined || months === null || months <= 0) {
         return "Sem contrato";
     }
