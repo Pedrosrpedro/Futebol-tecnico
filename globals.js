@@ -65,10 +65,10 @@ const gameState = {
     allMatches: [],
     lastMatchDateOfYear: null,
     freeAgents: [],
-    // Estas variáveis eram globais soltas, agora fazem parte de gameState para melhor organização
-    negotiationState: {},
-    selectedPlayerInfo: null,
-    userTicketPrice: null // NOVO: Preço do ingresso definido pelo usuário
+    // Estas variáveis eram globais soltas em outros arquivos, agora centralizadas aqui
+    negotiationState: {}, // Estado para negociações de contrato
+    selectedPlayerInfo: null, // Jogador selecionado para táticas
+    userTicketPrice: null // Preço do ingresso definido pelo usuário
 };
 
 // Variável que precisa ser global para setInterval/clearInterval
@@ -106,6 +106,7 @@ const overallWeights = { pace: 0.15, shooting: 0.15, passing: 0.2, dribbling: 0.
 const SIMULATION_DURATION_MS = 4 * 60 * 1000; // Duração da simulação de partida
 
 // NOVAS CONSTANTES PARA INGRESSOS E ESTÁDIO (baseados na liga)
+// Estes são valores base, o cálculo final considera o time, liga, etc.
 const STADIUM_BASE_CAPACITY = {
     'brasileirao_a': 50000,
     'brasileirao_b': 30000,
