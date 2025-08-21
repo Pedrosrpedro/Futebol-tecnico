@@ -20,17 +20,26 @@
     <script src="data/brasileirao_b.js" defer></script>
     <script src="data/brasileirao_c.js" defer></script>
     <script src="data/verba_times.js" defer></script>
+
     <!-- 2. Scripts do Jogo (em ordem de dependência) -->
-    <script src="script.js" defer></script>
+    <!-- Primeiro, os que definem o estado global e utilitários básicos -->
+    <script src="globals.js" defer></script>
+    <script src="utils.js" defer></script>
+    <!-- Depois, a lógica principal do jogo (não visual) -->
+    <script src="game_logic.js" defer></script>
+    <!-- Em seguida, o motor de simulação de partida (visual) -->
     <script src="match_engine.js" defer></script>
+    <!-- Depois, a lógica de interface do usuário -->
     <script src="ui_manager.js" defer></script>
+    <!-- Por último, o script principal que orquestra tudo -->
+    <script src="main.js" defer></script>
 </head>
 <body>
     <div id="game-container">
         <!-- Telas de criação -->
         <div id="manager-creation-screen" class="screen active"><div class="screen-content"><h2>Bem-vindo, Treinador!</h2><p>Qual é o seu nome?</p><input type="text" id="manager-name-input" placeholder="Digite seu nome..."><button id="confirm-manager-name-btn">Confirmar</button></div></div>
         <div id="start-screen" class="screen"><div class="screen-content"><h1>Football Manager</h1><button id="go-to-new-club-btn">Criar Novo Clube</button><button id="go-to-select-league-btn">Treinar Clube Existente</button></div></div>
-        <div id="new-club-screen" class="screen"><div class="screen-content"><h2>Crie seu Clube</h2><input type="text" id="club-name-input" placeholder="Nome do Clube"><input type="text" id="club-initials-input" placeholder="Iniciais (3 letras)"><button id="create-new-club-btn">Criar e Jogar</button><button class="secondary" id="new-club-back-btn">Voltar</button></div></div>
+        <div id="new-club-screen" class="screen"><div class="screen-content"><h2>Crie seu Clube</h2><input type="text" id="club-name-input" placeholder="Nome do Clube"><input type="text" id="club-initials-input" placeholder="Iniciais (3 letras)" disabled><button id="create-new-club-btn">Criar e Jogar</button><button class="secondary" id="new-club-back-btn">Voltar</button></div></div>
         <div id="select-league-screen" class="screen"><div class="screen-content"><h2>Selecione uma Liga</h2><div id="league-selection" class="card-container"></div><button class="secondary" id="select-league-back-btn">Voltar</button></div></div>
         <div id="select-team-screen" class="screen"><div class="screen-content"><h2>Selecione um Time</h2><div id="team-selection" class="card-container"></div><button class="secondary" id="select-team-back-btn">Voltar</button></div></div>
 
@@ -54,7 +63,8 @@
                     <li data-content="calendar-content">Calendário</li>
                     <li data-content="matches-content">Jogos</li>
                     <li data-content="finances-content">Finanças</li>
-                    <li data-content="sponsorship-content">Patrocínios</li> <!-- NOVO ITEM AQUI -->
+                    <li data-content="sponsorship-content">Patrocínios</li>
+                    <li data-content="tickets-content">Ingressos</li> <!-- NOVO ITEM AQUI -->
                     <li data-content="stadium-content">Estádio</li>
                 </ul>
             </nav>
@@ -132,7 +142,8 @@
                         <!-- Conteúdo das finanças dos adversários gerado pelo JS -->
                     </div>
                 </div>
-                <div id="sponsorship-content" class="main-content-panel"></div> <!-- NOVO PAINEL AQUI -->
+                <div id="sponsorship-content" class="main-content-panel"></div>
+                <div id="tickets-content" class="main-content-panel"></div> <!-- NOVO PAINEL DE INGRESSOS AQUI -->
                 <div id="stadium-content" class="main-content-panel"><h3>Editor de Estádio</h3><p>Recurso em desenvolvimento.</p></div>
             </main>
         </div>
@@ -163,7 +174,7 @@
                     <h2>PAUSA</h2>
                     <button id="resume-match-btn">Continuar Partida</button>
                     <button id="suggestions-btn" disabled>Sugestões Técnicas</button>
-                    <button id="ingame-tactics-btn">Táticas</button>
+                    <button id="ingame-tactics-btn" disabled>Táticas</button>
                 </div>
             </div>
             <div id="match-notification-area"></div>
@@ -280,7 +291,6 @@
                 </div>
             </div>
         </div>
-        <!-- NOVO MODAL DE CONFIRMAÇÃO -->
         <div id="confirmation-modal" class="modal-overlay">
             <div class="modal-content confirmation-modal-content">
                 <h2 id="confirmation-modal-title">Confirmar Ação</h2>
