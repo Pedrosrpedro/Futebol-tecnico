@@ -1504,3 +1504,88 @@ span.negative {
     color: var(--accent-color);
     font-weight: bold;
 }
+
+/* --- NOVOS ESTILOS PARA TELA DE INGRESSOS --- */
+#tickets-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    height: 100%; /* Garante que o painel ocupe a altura total */
+    overflow-y: auto; /* Permite rolagem se o conteúdo for maior que a tela */
+}
+
+.stadium-info-card, .match-day-projections-card {
+    background-color: var(--bg-dark);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    flex-shrink: 0; /* Impede que os cards encolham excessivamente */
+}
+
+.stadium-info-card h4, .match-day-projections-card h4 {
+    color: var(--accent-color);
+    margin-bottom: 15px;
+    font-size: 1.2em;
+}
+
+.stadium-info-card p, .match-day-projections-card p {
+    margin-bottom: 10px;
+    color: var(--text-primary);
+}
+
+.ticket-price-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.ticket-price-control label {
+    font-size: 1em;
+    color: var(--text-secondary);
+}
+
+.ticket-price-control input[type="number"] {
+    width: 100px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--bg-medium);
+    color: var(--text-primary);
+    font-size: 1em;
+    text-align: right;
+}
+
+.ticket-price-control span {
+    font-size: 1em;
+    color: var(--text-primary);
+    font-weight: bold;
+}
+
+.match-day-projections-card b {
+    color: var(--accent-color);
+}
+
+.attendance-feedback {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+.attendance-feedback p {
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+.attendance-feedback p.negative {
+    color: var(--danger-color);
+}
+
+.attendance-feedback p.positive {
+    color: var(--accent-color);
+}
+
+.attendance-feedback p.text-secondary {
+    color: var(--text-secondary);
+}
